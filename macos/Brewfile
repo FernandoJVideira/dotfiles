@@ -1,0 +1,100 @@
+tap "felixkratz/formulae", "https://github.com/FelixKratz/homebrew-formulae", trusted: true
+tap "nikitabobko/tap"
+# Clone of cat(1) with syntax highlighting and Git integration
+brew "bat"
+# Resource monitor. C++ version and continuation of bashtop and bpytop
+brew "btop"
+# XML-based font configuration API for X Windows
+brew "fontconfig"
+# Cloudflare Tunnel client (formerly Argo Tunnel)
+brew "cloudflared"
+# Open-source, cross-platform JavaScript runtime environment
+brew "node"
+# Package acting as bridge between Node projects and their package managers
+brew "corepack"
+# Modern, maintained replacement for ls
+brew "eza"
+# Like neofetch, but much faster because written mostly in C
+brew "fastfetch"
+# Simple, fast and user-friendly alternative to find
+brew "fd"
+# Command-line fuzzy finder written in Go
+brew "fzf"
+# Open source programming language to build simple/reliable/efficient software
+brew "go"
+# Database migrations CLI tool
+brew "golang-migrate"
+# Configurable static site generator
+brew "hugo"
+# Handy way to save and run project-specific commands
+brew "just"
+# Deep clean and optimize your Mac
+brew "mole"
+# Ambitious Vim-fork focused on extensibility and agility
+brew "neovim"
+# Development kit for the Java programming language
+brew "openjdk"
+# Development kit for the Java programming language
+brew "openjdk@17"
+# Command-line interface for Proton Pass
+brew "proton-pass-cli"
+# Search tool like grep and The Silver Searcher
+brew "ripgrep"
+# Cross-shell prompt for astronauts
+brew "starship"
+# Shell extension to navigate your filesystem faster
+brew "zoxide"
+# UNIX shell (command interpreter)
+brew "zsh"
+# A window border system for macOS
+brew "felixkratz/formulae/borders"
+# Custom macOS statusbar with shell plugin, interaction and graph support
+brew "felixkratz/formulae/sketchybar"
+# AeroSpace is an i3-like tiling window manager for macOS
+cask "nikitabobko/tap/aerospace", trusted: true
+# Professional image editing software
+cask "affinity-photo"
+# Menu bar tool to limit maximum charging percentage
+cask "aldente"
+# Web browser focusing on privacy
+cask "brave-browser"
+# Anthropic's official Claude AI desktop app
+cask "claude"
+# Screen capturing tool
+cask "cleanshot"
+# Drivers for DisplayLink docks, adapters and monitors
+cask "displaylink"
+# Developer platform
+cask "dotnet-sdk"
+cask "font-jetbrains-mono-nerd-font"
+# Terminal emulator that uses platform-native UI and GPU acceleration
+cask "ghostty"
+# Web browser
+cask "google-chrome@dev"
+# Chromium-based web browser
+cask "helium-browser"
+# App to write, plan, collaborate, and get organised
+cask "notion"
+# Knowledge base that works on top of a local folder of plain text Markdown files
+cask "obsidian"
+# Replacement for Docker Desktop
+cask "orbstack"
+# WebKit based web browser
+cask "orion"
+# Utility to uninstall apps and remove leftover files from old/uninstalled apps
+cask "pearcleaner"
+# VPN client focusing on security
+cask "protonvpn"
+# Imaging utility to install operating systems to a microSD card
+cask "raspberry-pi-imager"
+# Music streaming service
+cask "spotify"
+# Native GUI tool for relational databases
+cask "tableplus"
+# Management tool for Unity
+cask "unity-hub"
+# Multiplayer code editor
+cask "zed"
+go "github.com/air-verse/air"
+go "go.uber.org/mock/mockgen"
+go "github.com/sqlc-dev/sqlc/cmd/sqlc"
