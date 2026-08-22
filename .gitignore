@@ -1,0 +1,14 @@
+.DS_Store
+
+# Zsh compiled files
+*.zwc
+.zcompdump*
+
+# Auto-installed by plugin manager
+common/.config/zsh/plugins/
+
+# Machine-local overrides
+common/.config/zsh/local.zsh
+
+# Tutorial outline
+common/.config/zsh/TUTORIAL.md
