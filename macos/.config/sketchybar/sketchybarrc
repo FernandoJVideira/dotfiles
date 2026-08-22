@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+# === CONFIG ROOT ===
+CONFIG_DIR="$HOME/.config/sketchybar"
+PLUGIN_DIR="$CONFIG_DIR/plugins"
+
+# === COLORS (Gruvbox Dark) ===
+CLR_BG=0x00000000          # Transparent bar background
+CLR_COMP_BG=0xff3c3836     # Compartment background (Gruvbox bg1)
+CLR_COMP_BORDER=0xff665c54 # Compartment border (Gruvbox bg3)
+CLR_FG=0xffebdbb2          # Foreground (Gruvbox fg1)
+CLR_ACCENT=0xfffe8019      # Accent / focused state (Gruvbox orange)
+CLR_FG_DIM=0x77ebdbb2      # Dimmed foreground (Gruvbox fg1 @ ~47% alpha)
+
+# === PADDING CONSTANTS
+BAR_PADDING=8             # Outer bar padding (use compartments for outer spacing)
+ITEM_PADDING=3             # Default horizontal padding between items
+ICON_PADDING=2             # Consistent icon inner padding (reduced from mixed 2/4 for tighter look)
+LABEL_PADDING=1            # Consistent label inner padding (unified from 4/2)
+COMP_PADDING=6             # Compartment outer padding (increased from bar-level 0 for breathing room)
+
+# === SYSTEM METRICS PROVIDER ===
+# Removed hardcoded stats_provider call
+
+# === BAR (No outer padding; defer to compartments) ===
+sketchybar --bar position=top height=34 blur_radius=0 color="$CLR_BG" padding_left="$BAR_PADDING" padding_right="$BAR_PADDING"
+
+# === DEFAULTS (must precede item creation below; --default only applies to items created after it) ===
+sketchybar --default \
+  padding_left="$ITEM_PADDING" \
+  padding_right="$ITEM_PADDING" \
+  icon.font="JetBrainsMono Nerd Font:Regular:12.0" \
+  label.font="JetBrainsMono Nerd Font:Regular:14.0" \
+  icon.color="$CLR_FG" \
+  label.color="$CLR_FG" \
+  icon.padding_left="$ICON_PADDING" \
+  icon.padding_right="$ICON_PADDING" \
+  label.padding_left="$LABEL_PADDING" \
+  label.padding_right="$LABEL_PADDING"
+
+# === WORKSPACES ===
+sketchybar --add event aerospace_workspace_change
+LABELS=("" "" "" "󱙺" "󰉖" "" "" "󰙯" "" "󰝚")
+LEFT_SPACE_ITEMS=()
+INDEX=0
+
+for sid in $(aerospace list-workspaces --all); do
+  label="${LABELS[$INDEX]:-}"
+  item="space.$sid"
+  LEFT_SPACE_ITEMS+=("$item")
+
+  sketchybar --add item "$item" left \
+    --subscribe "$item" aerospace_workspace_change \
+    --set "$item" \
+      background.color=0xff000000 \
+      background.corner_radius=5 \
+      background.height=20 \
+      background.drawing=off \
+      label="$label" \
+      label.color="$CLR_FG_DIM" \
+      icon.padding_left="$ICON_PADDING" \
+      icon.padding_right="$ICON_PADDING" \
+      label.padding_left="$LABEL_PADDING" \
+      label.padding_right="$LABEL_PADDING" \
+      click_script="aerospace workspace $sid" \
+      script="$PLUGIN_DIR/aerospace.sh $sid"
+
+  ((INDEX++))
+done
+
+# === FRONT APP
+sketchybar --add item front_app left \
+  --set front_app \
+    script="$PLUGIN_DIR/front_app.sh" \
+    label.y_offset=1 \
+    label.padding_right="$COMP_PADDING" \
+  --subscribe front_app front_app_switched
+
+# === RIGHT SIDE ITEMS ===
+sketchybar --add item clock right \
+  --set clock update_freq=10 icon= script="$PLUGIN_DIR/clock.sh" label.padding_right="$COMP_PADDING"
+
+sketchybar --add item volume right \
+  --set volume script="$PLUGIN_DIR/volume.sh" \
+  --subscribe volume volume_change
+
+sketchybar --add item battery right \
+  --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
+  --subscribe battery system_woke power_source_change
+
+sketchybar --add item net right \
+  --set net update_freq=120 icon= script="$PLUGIN_DIR/wifi.sh"
+
+sketchybar --add item cpu_load right \
+  --set cpu_load icon= update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" icon.padding_left="$COMP_PADDING"
+
+# === ITEM GROUPS ===
+LEFT_ITEMS=("${LEFT_SPACE_ITEMS[@]}" front_app)
+RIGHT_ITEMS=(clock volume battery net cpu_load)
+
+# === COMPARTMENTS (Outer padding for clean edges; height=26 leaves vertical margin in 34pt bar) ===
+sketchybar --add bracket left_compartment "${LEFT_ITEMS[@]}" \
+  --set left_compartment \
+    background.color="$CLR_COMP_BG" \
+    background.corner_radius=8 \
+    background.height=26 \
+    background.border_color="$CLR_COMP_BORDER" \
+    background.border_width=1 \
+    background.drawing=on
+
+sketchybar --add bracket right_compartment "${RIGHT_ITEMS[@]}" \
+  --set right_compartment \
+    background.color="$CLR_COMP_BG" \
+    background.corner_radius=8 \
+    background.height=26 \
+    background.border_color="$CLR_COMP_BORDER" \
+    background.border_width=1 \
+    background.padding_left=0 \
+    background.drawing=on
+
+# === FINALIZE ===
+sketchybar --update

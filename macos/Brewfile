@@ -32,6 +32,8 @@ brew "just"
 brew "mole"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
+# Media player command-line interface
+brew "mpv"
 # Development kit for the Java programming language
 brew "openjdk"
 # Development kit for the Java programming language
@@ -54,8 +56,6 @@ brew "felixkratz/formulae/sketchybar"
 cask "nikitabobko/tap/aerospace", trusted: true
 # Professional image editing software
 cask "affinity-photo"
-# Menu bar tool to limit maximum charging percentage
-cask "aldente"
 # Web browser focusing on privacy
 cask "brave-browser"
 # Anthropic's official Claude AI desktop app
