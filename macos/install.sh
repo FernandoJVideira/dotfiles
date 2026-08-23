@@ -46,6 +46,9 @@ if [[ "$(sysctl -n hw.model)" == MacBook* ]]; then
   brew install --cask aldente
 fi
 
+log "Applying macOS defaults..."
+"$SCRIPT_DIR/macos-defaults.sh"
+
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../common/install.sh"
 
