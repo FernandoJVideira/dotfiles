@@ -28,12 +28,14 @@ brew "golang-migrate"
 brew "hugo"
 # Handy way to save and run project-specific commands
 brew "just"
+# Polyglot runtime manager (asdf rust clone)
+brew "mise"
 # Deep clean and optimize your Mac
 brew "mole"
+# Media player based on MPlayer and mplayer2
+brew "mpv"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Media player command-line interface
-brew "mpv"
 # Development kit for the Java programming language
 brew "openjdk"
 # Development kit for the Java programming language
@@ -44,6 +46,8 @@ brew "proton-pass-cli"
 brew "ripgrep"
 # Cross-shell prompt for astronauts
 brew "starship"
+# Terminal multiplexer
+brew "tmux"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # UNIX shell (command interpreter)
@@ -66,6 +70,8 @@ cask "cleanshot"
 cask "displaylink"
 # Developer platform
 cask "dotnet-sdk"
+# Matrix collaboration client
+cask "element"
 cask "font-jetbrains-mono-nerd-font"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
