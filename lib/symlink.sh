@@ -18,5 +18,5 @@ symlink_dotfiles(){
         log "Linking $target -> $file"
 
         ln -sf "$file" "$target"
-    done < <(find "$dir" -type f -not -name "install.sh" -not -name ".DS_Store" -print0)
+    done < <(find "$dir" -type f -not -name "*.sh" -not -name ".DS_Store" -print0)
 }
