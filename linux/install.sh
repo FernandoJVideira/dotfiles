@@ -11,7 +11,7 @@ if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
 
 [omarchy]
 SigLevel = Optional TrustAll
-Server = https://pkgs.omarchy.org/edge/$arch
+Server = https://pkgs.omarchy.org/stable/$arch
 EOF
 fi
 
