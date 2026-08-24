@@ -31,6 +31,13 @@ brew tap felixkratz/formulae
 log "Installing packages from Brewfile..."
 brew bundle --file="$SCRIPT_DIR/Brewfile"
 
+# Initialize Hyprspace (creates a default config if one doesn't exist yet).
+# Runs before symlink_dotfiles so our own hyprspace/config.toml correctly
+# overwrites whatever this creates, same ordering reason as
+# omarchy-reinstall-configs on the Linux side.
+log "Initializing Hyprspace..."
+hyprspace init
+
 # Create symlinks for dotfiles
 log "Symlinking macOS-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"

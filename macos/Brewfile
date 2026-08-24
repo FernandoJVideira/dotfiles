@@ -1,5 +1,5 @@
 tap "felixkratz/formulae", "https://github.com/FelixKratz/homebrew-formulae", trusted: true
-tap "nikitabobko/tap"
+tap "PeachlifeAB/tap"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
@@ -56,8 +56,8 @@ brew "zsh"
 brew "felixkratz/formulae/borders"
 # Custom macOS statusbar with shell plugin, interaction and graph support
 brew "felixkratz/formulae/sketchybar"
-# AeroSpace is an i3-like tiling window manager for macOS
-cask "nikitabobko/tap/aerospace", trusted: true
+# Hyprspace is a tiling window manager for macOS, forked from AeroSpace
+cask "hyprspace"
 # Professional image editing software
 cask "affinity-photo"
 # Web browser focusing on privacy
