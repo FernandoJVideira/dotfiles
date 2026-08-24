@@ -48,6 +48,15 @@ sudo omarchy-apply-system --install-user "$USER" --first-install
 log "Finalizing Omarchy user setup..."
 omarchy-provision-user --force --first-install
 
+# Seed Omarchy's shipped configs (Hyprland, Quickshell, etc.) into $HOME.
+# Needed because our user was created by the CachyOS installer, before
+# Omarchy was ever installed - /etc/skel seeding only happens at useradd
+# time, so it never ran with Omarchy's content. Must run before
+# symlink_dotfiles, since it force-copies over $HOME and would blow away
+# our own symlinks if it ran after.
+log "Seeding Omarchy's shipped configs..."
+omarchy-reinstall-configs
+
 # Prune unnecessary preinstalled apps (like Kdenlive and LibreOffice) to save space
 log "Removing unused preinstalled apps..."
 omarchy-pkg-drop kdenlive libreoffice-fresh
