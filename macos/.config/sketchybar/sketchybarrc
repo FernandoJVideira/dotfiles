@@ -117,4 +117,6 @@ sketchybar --add bracket right_compartment "${RIGHT_ITEMS[@]}" \
     background.drawing=on
 
 # === FINALIZE ===
+# Small delay so item event subscriptions are registered before the initial sync fires
+(sleep 0.2 && sketchybar --trigger hyprspace_workspace_change FOCUSED_WORKSPACE="$(hyprspace list-workspaces --focused)") &
 sketchybar --update
