@@ -71,7 +71,7 @@ done <<< "$selected_webapps"
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop
+sudo pacman -S --needed --noconfirm go element-desktop ghostty
 omarchy-install-editor-zed
 yay -S --noconfirm brave-origin-bin
 
