@@ -18,11 +18,18 @@ fi
 log "Installing omarchy packages..."
 sudo pacman -S --noconfirm omarchy-keyring omarchy omarchy-settings
 
-# TODO: capture CachyOS's existing custom repo stanzas (everything above
-# [core] in the current pacman.conf) into /etc/pacman.d/custom-repos.conf,
-# and activate ~/.config/omarchy/hooks/pre-refresh-pacman.d/add-custom-repo
-# — needs the real pacman.conf in front of me to get the extraction right.
-# Must happen before the first `omarchy update` or channel switch ever runs.
+log "Preserving CachyOS's custom repos..."
+awk '
+  /^\[core\]/ { exit }
+  /^\[options\]/ { skip=1; next }
+  /^\[/ { skip=0 }
+  !skip && !/^[[:space:]]*#/ && !/^[[:space:]]*$/ { print }
+' /etc/pacman.conf | sudo tee /etc/pacman.d/custom-repos.conf > /dev/null
+
+log "Activating the custom-repo preservation hook..."
+mkdir -p ~/.config/omarchy/hooks/pre-refresh-pacman.d
+cp /usr/share/omarchy/config/omarchy/hooks/pre-refresh-pacman.d/add-custom-repo.sample \
+   ~/.config/omarchy/hooks/pre-refresh-pacman.d/add-custom-repo
 
 # Check if the user wants to set up gaming tools
 if gum confirm "Set up gaming tools too?"; then
