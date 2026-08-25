@@ -5,7 +5,7 @@
 #   Prompt:       starship
 #   Navigation:   zoxide, fzf, fd
 #   CLI tools:    eza, bat, nvim, ripgrep
-#   Node:         nvm
+#   Dev envs:     mise
 
 fastfetch
 
@@ -100,12 +100,10 @@ source "$ZDOTDIR/prompt.zsh"
 
 
 # =========================================================
-# Node / NVM
+# mise (dev tool version manager)
 # =========================================================
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && source "$NVM_DIR/bash_completion"
+eval "$(mise activate zsh)"
 
 
 # bun completions

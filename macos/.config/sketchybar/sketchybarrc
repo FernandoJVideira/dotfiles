@@ -39,18 +39,17 @@ sketchybar --default \
   label.padding_right="$LABEL_PADDING"
 
 # === WORKSPACES ===
-sketchybar --add event aerospace_workspace_change
+sketchybar --add event hyprspace_workspace_change
 LABELS=("" "" "" "󱙺" "󰉖" "" "" "󰙯" "" "󰝚")
 LEFT_SPACE_ITEMS=()
-INDEX=0
 
-for sid in $(aerospace list-workspaces --all); do
-  label="${LABELS[$INDEX]:-}"
+for sid in $(seq 1 10); do
+  label="${LABELS[$((sid - 1))]:-}"
   item="space.$sid"
   LEFT_SPACE_ITEMS+=("$item")
 
   sketchybar --add item "$item" left \
-    --subscribe "$item" aerospace_workspace_change \
+    --subscribe "$item" hyprspace_workspace_change \
     --set "$item" \
       background.color=0xff000000 \
       background.corner_radius=5 \
@@ -62,10 +61,9 @@ for sid in $(aerospace list-workspaces --all); do
       icon.padding_right="$ICON_PADDING" \
       label.padding_left="$LABEL_PADDING" \
       label.padding_right="$LABEL_PADDING" \
-      click_script="aerospace workspace $sid" \
+      click_script="hyprspace workspace $sid" \
       script="$PLUGIN_DIR/aerospace.sh $sid"
 
-  ((INDEX++))
 done
 
 # === FRONT APP
@@ -119,4 +117,6 @@ sketchybar --add bracket right_compartment "${RIGHT_ITEMS[@]}" \
     background.drawing=on
 
 # === FINALIZE ===
+# Small delay so item event subscriptions are registered before the initial sync fires
+(sleep 0.2 && sketchybar --trigger hyprspace_workspace_change FOCUSED_WORKSPACE="$(hyprspace list-workspaces --focused)") &
 sketchybar --update
