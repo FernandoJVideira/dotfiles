@@ -17,6 +17,8 @@ HISTFILE="$XDG_STATE_HOME/zsh/history"
 HISTSIZE=100000
 SAVEHIST=100000
 
+[[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
+
 setopt APPEND_HISTORY
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
