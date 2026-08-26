@@ -45,22 +45,32 @@ sudo chsh -s "$(which zsh)" "$USER"
 
 # Install Omarchy base packages
 log "Installing Omarchy base packages..."
-mapfile -t base_packages < <(grep -v '^#' /usr/share/omarchy/install/omarchy-base.packages)
-sudo pacman -S --needed --noconfirm "${base_packages[@]}"
+mapfile -t base_packages < <(grep -v '^#' /usr/share/omarchy/install/omarchy-base.packages | grep -v '^$')
+omarchy-pkg-add "${base_packages[@]}"
+
+OMARCHY_NVIDIA_SCRIPT="/usr/share/omarchy/install/hardware/nvidia.sh"
+restore_omarchy_nvidia_script() {
+  if [[ -f "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig" ]]; then
+    sudo mv -f "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig" "$OMARCHY_NVIDIA_SCRIPT"
+  fi
+}
+if pacman -Q linux-cachyos-nvidia-open &>/dev/null || pacman -Q linux-cachyos-lts-nvidia-open &>/dev/null; then
+  log "Skipping Omarchy's NVIDIA driver setup (CachyOS's chwd-managed nvidia-open packages are already installed)..."
+  trap restore_omarchy_nvidia_script EXIT
+  sudo cp "$OMARCHY_NVIDIA_SCRIPT" "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig"
+  echo '# Skipped by dotfiles install.sh: CachyOS nvidia-open packages already installed.' |
+    sudo tee "$OMARCHY_NVIDIA_SCRIPT" > /dev/null
+fi
 
 # Set up Omarchy system and user
 log "Applying Omarchy system setup..."
 sudo omarchy-apply-system --install-user "$USER" --first-install
+restore_omarchy_nvidia_script
+trap - EXIT
 
 log "Finalizing Omarchy user setup..."
-omarchy-provision-user --force --first-install
+OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --force --first-install
 
-# Seed Omarchy's shipped configs (Hyprland, Quickshell, etc.) into $HOME.
-# Needed because our user was created by the CachyOS installer, before
-# Omarchy was ever installed - /etc/skel seeding only happens at useradd
-# time, so it never ran with Omarchy's content. Must run before
-# symlink_dotfiles, since it force-copies over $HOME and would blow away
-# our own symlinks if it ran after.
 log "Seeding Omarchy's shipped configs..."
 omarchy-reinstall-configs
 
@@ -80,7 +90,7 @@ done <<< "$selected_webapps"
 log "Installing workstation tools..."
 sudo pacman -S --needed --noconfirm go element-desktop ghostty
 omarchy-install-editor-zed
-yay -S --noconfirm brave-origin-bin
+yay -S --noconfirm brave-origin-bin proton-pass-cli
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."

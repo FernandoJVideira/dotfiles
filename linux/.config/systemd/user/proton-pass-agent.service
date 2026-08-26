@@ -1,9 +1,11 @@
 [Unit]
 Description=Proton Pass SSH Agent
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=/usr/bin/pass-cli ssh-agent start --create-new-identities SSH --socket-path %h/.ssh/proton-pass-agent.sock
 Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=default.target
