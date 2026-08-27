@@ -6,7 +6,7 @@
 local M = {}
 
 M.base46 = {
-	theme = "nord",
+	theme = require("omarchy_theme").current(),
 
 	-- hl_override = {
 	-- 	Comment = { italic = true },
