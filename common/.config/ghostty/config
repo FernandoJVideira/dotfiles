@@ -1,10 +1,13 @@
-# Dynamic theme colors
+# Dynamic theme colors (Omarchy only; silently skipped elsewhere)
 config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
+# Static fallback theme (macOS; loaded after the line above so it only
+# takes effect where the Omarchy state file doesn't exist)
+config-file = ?"~/.config/ghostty/theme.conf"
 
 # Font
 font-family = "JetBrainsMono Nerd Font"
 font-style = Regular
-font-size = 12
+font-size = 14
 
 # Window
 window-theme = ghostty
