@@ -71,15 +71,27 @@ trap - EXIT
 log "Finalizing Omarchy user setup..."
 OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --force --first-install
 
+
+log "Unlinking dotfiles-managed configs before Omarchy's config reset..."
+unlink_dotfiles "$SCRIPT_DIR"
+unlink_dotfiles "$SCRIPT_DIR/../common"
+
 log "Seeding Omarchy's shipped configs..."
 omarchy-reinstall-configs
+
+log "Relinking dotfiles-managed configs Omarchy's reset just overwrote..."
+symlink_dotfiles "$SCRIPT_DIR"
+symlink_dotfiles "$SCRIPT_DIR/../common"
+
+log "Reloading Hyprland..."
+hyprctl reload
 
 # Prune unnecessary preinstalled apps (like Kdenlive and LibreOffice) to save space
 log "Removing unused preinstalled apps..."
 omarchy-pkg-drop kdenlive libreoffice-fresh
 
 selected_webapps=$(gum choose --no-limit \
-  "Basecamp" "Google Contacts" "Google Maps" "Google Messages" \
+  "HEY" "Basecamp" "Google Contacts" "Google Maps" "Google Messages" \
   "Google Photos" "WhatsApp" "X" "YouTube")
 
 while IFS= read -r webapp; do
@@ -117,6 +129,9 @@ fi
 
 log "Symlinking Linux-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+log "Configuring monitors..."
+"$SCRIPT_DIR/configure-monitors.sh"
 
 log "Enabling Proton Pass SSH agent..."
 systemctl --user enable --now proton-pass-agent.service
