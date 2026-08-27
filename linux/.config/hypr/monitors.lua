@@ -22,39 +22,56 @@ local configured_positions = {
   ["HDMI-A-1"] = "auto-right",
 }
 
--- Pin every currently-connected, configured monitor to its true max
--- mode: highest resolution, then highest refresh rate available at that
--- resolution. Hyprland's own "preferred" mode follows the EDID-flagged
--- preferred timing, which is often a lower refresh rate than the panel
--- actually supports, and the built-in "highres"/"highrr" mode values
--- only optimize one dimension each. Uses hl.get_monitors() (in-process)
--- rather than shelling out to `hyprctl`, since calling back into
--- Hyprland's own IPC from inside its synchronous config load can
--- deadlock the compositor.
-for _, mon in ipairs(hl.get_monitors()) do
+-- Pin every configured monitor to its true max mode: highest resolution,
+-- then highest refresh rate available at that resolution. Hyprland's own
+-- "preferred" mode follows the EDID-flagged preferred timing, which is
+-- often a lower refresh rate than the panel actually supports, and the
+-- built-in "highres"/"highrr" mode values only optimize one dimension
+-- each. Uses hl.get_monitor()/hl.get_monitors() (in-process) rather than
+-- shelling out to `hyprctl`, since calling back into Hyprland's own IPC
+-- from inside its synchronous config load can deadlock the compositor.
+--
+-- Monitors aren't always enumerated yet the first time this file is
+-- parsed at compositor startup, so a one-shot loop over hl.get_monitors()
+-- can silently match nothing at boot and leave everything on the
+-- catch-all fallback above (wrong mode/position) until the next reload.
+-- Reusing this through both that initial pass and the monitor.added
+-- event covers monitors that show up after config parse, at boot or
+-- otherwise, without needing a delayed re-reload.
+local function pin_monitor(selector)
+  local mon = hl.get_monitor(selector)
+  if not mon then return end
+
   local position = configured_positions[mon.name]
+  if not position then return end
 
-  if position then
-    local best = nil
+  local best = nil
 
-    for _, m in ipairs(mon.available_modes) do
-      if not best
-          or (m.width * m.height > best.width * best.height)
-          or (m.width * m.height == best.width * best.height and m.refresh_rate > best.refresh_rate) then
-        best = m
-      end
-    end
-
-    if best then
-      hl.monitor({
-        output = mon.name,
-        mode = string.format("%dx%d@%.2f", best.width, best.height, best.refresh_rate),
-        position = position,
-        scale = omarchy_monitor_scale,
-      })
+  for _, m in ipairs(mon.available_modes) do
+    if not best
+        or (m.width * m.height > best.width * best.height)
+        or (m.width * m.height == best.width * best.height and m.refresh_rate > best.refresh_rate) then
+      best = m
     end
   end
+
+  if best then
+    hl.monitor({
+      output = mon.name,
+      mode = string.format("%dx%d@%.2f", best.width, best.height, best.refresh_rate),
+      position = position,
+      scale = omarchy_monitor_scale,
+    })
+  end
 end
+
+for _, mon in ipairs(hl.get_monitors()) do
+  pin_monitor(mon)
+end
+
+hl.on("monitor.added", function(mon)
+  pin_monitor(mon)
+end)
 
 -- 5 workspaces per monitor, in the order picked: main gets 1-5,
 -- the next monitor 6-10, and so on. Keeps the top bar's per-monitor
