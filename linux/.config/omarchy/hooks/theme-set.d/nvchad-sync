@@ -1,0 +1,49 @@
+#!/bin/bash
+# Called by omarchy-hook (see /usr/share/omarchy's theme-set.d docs) with
+# the new theme's slug as $1. Maps it to an NvChad base46 theme name, writes
+# that to a state file NvChad's chadrc.lua reads on startup
+# (common/.config/nvim/lua/omarchy_theme.lua), then nudges any already-running
+# Neovim instances to hot-reload via the OmarchyReloadTheme() global defined
+# in common/.config/nvim/init.lua.
+set -euo pipefail
+
+THEME_SLUG=$1
+STATE_FILE="$HOME/.local/state/nvim/omarchy_theme"
+COLORS_TOML="$HOME/.local/state/omarchy/current/theme/colors.toml"
+
+# Only stock Omarchy themes with an equivalent NvChad base46 theme are
+# mapped by name; anything else falls back to NvChad's default-dark/light
+# based on the theme's declared mode.
+declare -A THEME_MAP=(
+  [catppuccin]=catppuccin
+  [catppuccin-latte]=catppuccin-latte
+  [everforest]=everforest
+  [flexoki-light]=flexoki-light
+  [gruvbox]=gruvbox
+  [kanagawa]=kanagawa
+  [nord]=nord
+  [rose-pine]=rosepine
+  [tokyo-night]=tokyonight
+)
+
+nvchad_theme=${THEME_MAP[$THEME_SLUG]:-}
+
+if [[ -z $nvchad_theme ]]; then
+  mode=dark
+  if [[ -f $COLORS_TOML ]]; then
+    mode=$(grep -m1 '^mode' "$COLORS_TOML" | sed -E 's/^mode *= *"([^"]*)".*/\1/')
+  fi
+  if [[ $mode == light ]]; then
+    nvchad_theme=default-light
+  else
+    nvchad_theme=default-dark
+  fi
+fi
+
+mkdir -p "$(dirname "$STATE_FILE")"
+echo "$nvchad_theme" >"$STATE_FILE"
+
+for sock in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/nvim.*.0; do
+  [[ -S $sock ]] || continue
+  nvim --server "$sock" --remote-send '<C-\><C-n>:lua pcall(OmarchyReloadTheme)<CR>' >/dev/null 2>&1 || true
+done
