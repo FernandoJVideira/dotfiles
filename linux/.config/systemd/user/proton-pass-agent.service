@@ -1,8 +1,12 @@
 [Unit]
 Description=Proton Pass SSH Agent
-StartLimitIntervalSec=0
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
+ExecStartPre=/bin/sh -c 'pass-cli info >/dev/null 2>&1 || pass-cli login --pat "$(cat %h/.config/proton-pass-cli/pat)"'
 ExecStart=/usr/bin/pass-cli ssh-agent start --create-new-identities SSH --socket-path %h/.ssh/proton-pass-agent.sock
 Restart=on-failure
 RestartSec=5

@@ -32,3 +32,5 @@ alias yayu='yay -Syu'
 
 # Search AUR + official repos
 alias yays='yay -Ss'
+
+alias zed='zeditor'
