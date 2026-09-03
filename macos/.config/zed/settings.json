@@ -1,7 +1,25 @@
 {
+  "ssh_connections": [
+    {
+      "host": "nexus.fernandovideira.com",
+      "args": [],
+      "projects": [
+        {
+          "paths": [
+            "/home/fvideira/deployment"
+          ]
+        },
+        {
+          "paths": [
+            "/var/lib/casaos/apps/gitea"
+          ]
+        }
+      ]
+    }
+  ],
   "theme": "Gruvbox Dark",
   "terminal": {
-    "font_family": "JetBrainsMono Nerd Font",
+    "font_family": "Hack Nerd Font Mono",
     "font_size": 14.0
   }
 }
