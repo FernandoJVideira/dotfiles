@@ -18,7 +18,7 @@ symlink_dotfiles(){
         log "Linking $target -> $file"
 
         ln -sf "$file" "$target"
-    done < <(find "$dir" -type f -not -name "*.sh" -not -name ".DS_Store" -print0)
+    done < <(find "$dir" -type f -not -name "install.sh" -not -name "macos-defaults.sh" -not -name "configure-monitors.sh" -not -name ".DS_Store" -print0)
 }
 
 unlink_dotfiles(){
@@ -34,5 +34,5 @@ unlink_dotfiles(){
             log "Unlinking $target (was -> $file)"
             rm -f "$target"
         fi
-    done < <(find "$dir" -type f -not -name "*.sh" -not -name ".DS_Store" -print0)
+    done < <(find "$dir" -type f -not -name "install.sh" -not -name "macos-defaults.sh" -not -name "configure-monitors.sh" -not -name ".DS_Store" -print0)
 }
