@@ -2,8 +2,8 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/symlink.sh"
-source "$SCRIPT_DIR/../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/symlink.sh"
+source "$SCRIPT_DIR/../../lib/log.sh"
 
 if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
   log "Adding the omarchy edge repo..."
@@ -74,14 +74,14 @@ OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --force --first-ins
 
 log "Unlinking dotfiles-managed configs before Omarchy's config reset..."
 unlink_dotfiles "$SCRIPT_DIR"
-unlink_dotfiles "$SCRIPT_DIR/../common"
+unlink_dotfiles "$SCRIPT_DIR/../../common"
 
 log "Seeding Omarchy's shipped configs..."
 omarchy-reinstall-configs
 
 log "Relinking dotfiles-managed configs Omarchy's reset just overwrote..."
 symlink_dotfiles "$SCRIPT_DIR"
-symlink_dotfiles "$SCRIPT_DIR/../common"
+symlink_dotfiles "$SCRIPT_DIR/../../common"
 
 log "Reloading Hyprland..."
 hyprctl reload
@@ -100,9 +100,23 @@ done <<< "$selected_webapps"
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop ghostty
+sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli
+# Tools the shared zsh config assumes (no-ops if Omarchy already ships them)
+sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 omarchy-install-editor-zed
 yay -S --noconfirm brave-origin-bin proton-pass-cli
+# Same call omarchy-install-service-spotify makes (its launch keybind also
+# expects /usr/bin/spotify), just without the launch-after-install step.
+omarchy-pkg-add spotify
+
+# kitty as the default terminal (Ghostty stays installed, just not default).
+# Omarchy already has first-class kitty theming (default/themed/kitty.conf.tpl,
+# and bin/omarchy-theme-set's INSTALLED_THEME_DENIED list both name it
+# alongside alacritty/foot/ghostty/vscode) - it just hadn't been installed
+# before, so re-apply the current theme now to generate its themed colors file.
+log "Re-applying the current Omarchy theme to generate kitty's themed config..."
+CURRENT_OMARCHY_THEME="$(basename "$(readlink -f "$HOME/.local/state/omarchy/current/theme")")"
+omarchy-theme-set "$CURRENT_OMARCHY_THEME"
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
@@ -137,4 +151,4 @@ log "Enabling Proton Pass SSH agent..."
 systemctl --user enable --now proton-pass-agent.service
 
 log "Running shared dotfiles installer..."
-"$SCRIPT_DIR/../common/install.sh"
+"$SCRIPT_DIR/../../common/install.sh"

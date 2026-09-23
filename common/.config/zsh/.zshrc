@@ -54,8 +54,17 @@ autoload -Uz compinit
 # Initialize completion with cached metadata file
 compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
 
-# Enable interactive completion menu selection
-zstyle ':completion:*' menu select
+if (( $+commands[fzf] )); then
+  # fzf-tab draws the menu, so zsh's own must be off (it conflicts otherwise)
+  zstyle ':completion:*' menu no
+  # fzf-tab: preview directory contents when completing cd / zoxide (z, j)
+  zstyle ':fzf-tab:complete:(cd|z|zi|__zoxide_z):*' fzf-preview 'eza -1 --color=always $realpath'
+  # Group switching keys ('<' and '>') so they don't clash with typing
+  zstyle ':fzf-tab:*' switch-group '<' '>'
+else
+  # No fzf on this machine: keep zsh's own interactive menu (fzf-tab isn't loaded)
+  zstyle ':completion:*' menu select
+fi
 
 # Make completion case-insensitive
 # Example: "doc" can complete to "Documents"
@@ -75,6 +84,12 @@ fi
 if [[ -f /usr/share/fzf/key-bindings.zsh ]]; then
   source /usr/share/fzf/key-bindings.zsh
   source /usr/share/fzf/completion.zsh
+fi
+
+# Any other distro (Fedora/Nobara keeps its shell integration under
+# /usr/share/fzf/shell/, not the Arch path above): fzf >= 0.48 can emit it itself
+if (( ! $+functions[fzf-history-widget] )) && (( $+commands[fzf] )); then
+  source <(fzf --zsh)
 fi
 
 # =========================================================

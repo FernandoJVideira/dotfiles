@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Silence (or un-silence) crash notifications for ONE program.
+#   nobara-crash-mute <program>        mute it
+#   nobara-crash-mute <program> off    let it notify again
+#   nobara-crash-mute                  list what's muted
+# <program> is the binary's basename (or full path) as shown in the
+# notification title; matching is exact, so an interpreter-run program is keyed
+# as the interpreter (muting python3 mutes every python3 crash).
+set -euo pipefail
+
+MUTE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/nobara-crash/muted"
+
+if [[ $# -eq 0 ]]; then
+  [[ -s $MUTE_FILE ]] && cat "$MUTE_FILE" || echo "nothing muted"
+  exit 0
+fi
+
+name=${1##*/}
+mkdir -p "$(dirname "$MUTE_FILE")"
+touch "$MUTE_FILE"
+
+if [[ ${2:-} == off ]]; then
+  # rewrite without exact matches; grep -v exits 1 when nothing is left
+  grep -vxF -- "$name" "$MUTE_FILE" > "$MUTE_FILE.tmp" || true
+  mv "$MUTE_FILE.tmp" "$MUTE_FILE"
+  echo "unmuted: $name"
+else
+  grep -qxF -- "$name" "$MUTE_FILE" || echo "$name" >> "$MUTE_FILE"
+  echo "muted: $name  (undo: nobara-crash-mute $name off)"
+fi

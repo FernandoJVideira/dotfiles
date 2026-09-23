@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Hand a crashed process to Claude Code, with the diagnose-crash skill.
+# Clicked from the "Process crashed" notification, or run by hand against any
+# PID from `coredumpctl list`. Nobara counterpart of `omarchy agent crash`:
+# the method lives in the skill (~/.claude/skills/diagnose-crash), this only
+# gathers the facts and opens Claude in a terminal.
+#   nobara-crash-diagnose <pid> [comm] [exe] [signal]
+set -euo pipefail
+
+pid=${1:?usage: nobara-crash-diagnose <pid> [comm] [exe] [signal]}
+if [[ ! $pid =~ ^[0-9]+$ ]]; then
+  echo "Not a PID: $pid   (see: coredumpctl list)" >&2
+  exit 1
+fi
+comm=${2:-unknown}; exe=${3:-unknown}; signal=${4:-unknown}
+
+# Started from a systemd user service, so PATH is minimal and there is no
+# display: add where mise/pipx-style tools live, and find the Wayland socket.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+if [[ -z ${WAYLAND_DISPLAY:-} ]]; then
+  for sock in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/wayland-*; do
+    [[ -S $sock ]] && { export WAYLAND_DISPLAY=${sock##*/}; break; }
+  done
+fi
+
+if ! command -v claude >/dev/null; then
+  notify-send --urgency critical "Crash diagnosis" "claude isn't on PATH - install it (mise use --global claude-code)." || true
+  echo "claude not found on PATH" >&2
+  exit 1
+fi
+
+# Looked up live so a hand-run PID still gets a timestamp; a rotated-away
+# core only costs the timestamp.
+when=$(coredumpctl list "$pid" --no-pager --no-legend 2>/dev/null | tail -1 | cut -d' ' -f1-4) || true
+when=${when:-unknown}
+
+# What coredumpctl already knows (command line, unit, package version, and the
+# crashing thread's top frames), so Claude starts from the evidence instead of
+# re-fetching it. The per-library "Module ..." lines are pages of noise; a
+# rotated-away core just leaves this empty.
+details=$(coredumpctl info "$pid" --no-pager 2>/dev/null | grep -v -E '^[[:space:]]+Module ' | head -n 60) || true
+
+# Claude asks to trust a directory on first use, and won't remember trust for
+# $HOME - run from a dedicated one.
+workdir="${XDG_STATE_HOME:-$HOME/.local/state}/nobara-crash"
+mkdir -p "$workdir"
+promptfile=$(mktemp "$workdir/prompt.XXXXXX")
+
+cat > "$promptfile" <<PROMPT
+A process crashed on this Nobara machine and I want to know why.
+
+What systemd-coredump recorded:
+  process:  $comm
+  PID:      $pid
+  binary:   $exe
+  signal:   $signal
+  time:     $when
+
+coredumpctl info $pid (library list trimmed; the full core is still in coredumpctl):
+${details:-  (not available - the core may have been rotated away)}
+
+Use the diagnose-crash skill: it covers how to investigate on this machine
+(Fedora, coredumpctl, debuginfod, dnf history, Hyprland/Quickshell specifics)
+and what to report. If your harness has no skill mechanism, read and follow
+~/.claude/skills/diagnose-crash/SKILL.md instead. Diagnose only - don't fix or
+change anything without asking me.
+PROMPT
+
+exec "${NOBARA_CRASH_TERMINAL:-kitty}" --class crash-diagnosis --title "Crash diagnosis: $comm" \
+  --directory "$workdir" \
+  bash -c 'claude "$(cat "$1")"; rm -f "$1"' _ "$promptfile"
