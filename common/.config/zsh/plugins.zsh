@@ -25,7 +25,7 @@ zplugin-update() {
 
 # fzf-tab replaces zsh's completion menu with fzf. It has to load after compinit
 # (plugins.zsh is sourced after it) and before anything that wraps ZLE widgets.
-_zplugin_load Aloxaf fzf-tab
+(( $+commands[fzf] )) && _zplugin_load Aloxaf fzf-tab
 _zplugin_load zsh-users zsh-autosuggestions
 _zplugin_load zsh-users zsh-history-substring-search
 _zplugin_load jeffreytse zsh-vi-mode
