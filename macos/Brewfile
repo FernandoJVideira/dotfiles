@@ -75,6 +75,8 @@ cask "element"
 cask "font-jetbrains-mono-nerd-font"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
+# Default terminal - fast, GPU-accelerated, kept in sync with the Nobara/Arch style
+cask "kitty"
 # Web browser
 cask "google-chrome@dev"
 # Chromium-based web browser
