@@ -60,8 +60,9 @@ else
 fi
 
 # Install workstation tools (mirrors linux/arch/install.sh's "go
-# element-desktop ghostty" + zed). go is in Fedora's own repos; Ghostty and
-# Zed aren't - both projects' own docs point at the Terra repo for Fedora.
+# element-desktop" + zed; Ghostty is deliberately not installed here - kitty is
+# the terminal on this machine). go is in Fedora's own repos; Zed isn't - its
+# project docs point at the Terra repo for Fedora.
 #
 # Nobara's own `nobara-repos` package already owns and permanently claims
 # /etc/yum.repos.d/terra.repo (confirmed live via the exact rpm conflict
@@ -72,7 +73,7 @@ fi
 # restore it by reinstalling nobara-repos, not by installing terra-release.
 # For non-Nobara Fedora-family systems without nobara-repos, fall back to
 # the upstream bootstrap.
-log "Installing workstation tools (Ghostty, Zed, Go)..."
+log "Installing workstation tools (Zed, Go)..."
 if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
   if rpm -q nobara-repos &>/dev/null; then
     log "Restoring Nobara's own terra.repo (owned by nobara-repos)..."
@@ -84,7 +85,7 @@ fi
 # spotify-launcher (also from Terra) is a small client that fetches Spotify's
 # official package itself on first run, since Spotify isn't in Fedora's repos.
 # discord is also packaged in Terra (Fedora's own repos can't ship it).
-sudo dnf install -y --skip-unavailable ghostty zed golang spotify-launcher discord
+sudo dnf install -y --skip-unavailable zed golang spotify-launcher discord
 
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
@@ -103,8 +104,8 @@ for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
-if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null || ! rpm -q discord &>/dev/null; then
-  log "WARNING: ghostty, zed, spotify-launcher and/or discord still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
+if ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null || ! rpm -q discord &>/dev/null; then
+  log "WARNING: zed, spotify-launcher and/or discord still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search zed' by hand."
 fi
 
 # Proton Pass CLI (Arch gets it from the AUR, macOS from Homebrew). No Fedora
@@ -226,8 +227,8 @@ fi
 
 # apps.terminal drives the launcher's "run in terminal" and "sudo <cmd>"
 # actions (services/LauncherSearch.qml in end4-pC/illogical-impulse).
-# Reverted back to the upstream default (kitty -1) after trying Ghostty as
-# default - Ghostty stays installed and available, just not the default.
+# Left at the upstream default (kitty -1); Ghostty was tried as default and
+# then dropped from this script's package list.
 # appearance.wallpaperTheming.enableTerminal stays on regardless of which
 # terminal is default: it's the generic live-OSC-theming toggle
 # (scripts/colors/applycolor.sh's apply_term(), which handles kitty and any
