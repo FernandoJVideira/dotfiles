@@ -20,6 +20,8 @@ brew "fastfetch"
 brew "fd"
 # Command-line fuzzy finder written in Go
 brew "fzf"
+# GitHub from the command line
+brew "gh"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Database migrations CLI tool
