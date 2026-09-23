@@ -24,6 +24,8 @@ export GPG_TTY=$(tty)
 
 # ---------- Starship ----------
 export STARSHIP_CONFIG="$ZDOTDIR/starship.toml"
+# macOS ships a Gruvbox-colored variant (only symlinked there), so no OS check needed
+[[ -f "$ZDOTDIR/starship.macos.toml" ]] && export STARSHIP_CONFIG="$ZDOTDIR/starship.macos.toml"
 
 # ---------- PATH ----------
 # Personal binaries/scripts
