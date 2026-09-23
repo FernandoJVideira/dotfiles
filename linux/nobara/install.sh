@@ -44,6 +44,18 @@ sed 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release > "$ILLOGICAL_IMPULSE_DIR/
 log "Running illogical-impulse's installer (installs Hyprland, Quickshell, and every other dependency end4-pC needs)..."
 "$ILLOGICAL_IMPULSE_DIR/setup" install
 
+# Install workstation tools (mirrors linux/arch/install.sh's "go
+# element-desktop ghostty" + zed). go is in Fedora's own repos; Ghostty and
+# Zed aren't (neither ships an official Fedora package as of writing - both
+# projects' own docs point at the same Terra repo for Fedora, so one repo
+# enable covers both: https://ghostty.org/docs/install/binary#fedora,
+# https://zed.dev/docs/linux). --nogpgcheck applies only to installing
+# terra-release itself (the package that carries Terra's own GPG key) - this
+# is Terra's own documented bootstrap step, the same pattern RPM Fusion uses.
+log "Installing workstation tools (Ghostty, Zed, Go)..."
+sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+sudo dnf install -y ghostty zed golang
+
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 
