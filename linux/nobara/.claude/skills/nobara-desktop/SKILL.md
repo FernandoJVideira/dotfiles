@@ -87,8 +87,11 @@ restart widgets. `hyprland/keybinds.lua` is the full list.
 - **Never install Terra's `terra-release` and don't delete
   `/etc/yum.repos.d/terra.repo`.** That file belongs to Nobara's `nobara-repos`;
   if it goes missing restore it with `sudo dnf reinstall nobara-repos`.
-- **dnf5 exits 0 even when a package name doesn't resolve** - it installs the
-  rest and only warns. Verify installs with `rpm -q <pkg>`, never the exit code.
+- **dnf5 aborts the whole transaction when one name doesn't resolve** ("No match
+  for argument: ...") - nothing else on that command line gets installed. Package
+  names drift between Fedora releases (e.g. `systemd-coredump` no longer exists;
+  it's part of `systemd`). Check a name before scripting it; `--skip-unavailable`
+  turns the abort into a skip, and `rpm -q <pkg>` confirms what really installed.
 - Do not hand-edit anything in `~/.config` that is a symlink into the dotfiles
   repo without saying so - it edits the repo. Persistent changes go in
   `linux/nobara/` (or `common/` if shared with the other machines) and get

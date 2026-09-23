@@ -84,18 +84,22 @@ fi
 # spotify-launcher (also from Terra) is a small client that fetches Spotify's
 # official package itself on first run, since Spotify isn't in Fedora's repos.
 # discord is also packaged in Terra (Fedora's own repos can't ship it).
-sudo dnf install -y ghostty zed golang spotify-launcher discord
+sudo dnf install -y --skip-unavailable ghostty zed golang spotify-launcher discord
 
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
 # start). illogical-impulse only brings eza/starship (via its COPRs), not these.
-sudo dnf install -y gh   # GitHub CLI, in Fedora's own repos
+sudo dnf install -y --skip-unavailable gh   # GitHub CLI, in Fedora's own repos
 rpm -q gh &>/dev/null || log "WARNING: gh not installed."
 
 # Crash watcher deps too: libnotify (notify-send), gdb (backtraces for the
-# diagnose-crash skill), systemd-coredump (usually already there on Nobara).
-sudo dnf install -y fzf zoxide fd-find bat fastfetch jq libnotify gdb systemd-coredump
-for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb systemd-coredump; do
+# diagnose-crash skill). There's no systemd-coredump package on current Fedora -
+# it was folded into `systemd` itself (confirmed live: dnf reports "No match for
+# argument"). dnf5 aborts the WHOLE transaction on an unavailable name unless
+# --skip-unavailable is given, so use it: one bad name then just warns below
+# instead of taking every other package (and this script, under set -e) with it.
+sudo dnf install -y --skip-unavailable fzf zoxide fd-find bat fastfetch jq libnotify gdb
+for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
@@ -193,6 +197,9 @@ fi
 # Nobara counterpart of Omarchy's). The scripts in ~/.local/bin and the unit
 # were just symlinked above. Reading the system journal needs wheel/adm/
 # systemd-journal - the service would otherwise fail in a retry loop.
+if ! command -v coredumpctl >/dev/null || ! grep -q systemd-coredump /proc/sys/kernel/core_pattern; then
+  log "WARNING: systemd-coredump doesn't look active (coredumpctl missing or kernel.core_pattern doesn't pipe to it) - the crash watcher will have nothing to report."
+fi
 if ! id -nG | tr ' ' '\n' | grep -qxE 'wheel|adm|systemd-journal'; then
   log "WARNING: $USER isn't in wheel/adm/systemd-journal, so the crash watcher can't read the journal - run: sudo usermod -aG systemd-journal $USER (then log out and in)."
 fi
