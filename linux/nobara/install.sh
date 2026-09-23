@@ -153,6 +153,18 @@ else
   log "illogical-impulse config.json not found yet (created on first Quickshell launch) - skipping apps.terminal/terminal theming, rerun this script after logging into Hyprland once."
 fi
 
+# illogical-impulse's kitty.conf sets `shell fish`, so kitty windows open fish and
+# never load this repo's zsh config (aliases, prompt, fzf-tab...). zsh is the
+# login shell here (chsh above), so point kitty at it. Patched in place rather
+# than replacing the file, so ii's keybinds and theme include stay intact;
+# --follow-symlinks in case ii links it instead of copying. Only affects
+# NEW kitty windows.
+KITTY_CONF="$HOME/.config/kitty/kitty.conf"
+if [[ -f "$KITTY_CONF" ]] && grep -q '^shell fish' "$KITTY_CONF"; then
+  log "Pointing kitty at zsh instead of fish so the zsh aliases/prompt load..."
+  sed -i --follow-symlinks 's/^shell fish$/shell zsh/' "$KITTY_CONF"
+fi
+
 # Custom Hyprland overrides, in the "custom" folder illogical-impulse's own
 # hyprland.lua sources on top of its defaults (dotfiles-update-friendly -
 # survives ./setup install / exp-update reruns, unlike editing the upstream
