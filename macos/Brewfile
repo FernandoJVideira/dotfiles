@@ -20,6 +20,8 @@ brew "fastfetch"
 brew "fd"
 # Command-line fuzzy finder written in Go
 brew "fzf"
+# GitHub from the command line
+brew "gh"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Database migrations CLI tool
@@ -72,9 +74,13 @@ cask "displaylink"
 cask "dotnet-sdk"
 # Matrix collaboration client
 cask "element"
+# Voice/text chat (native app: better screen-share than the webapp)
+cask "discord"
 cask "font-jetbrains-mono-nerd-font"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
+# Default terminal - fast, GPU-accelerated, kept in sync with the Nobara/Arch style
+cask "kitty"
 # Web browser
 cask "google-chrome@dev"
 # Chromium-based web browser

@@ -6,7 +6,7 @@ import Quickshell.Hyprland
 // "Custom user modules") that shows only the workspace range assigned to
 // the monitor this bar surface is rendered on, instead of the same global
 // 1-5(-10) range on every screen. Wired into ~/.config/omarchy/shell.json
-// by linux/configure-monitors.sh, which also supplies the per-monitor
+// by linux/arch/configure-monitors.sh, which also supplies the per-monitor
 // ranges via this widget's `settings.ranges` (screen name -> workspace id
 // array). Deliberately a bare Item rather than extending the first-party
 // qs.Ui.BarWidget/qs.Commons.Style helpers those internal widgets use —

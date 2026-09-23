@@ -1,0 +1,17 @@
+[Unit]
+Description=Proton Pass SSH Agent
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Same as linux/arch's unit except pass-cli lives in ~/.local/bin here (Proton's
+# official installer, no Fedora package exists) instead of /usr/bin (AUR package).
+[Service]
+ExecStartPre=/bin/sh -c '%h/.local/bin/pass-cli info >/dev/null 2>&1 || %h/.local/bin/pass-cli login --pat "$(cat %h/.config/proton-pass-cli/pat)"'
+ExecStart=%h/.local/bin/pass-cli ssh-agent start --create-new-identities SSH --socket-path %h/.ssh/proton-pass-agent.sock
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
