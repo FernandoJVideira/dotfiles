@@ -44,11 +44,11 @@ outer.top = [{ monitor."built-in" = 18 }, { monitor."main" = 48 }, 48]
 # ---------- MAIN KEY BINDINGS -----------
 
 [mode.main.binding]
-cmd-enter = 'exec-and-forget open -na ghostty'
+cmd-enter = 'exec-and-forget open -na kitty'
 cmd-shift-w = 'exec-and-forget open -na Orion'
 cmd-shift-e = 'exec-and-forget open -na Zed'
 alt-m = 'new-window-or-open Spotify'
-alt-shift-p = 'open-terminal Ghostty btop'
+alt-shift-p = 'open-terminal kitty btop'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace
 ctrl-1 = 'workspace 1'
@@ -120,7 +120,7 @@ if.app-id = 'com.jetbrains.goland'
 run = ['move-node-to-workspace 1']
 
 [[on-window-detected]]
-if.app-id='com.mitchellh.ghostty'
+if.app-id='net.kovidgoyal.kitty'
 run= [
   'move-node-to-workspace 2',
 ]
