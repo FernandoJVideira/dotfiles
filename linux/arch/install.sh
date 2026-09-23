@@ -100,9 +100,18 @@ done <<< "$selected_webapps"
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop ghostty
+sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty
 omarchy-install-editor-zed
 yay -S --noconfirm brave-origin-bin proton-pass-cli
+
+# kitty as the default terminal (Ghostty stays installed, just not default).
+# Omarchy already has first-class kitty theming (default/themed/kitty.conf.tpl,
+# and bin/omarchy-theme-set's INSTALLED_THEME_DENIED list both name it
+# alongside alacritty/foot/ghostty/vscode) - it just hadn't been installed
+# before, so re-apply the current theme now to generate its themed colors file.
+log "Re-applying the current Omarchy theme to generate kitty's themed config..."
+CURRENT_OMARCHY_THEME="$(basename "$(readlink -f "$HOME/.local/state/omarchy/current/theme")")"
+omarchy-theme-set "$CURRENT_OMARCHY_THEME"
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
