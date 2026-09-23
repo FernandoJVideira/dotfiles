@@ -167,6 +167,21 @@ else
   printf -- '-- Personal Hyprland variable overrides (see ~/.config/hypr/hyprland/variables.lua for defaults)\nterminal = "ghostty"\n' > "$CUSTOM_VARIABLES_LUA"
 fi
 
+# GTK single-instance mode (recommended by GTK, and how Ghostty avoids a
+# full cold GTK startup on every launch - unlike kitty -1's daemon-reuse,
+# there's no flag for this, it's a config option) is on by default, but
+# Ghostty auto-disables it if it thinks it's launched from a CLI context.
+# However Hyprland's exec_cmd launches it seems to trip that heuristic -
+# force it on explicitly instead of relying on the heuristic.
+# https://ghostty.org/docs/help/gtk-single-instance
+GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
+GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
+mkdir -p "$GHOSTTY_CONFIG_DIR"
+if [[ ! -f "$GHOSTTY_CONFIG" ]] || ! grep -q 'gtk-single-instance' "$GHOSTTY_CONFIG"; then
+  log "Forcing Ghostty's GTK single-instance mode on (fixes slow SUPER+Return launches)..."
+  echo 'gtk-single-instance = true' >> "$GHOSTTY_CONFIG"
+fi
+
 CUSTOM_GENERAL_LUA="$HYPR_CUSTOM_DIR/general.lua"
 if [[ ! -f "$CUSTOM_GENERAL_LUA" ]] || ! grep -q 'kb_layout' "$CUSTOM_GENERAL_LUA"; then
   log "Setting keyboard layout to pt..."
