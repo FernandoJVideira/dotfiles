@@ -32,6 +32,15 @@ else
   git clone "$ILLOGICAL_IMPULSE_REPO" "$ILLOGICAL_IMPULSE_DIR"
 fi
 
+# illogical-impulse's own distro detector (sdata/lib/dist-determine.sh) only
+# does an exact match against ID_LIKE=="fedora". Nobara reports
+# ID_LIKE="rhel centos fedora" (multi-value), which misses that check and
+# falls through to its Nix-based fallback installer - still WIP upstream and
+# not what we want. It reads a REPO_ROOT/os-release override file first, if
+# present, so write one with ID_LIKE corrected to force the dnf-based path.
+log "Overriding illogical-impulse's distro detection for Nobara's multi-value ID_LIKE..."
+sed 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release > "$ILLOGICAL_IMPULSE_DIR/os-release"
+
 log "Running illogical-impulse's installer (installs Hyprland, Quickshell, and every other dependency end4-pC needs)..."
 "$ILLOGICAL_IMPULSE_DIR/setup" install
 
