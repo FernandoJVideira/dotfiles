@@ -129,21 +129,18 @@ if [[ -f "$VARIABLES_LUA" ]] && grep -q 'hl\.env("qsConfig", "ii")' "$VARIABLES_
 fi
 
 # apps.terminal drives the launcher's "run in terminal" and "sudo <cmd>"
-# actions (services/LauncherSearch.qml in end4-pC/illogical-impulse); it
-# defaults to kitty. appearance.wallpaperTheming.enableTerminal (defaults to
-# true, but set it explicitly to be sure) gates scripts/colors/applycolor.sh's
-# apply_anyterm(), which pushes standard OSC color escape sequences to every
-# open /dev/pts/* device on every theme change - that's terminal-agnostic
-# (no per-app matugen template needed) and Ghostty, a modern spec-compliant
-# terminal, already picks it up. This config.json is shared by ii and end4-pC
-# alike (Directories.qml hardcodes the "illogical-impulse" folder name
-# regardless of which `qs -c` config is active), so patch it here rather
-# than per-shell.
+# actions (services/LauncherSearch.qml in end4-pC/illogical-impulse).
+# Reverted back to the upstream default (kitty -1) after trying Ghostty as
+# default - Ghostty stays installed and available, just not the default.
+# appearance.wallpaperTheming.enableTerminal stays on regardless of which
+# terminal is default: it's the generic live-OSC-theming toggle
+# (scripts/colors/applycolor.sh's apply_term(), which handles kitty and any
+# other open terminal), not something specific to either terminal.
 SHELL_CONFIG="$HOME/.config/illogical-impulse/config.json"
 if [[ -f "$SHELL_CONFIG" ]]; then
-  log "Setting Ghostty as the launcher's terminal app and enabling live terminal theming..."
+  log "Reverting the launcher's terminal app to kitty, keeping live terminal theming on..."
   sudo dnf install -y jq
-  jq '.apps.terminal = "ghostty" | .appearance.wallpaperTheming.enableTerminal = true' "$SHELL_CONFIG" > "$SHELL_CONFIG.tmp" && mv "$SHELL_CONFIG.tmp" "$SHELL_CONFIG"
+  jq '.apps.terminal = "kitty -1" | .appearance.wallpaperTheming.enableTerminal = true' "$SHELL_CONFIG" > "$SHELL_CONFIG.tmp" && mv "$SHELL_CONFIG.tmp" "$SHELL_CONFIG"
 else
   log "illogical-impulse config.json not found yet (created on first Quickshell launch) - skipping apps.terminal/terminal theming, rerun this script after logging into Hyprland once."
 fi
@@ -151,35 +148,17 @@ fi
 # Custom Hyprland overrides, in the "custom" folder illogical-impulse's own
 # hyprland.lua sources on top of its defaults (dotfiles-update-friendly -
 # survives ./setup install / exp-update reruns, unlike editing the upstream
-# files directly): Ghostty for SUPER+Return/T (the shared `terminal` var,
-# which defaults to a fallback chain that doesn't include ghostty at all -
-# see hyprland/variables.lua), and pt keyboard layout.
+# files directly): pt keyboard layout. (SUPER+Return's `terminal` var
+# override was removed here too - its upstream default fallback chain
+# already resolves to kitty since foot isn't installed, so no override is
+# needed to get kitty back.)
 HYPR_CUSTOM_DIR="$HOME/.config/hypr/custom"
 mkdir -p "$HYPR_CUSTOM_DIR"
 
 CUSTOM_VARIABLES_LUA="$HYPR_CUSTOM_DIR/variables.lua"
-if [[ -f "$CUSTOM_VARIABLES_LUA" ]] && grep -q '^terminal = ' "$CUSTOM_VARIABLES_LUA"; then
-  sed -i 's|^terminal = .*|terminal = "ghostty"|' "$CUSTOM_VARIABLES_LUA"
-elif [[ -f "$CUSTOM_VARIABLES_LUA" ]]; then
-  echo 'terminal = "ghostty"' >> "$CUSTOM_VARIABLES_LUA"
-else
-  log "Setting Ghostty as the SUPER+Return terminal..."
-  printf -- '-- Personal Hyprland variable overrides (see ~/.config/hypr/hyprland/variables.lua for defaults)\nterminal = "ghostty"\n' > "$CUSTOM_VARIABLES_LUA"
-fi
-
-# GTK single-instance mode (recommended by GTK, and how Ghostty avoids a
-# full cold GTK startup on every launch - unlike kitty -1's daemon-reuse,
-# there's no flag for this, it's a config option) is on by default, but
-# Ghostty auto-disables it if it thinks it's launched from a CLI context.
-# However Hyprland's exec_cmd launches it seems to trip that heuristic -
-# force it on explicitly instead of relying on the heuristic.
-# https://ghostty.org/docs/help/gtk-single-instance
-GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
-GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config"
-mkdir -p "$GHOSTTY_CONFIG_DIR"
-if [[ ! -f "$GHOSTTY_CONFIG" ]] || ! grep -q 'gtk-single-instance' "$GHOSTTY_CONFIG"; then
-  log "Forcing Ghostty's GTK single-instance mode on (fixes slow SUPER+Return launches)..."
-  echo 'gtk-single-instance = true' >> "$GHOSTTY_CONFIG"
+if [[ -f "$CUSTOM_VARIABLES_LUA" ]] && grep -q '^terminal = "ghostty"$' "$CUSTOM_VARIABLES_LUA"; then
+  log "Removing the SUPER+Return terminal override (reverting to the upstream default, kitty)..."
+  sed -i '/^terminal = "ghostty"$/d' "$CUSTOM_VARIABLES_LUA"
 fi
 
 CUSTOM_GENERAL_LUA="$HYPR_CUSTOM_DIR/general.lua"
