@@ -105,6 +105,9 @@ sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 omarchy-install-editor-zed
 yay -S --noconfirm brave-origin-bin proton-pass-cli
+# Same call omarchy-install-service-spotify makes (its launch keybind also
+# expects /usr/bin/spotify), just without the launch-after-install step.
+omarchy-pkg-add spotify
 
 # kitty as the default terminal (Ghostty stays installed, just not default).
 # Omarchy already has first-class kitty theming (default/themed/kitty.conf.tpl,
