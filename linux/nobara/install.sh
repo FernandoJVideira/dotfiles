@@ -68,7 +68,14 @@ fi
 # terra-release itself (the package that carries Terra's own GPG key) - this
 # is Terra's own documented bootstrap step, the same pattern RPM Fusion uses.
 log "Installing workstation tools (Ghostty, Zed, Go)..."
-sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+# terra-release installs a permanent [terra] repo definition in
+# /etc/yum.repos.d/ once, with its own trusted GPG key. Only add the
+# ephemeral --repofrompath bootstrap repo (also id "terra") if that hasn't
+# happened yet - redoing it on every rerun collides with the now-permanent
+# repo of the same id.
+if ! rpm -q terra-release &>/dev/null; then
+  sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+fi
 sudo dnf install -y ghostty zed golang
 
 log "Symlinking Nobara-specific dotfiles..."
