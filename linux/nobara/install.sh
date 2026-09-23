@@ -295,6 +295,30 @@ hl.config({
 EOF
 fi
 
+# 5 workspaces per monitor (DP-1 = 1-5, HDMI-A-1 = 6-10) plus SUPER+SHIFT+1..0
+# to move a window there. SUPER+1..5 then act on the focused monitor's group
+# (ii's workspace_in_group with a group size of 5).
+CUSTOM_KEYBINDS_LUA="$HYPR_CUSTOM_DIR/keybinds.lua"
+if [[ ! -f "$CUSTOM_KEYBINDS_LUA" ]] || ! grep -q 'workspaceGroupSize = 5' "$CUSTOM_KEYBINDS_LUA"; then
+  log "Setting up 5 workspaces per monitor and SUPER+SHIFT+N window moves..."
+  cat >> "$CUSTOM_KEYBINDS_LUA" <<'EOF'
+
+-- 5 workspaces per monitor: DP-1 = 1-5, HDMI-A-1 = 6-10 (keys 1-5 act on the focused monitor's group)
+workspaceGroupSize = 5
+for i = 1, 5 do
+    hl.workspace_rule({ workspace = tostring(i), monitor = "DP-1", default = (i == 1), persistent = true })
+    hl.workspace_rule({ workspace = tostring(i + 5), monitor = "HDMI-A-1", default = (i == 1), persistent = true })
+end
+
+-- SUPER+SHIFT+1..0: move the focused window to that slot of the current monitor's group and follow it
+for i = 1, 10 do
+    hl.bind("SUPER + SHIFT + " .. (i % 10), function()
+        hl.dispatch(hl.dsp.window.move({ workspace = workspace_in_group(i) }))
+    end, { description = "Window: Move to workspace " .. i })
+end
+EOF
+fi
+
 # Activate graphical-session.target. Hyprland is started by start-hyprland from
 # the display manager (not uwsm), so nothing brings that target up, and
 # xdg-desktop-portal (Requisite=graphical-session.target) fails with
