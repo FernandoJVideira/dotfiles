@@ -28,7 +28,7 @@ It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it al
 
 ## macOS
 
-`macos/install.sh` installs Xcode's command line tools, Homebrew, then everything in `Brewfile` (CLI tools, Ghostty, sketchybar, and casks like Brave, Notion, Obsidian). Hyprspace, an AeroSpace fork used as the tiling window manager, gets initialized before the dotfile symlinks go down, so my own `hyprspace/config.toml` overwrites whatever default it generates rather than the other way around.
+`macos/install.sh` installs Xcode's command line tools, Homebrew, then everything in `Brewfile` (CLI tools, kitty (Ghostty too), sketchybar, and casks like Brave, Notion, Obsidian). Hyprspace, an AeroSpace fork used as the tiling window manager, gets initialized before the dotfile symlinks go down, so my own `hyprspace/config.toml` overwrites whatever default it generates rather than the other way around.
 
 A few things only happen conditionally:
 
