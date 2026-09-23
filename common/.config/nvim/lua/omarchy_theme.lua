@@ -1,5 +1,5 @@
 -- Resolves the NvChad base46 theme name from the state file that Omarchy's
--- theme-set hook (linux/.config/omarchy/hooks/theme-set.d/nvchad-sync)
+-- theme-set hook (linux/arch/.config/omarchy/hooks/theme-set.d/nvchad-sync)
 -- writes on every `omarchy theme set`. Falls back to "gruvbox" when the
 -- file doesn't exist (fresh install, or on macOS where Omarchy isn't
 -- present at all, so the theme stays pinned to gruvbox instead of
