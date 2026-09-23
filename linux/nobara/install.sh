@@ -87,6 +87,29 @@ if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null; then
   log "WARNING: ghostty and/or zed still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
 fi
 
+# mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
+# whatever's frozen in Fedora's repos - matches Omarchy's own approach on the
+# Arch side, which mise-manages its coding-agent CLI stubs the same way (see
+# manual/17-ai.md in the omarchy repo). Covers neovim, tmux, and node
+# (Vue/Nuxt work) - all present in mise's registry under their plain names.
+if [[ ! -x "$HOME/.local/bin/mise" ]]; then
+  log "Installing mise..."
+  curl https://mise.run | sh
+fi
+log "Installing neovim, tmux, and node via mise..."
+"$HOME/.local/bin/mise" use --global neovim tmux node
+
+# claude-code is a separate call from the group above: its exact registry
+# short name is less certain than neovim/tmux/node (only cross-checked
+# against the registry site's search, not a live `mise registry` listing),
+# and mise's failure mode for one bad name in a multi-tool `use` call isn't
+# verified either - keeping it isolated means a wrong name here can't take
+# neovim/tmux/node down with it.
+log "Installing Claude Code CLI via mise..."
+if ! "$HOME/.local/bin/mise" use --global claude-code; then
+  log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' by hand to find the right name."
+fi
+
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 
