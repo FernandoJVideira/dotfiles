@@ -72,6 +72,8 @@ cask "displaylink"
 cask "dotnet-sdk"
 # Matrix collaboration client
 cask "element"
+# Voice/text chat (native app: better screen-share than the webapp)
+cask "discord"
 cask "font-jetbrains-mono-nerd-font"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
