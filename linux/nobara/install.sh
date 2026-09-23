@@ -294,6 +294,22 @@ hl.config({
 EOF
 fi
 
+# Activate graphical-session.target. Hyprland is started by start-hyprland from
+# the display manager (not uwsm), so nothing brings that target up, and
+# xdg-desktop-portal (Requisite=graphical-session.target) fails with
+# "Dependency failed" - no portal at all: no screen sharing, no file chooser.
+# hyprland-session.target (symlinked above) BindsTo it; start it once the
+# session environment is in systemd's manager, so the portals see WAYLAND_DISPLAY.
+CUSTOM_EXECS_LUA="$HYPR_CUSTOM_DIR/execs.lua"
+if [[ ! -f "$CUSTOM_EXECS_LUA" ]] || ! grep -q 'hyprland-session.target' "$CUSTOM_EXECS_LUA"; then
+  log "Starting hyprland-session.target with Hyprland (fixes xdg-desktop-portal)..."
+  cat >> "$CUSTOM_EXECS_LUA" <<'EOF'
+hl.on("hyprland.start", function ()
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start hyprland-session.target")
+end)
+EOF
+fi
+
 # Only relaunch Quickshell if we're actually inside a Hyprland session
 # ($HYPRLAND_INSTANCE_SIGNATURE is set by Hyprland for every process it spawns).
 # Quickshell speaks Wayland's layer-shell protocol, which KDE's compositor
