@@ -81,7 +81,9 @@ if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
     sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
   fi
 fi
-sudo dnf install -y ghostty zed golang
+# spotify-launcher (also from Terra) is a small client that fetches Spotify's
+# official package itself on first run, since Spotify isn't in Fedora's repos.
+sudo dnf install -y ghostty zed golang spotify-launcher
 
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
@@ -91,8 +93,8 @@ for pkg in fzf zoxide fd-find bat fastfetch; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
-if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null; then
-  log "WARNING: ghostty and/or zed still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
+if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null; then
+  log "WARNING: ghostty, zed and/or spotify-launcher still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
 fi
 
 # mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
