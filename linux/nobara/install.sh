@@ -295,16 +295,23 @@ hl.config({
 EOF
 fi
 
-# 5 workspaces per monitor (DP-1 = 1-5, HDMI-A-1 = 6-10) plus SUPER+SHIFT+1..0
-# to move a window there. SUPER+1..5 then act on the focused monitor's group
-# (ii's workspace_in_group with a group size of 5).
+# 10 fixed workspaces, 5 per monitor (DP-1 = 1-5, HDMI-A-1 = 6-10), plus
+# SUPER+SHIFT+1..0 to move a window there. Keys 1..0 always mean workspace 1..10
+# (ii's workspace_in_group is overridden so they don't shift with the focused monitor).
 CUSTOM_KEYBINDS_LUA="$HYPR_CUSTOM_DIR/keybinds.lua"
-if [[ ! -f "$CUSTOM_KEYBINDS_LUA" ]] || ! grep -q 'workspaceGroupSize = 5' "$CUSTOM_KEYBINDS_LUA"; then
-  log "Setting up 5 workspaces per monitor and SUPER+SHIFT+N window moves..."
+if [[ -f "$CUSTOM_KEYBINDS_LUA" ]] && grep -q 'workspaceGroupSize = 5' "$CUSTOM_KEYBINDS_LUA"; then
+  log "Replacing the old per-monitor workspace group override..."
+  sed -i -e 's|^-- 5 workspaces per monitor:.*|-- 10 fixed workspaces: DP-1 = 1-5, HDMI-A-1 = 6-10. Keys 1..0 always mean workspace 1..10, whichever monitor is focused|' \
+    -e 's|^workspaceGroupSize = 5$|workspaceGroupSize = 10\nfunction workspace_in_group(i)\n    return i\nend|' "$CUSTOM_KEYBINDS_LUA"
+elif [[ ! -f "$CUSTOM_KEYBINDS_LUA" ]] || ! grep -q 'workspaceGroupSize = 10' "$CUSTOM_KEYBINDS_LUA"; then
+  log "Setting up 10 fixed workspaces (5 per monitor) and SUPER+SHIFT+N window moves..."
   cat >> "$CUSTOM_KEYBINDS_LUA" <<'EOF'
 
--- 5 workspaces per monitor: DP-1 = 1-5, HDMI-A-1 = 6-10 (keys 1-5 act on the focused monitor's group)
-workspaceGroupSize = 5
+-- 10 fixed workspaces: DP-1 = 1-5, HDMI-A-1 = 6-10. Keys 1..0 always mean workspace 1..10, whichever monitor is focused
+workspaceGroupSize = 10
+function workspace_in_group(i)
+    return i
+end
 for i = 1, 5 do
     hl.workspace_rule({ workspace = tostring(i), monitor = "DP-1", default = (i == 1), persistent = true })
     hl.workspace_rule({ workspace = tostring(i + 5), monitor = "HDMI-A-1", default = (i == 1), persistent = true })
