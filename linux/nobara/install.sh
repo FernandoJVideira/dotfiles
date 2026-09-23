@@ -130,16 +130,53 @@ fi
 
 # apps.terminal drives the launcher's "run in terminal" and "sudo <cmd>"
 # actions (services/LauncherSearch.qml in end4-pC/illogical-impulse); it
-# defaults to kitty. This config.json is shared by ii and end4-pC alike
-# (Directories.qml hardcodes the "illogical-impulse" folder name regardless
-# of which `qs -c` config is active), so patch it here rather than per-shell.
+# defaults to kitty. appearance.wallpaperTheming.enableTerminal (defaults to
+# true, but set it explicitly to be sure) gates scripts/colors/applycolor.sh's
+# apply_anyterm(), which pushes standard OSC color escape sequences to every
+# open /dev/pts/* device on every theme change - that's terminal-agnostic
+# (no per-app matugen template needed) and Ghostty, a modern spec-compliant
+# terminal, already picks it up. This config.json is shared by ii and end4-pC
+# alike (Directories.qml hardcodes the "illogical-impulse" folder name
+# regardless of which `qs -c` config is active), so patch it here rather
+# than per-shell.
 SHELL_CONFIG="$HOME/.config/illogical-impulse/config.json"
 if [[ -f "$SHELL_CONFIG" ]]; then
-  log "Setting Ghostty as the launcher's terminal app..."
+  log "Setting Ghostty as the launcher's terminal app and enabling live terminal theming..."
   sudo dnf install -y jq
-  jq '.apps.terminal = "ghostty"' "$SHELL_CONFIG" > "$SHELL_CONFIG.tmp" && mv "$SHELL_CONFIG.tmp" "$SHELL_CONFIG"
+  jq '.apps.terminal = "ghostty" | .appearance.wallpaperTheming.enableTerminal = true' "$SHELL_CONFIG" > "$SHELL_CONFIG.tmp" && mv "$SHELL_CONFIG.tmp" "$SHELL_CONFIG"
 else
-  log "illogical-impulse config.json not found yet (created on first Quickshell launch) - skipping apps.terminal, rerun this script after logging into Hyprland once."
+  log "illogical-impulse config.json not found yet (created on first Quickshell launch) - skipping apps.terminal/terminal theming, rerun this script after logging into Hyprland once."
+fi
+
+# Custom Hyprland overrides, in the "custom" folder illogical-impulse's own
+# hyprland.lua sources on top of its defaults (dotfiles-update-friendly -
+# survives ./setup install / exp-update reruns, unlike editing the upstream
+# files directly): Ghostty for SUPER+Return/T (the shared `terminal` var,
+# which defaults to a fallback chain that doesn't include ghostty at all -
+# see hyprland/variables.lua), and pt keyboard layout.
+HYPR_CUSTOM_DIR="$HOME/.config/hypr/custom"
+mkdir -p "$HYPR_CUSTOM_DIR"
+
+CUSTOM_VARIABLES_LUA="$HYPR_CUSTOM_DIR/variables.lua"
+if [[ -f "$CUSTOM_VARIABLES_LUA" ]] && grep -q '^terminal = ' "$CUSTOM_VARIABLES_LUA"; then
+  sed -i 's|^terminal = .*|terminal = "ghostty"|' "$CUSTOM_VARIABLES_LUA"
+elif [[ -f "$CUSTOM_VARIABLES_LUA" ]]; then
+  echo 'terminal = "ghostty"' >> "$CUSTOM_VARIABLES_LUA"
+else
+  log "Setting Ghostty as the SUPER+Return terminal..."
+  printf -- '-- Personal Hyprland variable overrides (see ~/.config/hypr/hyprland/variables.lua for defaults)\nterminal = "ghostty"\n' > "$CUSTOM_VARIABLES_LUA"
+fi
+
+CUSTOM_GENERAL_LUA="$HYPR_CUSTOM_DIR/general.lua"
+if [[ ! -f "$CUSTOM_GENERAL_LUA" ]] || ! grep -q 'kb_layout' "$CUSTOM_GENERAL_LUA"; then
+  log "Setting keyboard layout to pt..."
+  cat >> "$CUSTOM_GENERAL_LUA" <<'EOF'
+hl.config({
+    input = {
+        kb_layout = "pt"
+    }
+})
+EOF
 fi
 
 # Only relaunch Quickshell if we're actually inside a Hyprland session
@@ -149,11 +186,13 @@ fi
 # (Nobara's default) would render end4-pC's bar as a floating overlay on top
 # of a live KDE desktop, with none of Hyprland's own behavior actually running.
 if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+  log "Reloading Hyprland (picks up the custom terminal/keyboard overrides)..."
+  hyprctl reload
   log "(Re)starting Quickshell with end4-pC..."
   killall qs 2>/dev/null || true
   qs -c end4-pC > /dev/null 2>&1 & disown
 else
-  log "Not in a Hyprland session - skipping Quickshell relaunch. Log out and pick 'Hyprland' at the SDDM login screen to use it."
+  log "Not in a Hyprland session - skipping Hyprland reload/Quickshell relaunch. Log out and pick 'Hyprland' at the SDDM login screen to use it."
 fi
 
 log "Running shared dotfiles installer..."
