@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Notify when one of MY processes dumps core, and offer to hand it to Claude.
+# Nobara counterpart of Omarchy's "Process crashed" watcher: follows the
+# systemd-coredump entries in the journal (event-driven, no polling) and pops
+# a notification with "Diagnose with Claude" / "Mute" actions.
+#
+#   nobara-crash-watch            follow the journal (what the user service runs)
+#   nobara-crash-watch --stdin    read journal-style JSON lines from stdin (tests)
+#
+# Env overrides (tests): NOBARA_CRASH_NOTIFY, NOBARA_CRASH_DIAGNOSE,
+# NOBARA_CRASH_MUTE, NOBARA_CRASH_UID.
+set -uo pipefail
+
+# systemd's fixed MESSAGE_ID for "Process ... dumped core" entries
+COREDUMP_MESSAGE_ID=fc2e22bc6ee647b6b90729ab34a250b1
+MUTE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/nobara-crash/muted"
+MIN_INTERVAL=10   # seconds; a compositor crash takes many clients down at once
+NOTIFY="${NOBARA_CRASH_NOTIFY:-notify-send}"
+DIAGNOSE="${NOBARA_CRASH_DIAGNOSE:-nobara-crash-diagnose}"
+MUTE="${NOBARA_CRASH_MUTE:-nobara-crash-mute}"
+MY_UID="${NOBARA_CRASH_UID:-$(id -u)}"
+last_notified=0
+
+is_muted() {
+  [[ -f $MUTE_FILE ]] || return 1
+  local name
+  for name in "$@"; do
+    grep -qxF -- "$name" "$MUTE_FILE" && return 0
+  done
+  return 1
+}
+
+# Journal text can contain markup characters; notification bodies render them.
+escape() { local s=$1; s=${s//&/&amp;}; s=${s//</&lt;}; s=${s//>/&gt;}; printf '%s' "$s"; }
+
+handle() {
+  local line=$1 uid pid comm exe sig prog now
+  IFS=$'\t' read -r uid pid comm exe sig < <(
+    jq -r '[.COREDUMP_UID, .COREDUMP_PID, .COREDUMP_COMM, .COREDUMP_EXE, .COREDUMP_SIGNAL_NAME]
+           | map(if . == null then "unknown" else tostring end) | @tsv' <<<"$line" 2>/dev/null
+  ) || return 0
+  [[ -n ${pid:-} ]] || return 0
+
+  # Only my own processes; other users' crashes aren't mine to diagnose.
+  [[ $uid == "$MY_UID" ]] || return 0
+
+  prog=$comm
+  [[ $exe != unknown ]] && prog=${exe##*/}
+
+  if is_muted "$prog" "$comm"; then
+    echo "muted: $prog (pid $pid)" >&2
+    return 0
+  fi
+
+  now=$(date +%s)
+  if (( now - last_notified < MIN_INTERVAL )); then
+    echo "rate-limited: $prog (pid $pid)" >&2
+    return 0
+  fi
+  last_notified=$now
+
+  (
+    action=$("$NOTIFY" --app-name "Crash watcher" --urgency normal \
+      --icon dialog-warning --expire-time 60000 --wait \
+      --action "diagnose=Diagnose with Claude" --action "mute=Mute $prog" \
+      "Process crashed: $prog" \
+      "$(escape "$prog") (pid $pid) died with ${sig}.") || exit 0
+    case $action in
+      *diagnose*) "$DIAGNOSE" "$pid" "$comm" "$exe" "$sig" ;;
+      *mute*) "$MUTE" "$prog" ;;
+    esac
+  ) &
+}
+
+if [[ ${1:-} == --stdin ]]; then
+  source_cmd=(cat)
+else
+  source_cmd=(journalctl --follow --lines=0 --output=json --no-pager "MESSAGE_ID=$COREDUMP_MESSAGE_ID")
+fi
+
+# pipefail (above) makes a journalctl failure - e.g. no permission to read the
+# system journal - exit nonzero so systemd's Restart= sees it, instead of the
+# loop's own success hiding it.
+"${source_cmd[@]}" | { while IFS= read -r line; do handle "$line"; done; wait; }
