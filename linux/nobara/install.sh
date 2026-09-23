@@ -61,24 +61,20 @@ fi
 
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop ghostty" + zed). go is in Fedora's own repos; Ghostty and
-# Zed aren't (neither ships an official Fedora package as of writing - both
-# projects' own docs point at the same Terra repo for Fedora, so one repo
-# enable covers both: https://ghostty.org/docs/install/binary#fedora,
-# https://zed.dev/docs/linux). --nogpgcheck applies only to installing
-# terra-release itself (the package that carries Terra's own GPG key) - this
-# is Terra's own documented bootstrap step, the same pattern RPM Fusion uses.
+# Zed aren't in Fedora's, but both projects' own docs point at the Terra repo
+# for Fedora - which, on Nobara specifically, is already preinstalled and
+# enabled via Nobara's own `terra-repos` package (confirmed live: bootstrapping
+# Terra's own terra-release package collided with files Nobara's terra-repos
+# already owns). Try the plain install first and only bootstrap Terra
+# ourselves if that fails, instead of assuming which repo package owns it.
 log "Installing workstation tools (Ghostty, Zed, Go)..."
-# terra-release installs a permanent [terra] repo definition in
-# /etc/yum.repos.d/terra.repo, with its own trusted GPG key. Only add the
-# ephemeral --repofrompath bootstrap repo (also id "terra") if that file
-# doesn't exist yet - checking `rpm -q terra-release` instead isn't reliable
-# here: a prior run can leave the file behind (dnf writes it as part of
-# resolving the transaction) even when the package's own install didn't
-# complete, which still collides with a second --repofrompath "terra,...".
-if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
-  sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+if ! sudo dnf install -y ghostty zed golang; then
+  log "Ghostty/Zed not available from currently enabled repos - bootstrapping Terra..."
+  if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
+    sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+  fi
+  sudo dnf install -y ghostty zed golang
 fi
-sudo dnf install -y ghostty zed golang
 
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
