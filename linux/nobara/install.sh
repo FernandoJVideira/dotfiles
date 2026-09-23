@@ -106,6 +106,40 @@ if [[ ! -x "$HOME/.local/bin/pass-cli" ]]; then
   curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 fi
 
+# Brave Origin (Arch: brave-origin-bin from the AUR, then set as default browser).
+# It isn't in Brave's dnf repo (that only carries brave-browser); stable Origin
+# RPMs are published on the brave-browser GitHub releases, so pick the newest
+# non-prerelease one. Two checks before installing: the published SHA256 must
+# match (hard fail), and dnf must verify the RPM's own signature against Brave's
+# key (localpkg_gpgcheck; unset by default for local files). Either failing skips
+# Brave with a warning instead of aborting the rest of the script.
+if ! rpm -q brave-origin &>/dev/null; then
+  log "Installing Brave Origin..."
+  brave_tmp="$(mktemp -d)"
+  brave_url="$(curl -fsSL 'https://api.github.com/repos/brave/brave-browser/releases?per_page=100' \
+    | jq -r '[.[] | select(.prerelease==false) | .assets[] | select(.name | test("^brave-origin-[0-9.]+-1\\.x86_64\\.rpm$")) | .browser_download_url][0] // empty')"
+  if [[ -z "$brave_url" ]]; then
+    log "WARNING: couldn't find a stable Brave Origin RPM on GitHub - skipping Brave."
+  elif curl -fsSL -o "$brave_tmp/brave-origin.rpm" "$brave_url" \
+      && curl -fsSL -o "$brave_tmp/brave-origin.sha256" "$brave_url.sha256" \
+      && [[ "$(sha256sum "$brave_tmp/brave-origin.rpm" | awk '{print $1}')" == "$(awk '{print $1}' "$brave_tmp/brave-origin.sha256")" ]]; then
+    sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+    sudo dnf install -y --setopt=localpkg_gpgcheck=1 "$brave_tmp/brave-origin.rpm" \
+      || log "WARNING: Brave Origin failed its signature check or install - skipped."
+  else
+    log "WARNING: Brave Origin download or SHA256 check failed - skipped."
+  fi
+  rm -rf "$brave_tmp"
+fi
+
+# The RPM ships two desktop files; brave-origin.desktop is the one Arch's package
+# uses too. Guarded so a skipped install doesn't try to make a missing app default.
+if [[ -f /usr/share/applications/brave-origin.desktop ]]; then
+  log "Setting Brave Origin as the default browser..."
+  xdg-settings set default-web-browser brave-origin.desktop \
+    || log "WARNING: xdg-settings couldn't set the default browser (no desktop session?)."
+fi
+
 # mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
 # whatever's frozen in Fedora's repos - matches Omarchy's own approach on the
 # Arch side, which mise-manages its coding-agent CLI stubs the same way (see
@@ -207,6 +241,19 @@ CUSTOM_VARIABLES_LUA="$HYPR_CUSTOM_DIR/variables.lua"
 if [[ -f "$CUSTOM_VARIABLES_LUA" ]] && grep -q '^terminal = "ghostty"$' "$CUSTOM_VARIABLES_LUA"; then
   log "Removing the SUPER+Return terminal override (reverting to the upstream default, kitty)..."
   sed -i '/^terminal = "ghostty"$/d' "$CUSTOM_VARIABLES_LUA"
+fi
+
+# SUPER+W runs illogical-impulse's `browser` variable, whose fallback chain lists
+# 'brave' but not Origin's binary (brave-origin-stable in its RPM), so override it.
+if [[ -x /usr/bin/brave-origin-stable ]]; then
+  if [[ -f "$CUSTOM_VARIABLES_LUA" ]] && grep -q '^browser = ' "$CUSTOM_VARIABLES_LUA"; then
+    sed -i 's|^browser = .*|browser = "brave-origin-stable"|' "$CUSTOM_VARIABLES_LUA"
+  elif [[ -f "$CUSTOM_VARIABLES_LUA" ]]; then
+    echo 'browser = "brave-origin-stable"' >> "$CUSTOM_VARIABLES_LUA"
+  else
+    log "Setting Brave Origin as the SUPER+W browser..."
+    printf -- '-- Personal Hyprland variable overrides (see ~/.config/hypr/hyprland/variables.lua for defaults)\nbrowser = "brave-origin-stable"\n' > "$CUSTOM_VARIABLES_LUA"
+  fi
 fi
 
 CUSTOM_GENERAL_LUA="$HYPR_CUSTOM_DIR/general.lua"
