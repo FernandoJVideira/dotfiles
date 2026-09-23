@@ -2,8 +2,8 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/symlink.sh"
-source "$SCRIPT_DIR/../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/symlink.sh"
+source "$SCRIPT_DIR/../../lib/log.sh"
 
 if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
   log "Adding the omarchy edge repo..."
@@ -74,14 +74,14 @@ OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --force --first-ins
 
 log "Unlinking dotfiles-managed configs before Omarchy's config reset..."
 unlink_dotfiles "$SCRIPT_DIR"
-unlink_dotfiles "$SCRIPT_DIR/../common"
+unlink_dotfiles "$SCRIPT_DIR/../../common"
 
 log "Seeding Omarchy's shipped configs..."
 omarchy-reinstall-configs
 
 log "Relinking dotfiles-managed configs Omarchy's reset just overwrote..."
 symlink_dotfiles "$SCRIPT_DIR"
-symlink_dotfiles "$SCRIPT_DIR/../common"
+symlink_dotfiles "$SCRIPT_DIR/../../common"
 
 log "Reloading Hyprland..."
 hyprctl reload
@@ -137,4 +137,4 @@ log "Enabling Proton Pass SSH agent..."
 systemctl --user enable --now proton-pass-agent.service
 
 log "Running shared dotfiles installer..."
-"$SCRIPT_DIR/../common/install.sh"
+"$SCRIPT_DIR/../../common/install.sh"
