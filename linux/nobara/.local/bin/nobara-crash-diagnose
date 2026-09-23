@@ -34,6 +34,12 @@ fi
 when=$(coredumpctl list "$pid" --no-pager --no-legend 2>/dev/null | tail -1 | cut -d' ' -f1-4) || true
 when=${when:-unknown}
 
+# What coredumpctl already knows (command line, unit, package version, and the
+# crashing thread's top frames), so Claude starts from the evidence instead of
+# re-fetching it. The per-library "Module ..." lines are pages of noise; a
+# rotated-away core just leaves this empty.
+details=$(coredumpctl info "$pid" --no-pager 2>/dev/null | grep -v -E '^[[:space:]]+Module ' | head -n 60) || true
+
 # Claude asks to trust a directory on first use, and won't remember trust for
 # $HOME - run from a dedicated one.
 workdir="${XDG_STATE_HOME:-$HOME/.local/state}/nobara-crash"
@@ -49,6 +55,9 @@ What systemd-coredump recorded:
   binary:   $exe
   signal:   $signal
   time:     $when
+
+coredumpctl info $pid (library list trimmed; the full core is still in coredumpctl):
+${details:-  (not available - the core may have been rotated away)}
 
 Use the diagnose-crash skill: it covers how to investigate on this machine
 (Fedora, coredumpctl, debuginfod, dnf history, Hyprland/Quickshell specifics)

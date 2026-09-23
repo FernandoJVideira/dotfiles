@@ -8,7 +8,9 @@
 #   nobara-crash-watch --stdin    read journal-style JSON lines from stdin (tests)
 #
 # Env overrides (tests): NOBARA_CRASH_NOTIFY, NOBARA_CRASH_DIAGNOSE,
-# NOBARA_CRASH_MUTE, NOBARA_CRASH_UID.
+# NOBARA_CRASH_MUTE, NOBARA_CRASH_UID, NOBARA_CRASH_SERVER_UP (command that
+# succeeds when a notification server is running), NOBARA_CRASH_WAIT and
+# NOBARA_CRASH_POLL (seconds).
 set -uo pipefail
 
 # systemd's fixed MESSAGE_ID for "Process ... dumped core" entries
@@ -19,7 +21,32 @@ NOTIFY="${NOBARA_CRASH_NOTIFY:-notify-send}"
 DIAGNOSE="${NOBARA_CRASH_DIAGNOSE:-nobara-crash-diagnose}"
 MUTE="${NOBARA_CRASH_MUTE:-nobara-crash-mute}"
 MY_UID="${NOBARA_CRASH_UID:-$(id -u)}"
+# Quickshell is this desktop's notification server, so when the shell is what
+# crashed there is nobody to show the notification or take the button click
+# (notify-send then times out or falls back to a button-less one). Wait for a
+# server to come back - e.g. after restarting the shell - before notifying.
+SERVER_WAIT="${NOBARA_CRASH_WAIT:-300}"
+SERVER_POLL="${NOBARA_CRASH_POLL:-2}"
 last_notified=0
+
+server_up() {
+  if [[ -n ${NOBARA_CRASH_SERVER_UP:-} ]]; then
+    eval "$NOBARA_CRASH_SERVER_UP"
+  else
+    gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+      --method org.freedesktop.DBus.NameHasOwner org.freedesktop.Notifications 2>/dev/null | grep -q true
+  fi
+}
+
+# 0 once a notification server is up, 1 if none appeared within SERVER_WAIT.
+wait_for_server() {
+  local waited=0
+  until server_up; do
+    awk -v a="$waited" -v b="$SERVER_WAIT" 'BEGIN { exit !(a >= b) }' && return 1
+    sleep "$SERVER_POLL"
+    waited=$(awk -v a="$waited" -v b="$SERVER_POLL" 'BEGIN { print a + b }')
+  done
+}
 
 is_muted() {
   [[ -f $MUTE_FILE ]] || return 1
@@ -60,6 +87,10 @@ handle() {
   last_notified=$now
 
   (
+    if ! wait_for_server; then
+      echo "no notification server after ${SERVER_WAIT}s, dropping: $prog (pid $pid)" >&2
+      exit 0
+    fi
     action=$("$NOTIFY" --app-name "Crash watcher" --urgency normal \
       --icon dialog-warning --expire-time 60000 --wait \
       --action "diagnose=Diagnose with Claude" --action "mute=Mute $prog" \
