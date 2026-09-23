@@ -69,11 +69,13 @@ fi
 # is Terra's own documented bootstrap step, the same pattern RPM Fusion uses.
 log "Installing workstation tools (Ghostty, Zed, Go)..."
 # terra-release installs a permanent [terra] repo definition in
-# /etc/yum.repos.d/ once, with its own trusted GPG key. Only add the
-# ephemeral --repofrompath bootstrap repo (also id "terra") if that hasn't
-# happened yet - redoing it on every rerun collides with the now-permanent
-# repo of the same id.
-if ! rpm -q terra-release &>/dev/null; then
+# /etc/yum.repos.d/terra.repo, with its own trusted GPG key. Only add the
+# ephemeral --repofrompath bootstrap repo (also id "terra") if that file
+# doesn't exist yet - checking `rpm -q terra-release` instead isn't reliable
+# here: a prior run can leave the file behind (dnf writes it as part of
+# resolving the transaction) even when the package's own install didn't
+# complete, which still collides with a second --repofrompath "terra,...".
+if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
   sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
 fi
 sudo dnf install -y ghostty zed golang
