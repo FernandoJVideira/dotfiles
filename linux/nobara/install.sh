@@ -61,24 +61,30 @@ fi
 
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop ghostty" + zed). go is in Fedora's own repos; Ghostty and
-# Zed aren't - both projects' own docs point at the Terra repo for Fedora,
-# which is NOT preinstalled on Nobara (confirmed live: dnf repolist --all and
-# dnf search both come up completely empty for it). An earlier version of
-# this script tried "install directly, bootstrap Terra only if that fails" -
-# also confirmed live to be broken, because Nobara/Fedora 44 ships dnf5,
-# which doesn't hard-fail a transaction just because some named packages
-# don't resolve. It quietly installed golang, warned about ghostty/zed, and
-# still exited 0 - so the fallback never ran. Don't trust dnf's exit code for
-# this; bootstrap Terra unconditionally (idempotent via the file check) and
-# verify with rpm -q afterward instead.
+# Zed aren't - both projects' own docs point at the Terra repo for Fedora.
+#
+# Nobara's own `nobara-repos` package already owns and permanently claims
+# /etc/yum.repos.d/terra.repo (confirmed live via the exact rpm conflict
+# error), pre-enabled with its own gpgkey/metalink - Terra's upstream
+# terra-release package installs that exact same path, so it will ALWAYS
+# conflict here and must never be installed on Nobara. If the file is
+# missing (e.g. manually deleted at some point, also confirmed live),
+# restore it by reinstalling nobara-repos, not by installing terra-release.
+# For non-Nobara Fedora-family systems without nobara-repos, fall back to
+# the upstream bootstrap.
 log "Installing workstation tools (Ghostty, Zed, Go)..."
 if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
-  sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+  if rpm -q nobara-repos &>/dev/null; then
+    log "Restoring Nobara's own terra.repo (owned by nobara-repos)..."
+    sudo dnf reinstall -y nobara-repos
+  else
+    sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra\$releasever" terra-release
+  fi
 fi
 sudo dnf install -y ghostty zed golang
 
 if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null; then
-  log "WARNING: ghostty and/or zed still not installed after the Terra bootstrap - check 'dnf repolist --all | grep -i terra' and 'dnf search ghostty zed' by hand."
+  log "WARNING: ghostty and/or zed still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
 fi
 
 log "Symlinking Nobara-specific dotfiles..."
