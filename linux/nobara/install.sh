@@ -62,9 +62,19 @@ if [[ -f "$VARIABLES_LUA" ]] && grep -q 'hl\.env("qsConfig", "ii")' "$VARIABLES_
   sed -i 's/hl\.env("qsConfig", "ii")/hl.env("qsConfig", "end4-pC")/' "$VARIABLES_LUA"
 fi
 
-log "(Re)starting Quickshell with end4-pC..."
-killall qs 2>/dev/null || true
-qs -c end4-pC > /dev/null 2>&1 & disown
+# Only relaunch Quickshell if we're actually inside a Hyprland session
+# ($HYPRLAND_INSTANCE_SIGNATURE is set by Hyprland for every process it spawns).
+# Quickshell speaks Wayland's layer-shell protocol, which KDE's compositor
+# (KWin) also implements - running this unconditionally from a KDE session
+# (Nobara's default) would render end4-pC's bar as a floating overlay on top
+# of a live KDE desktop, with none of Hyprland's own behavior actually running.
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+  log "(Re)starting Quickshell with end4-pC..."
+  killall qs 2>/dev/null || true
+  qs -c end4-pC > /dev/null 2>&1 & disown
+else
+  log "Not in a Hyprland session - skipping Quickshell relaunch. Log out and pick 'Hyprland' at the SDDM login screen to use it."
+fi
 
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
