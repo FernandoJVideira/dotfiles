@@ -83,6 +83,14 @@ if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
 fi
 sudo dnf install -y ghostty zed golang
 
+# The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
+# zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
+# start). illogical-impulse only brings eza/starship (via its COPRs), not these.
+sudo dnf install -y fzf zoxide fd-find bat fastfetch
+for pkg in fzf zoxide fd-find bat fastfetch; do
+  rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
+done
+
 if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null; then
   log "WARNING: ghostty and/or zed still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
 fi
