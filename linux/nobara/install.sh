@@ -89,13 +89,21 @@ sudo dnf install -y ghostty zed golang spotify-launcher discord
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
 # start). illogical-impulse only brings eza/starship (via its COPRs), not these.
-sudo dnf install -y fzf zoxide fd-find bat fastfetch
-for pkg in fzf zoxide fd-find bat fastfetch; do
+sudo dnf install -y fzf zoxide fd-find bat fastfetch jq
+for pkg in fzf zoxide fd-find bat fastfetch jq; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
 if ! rpm -q ghostty &>/dev/null || ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null || ! rpm -q discord &>/dev/null; then
   log "WARNING: ghostty, zed, spotify-launcher and/or discord still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search ghostty zed' by hand."
+fi
+
+# Proton Pass CLI (Arch gets it from the AUR, macOS from Homebrew). No Fedora
+# package exists; Proton's own installer is the documented route - it drops
+# pass-cli in ~/.local/bin (no sudo), verifies a SHA256, and needs curl + jq.
+if [[ ! -x "$HOME/.local/bin/pass-cli" ]]; then
+  log "Installing Proton Pass CLI..."
+  curl -fsSL https://proton.me/download/pass-cli/install.sh | bash
 fi
 
 # mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
@@ -123,6 +131,23 @@ fi
 
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+# Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
+# shared .zshenv). The unit logs in with a personal access token read from
+# ~/.config/proton-pass-cli/pat - a secret, so this script can't create it:
+# enable the unit always, but only start it once that file exists (a start
+# without it fails ExecStartPre, which would abort this script under set -e).
+mkdir -p -m 700 "$HOME/.ssh"
+if systemctl --user enable proton-pass-agent.service; then
+  if [[ -f "$HOME/.config/proton-pass-cli/pat" ]]; then
+    log "Starting the Proton Pass SSH agent..."
+    systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
+  else
+    log "Proton Pass agent enabled but NOT started: put your personal access token in ~/.config/proton-pass-cli/pat (same as on Arch), then run: systemctl --user start proton-pass-agent.service"
+  fi
+else
+  log "WARNING: could not enable proton-pass-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-agent.service from a desktop session."
+fi
 
 mkdir -p "$(dirname "$END4_PC_DIR")"
 if [[ -d "$END4_PC_DIR/.git" ]]; then
