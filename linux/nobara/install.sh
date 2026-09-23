@@ -41,8 +41,23 @@ fi
 log "Overriding illogical-impulse's distro detection for Nobara's multi-value ID_LIKE..."
 sed 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release > "$ILLOGICAL_IMPULSE_DIR/os-release"
 
-log "Running illogical-impulse's installer (installs Hyprland, Quickshell, and every other dependency end4-pC needs)..."
-"$ILLOGICAL_IMPULSE_DIR/setup" install
+# ./setup install is illogical-impulse's full (re)install flow - it resets
+# its own config files, including ~/.config/hypr/hyprland/variables.lua and,
+# apparently, ~/.config/quickshell/ itself (confirmed live: rerunning it wiped
+# end4-pC's clone out from under a working setup, with no crash, just
+# Quickshell silently unable to find "end4-pC" and falling back to defaults).
+# Only run the full installer once; on a rerun, everything below this point
+# (workstation tools, end4-pC clone/pull, the qsConfig and terminal patches,
+# symlinks) is independently idempotent and re-verifies/repairs itself
+# without needing a full reinstall. To pull upstream illogical-impulse
+# updates deliberately, run "$ILLOGICAL_IMPULSE_DIR/setup" exp-update by hand.
+if [[ -f "$HOME/.config/hypr/hyprland/variables.lua" ]]; then
+  log "illogical-impulse already set up - skipping full reinstall (rerun with FORCE_II_REINSTALL=1 to override)..."
+  [[ -n "${FORCE_II_REINSTALL:-}" ]] && "$ILLOGICAL_IMPULSE_DIR/setup" install
+else
+  log "Running illogical-impulse's installer (installs Hyprland, Quickshell, and every other dependency end4-pC needs)..."
+  "$ILLOGICAL_IMPULSE_DIR/setup" install
+fi
 
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop ghostty" + zed). go is in Fedora's own repos; Ghostty and
@@ -72,6 +87,20 @@ VARIABLES_LUA="$HOME/.config/hypr/hyprland/variables.lua"
 if [[ -f "$VARIABLES_LUA" ]] && grep -q 'hl\.env("qsConfig", "ii")' "$VARIABLES_LUA"; then
   log "Setting end4-pC as the default Quickshell config..."
   sed -i 's/hl\.env("qsConfig", "ii")/hl.env("qsConfig", "end4-pC")/' "$VARIABLES_LUA"
+fi
+
+# apps.terminal drives the launcher's "run in terminal" and "sudo <cmd>"
+# actions (services/LauncherSearch.qml in end4-pC/illogical-impulse); it
+# defaults to kitty. This config.json is shared by ii and end4-pC alike
+# (Directories.qml hardcodes the "illogical-impulse" folder name regardless
+# of which `qs -c` config is active), so patch it here rather than per-shell.
+SHELL_CONFIG="$HOME/.config/illogical-impulse/config.json"
+if [[ -f "$SHELL_CONFIG" ]]; then
+  log "Setting Ghostty as the launcher's terminal app..."
+  sudo dnf install -y jq
+  jq '.apps.terminal = "ghostty"' "$SHELL_CONFIG" > "$SHELL_CONFIG.tmp" && mv "$SHELL_CONFIG.tmp" "$SHELL_CONFIG"
+else
+  log "illogical-impulse config.json not found yet (created on first Quickshell launch) - skipping apps.terminal, rerun this script after logging into Hyprland once."
 fi
 
 # Only relaunch Quickshell if we're actually inside a Hyprland session
