@@ -3,3 +3,9 @@
 # Please adapt and uncomment the following lines:
 	name = FernandoJVideira
 	email = 03.pleaser-minster@icloud.com
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
