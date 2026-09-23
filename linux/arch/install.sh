@@ -100,7 +100,7 @@ done <<< "$selected_webapps"
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty
+sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli
 # Tools the shared zsh config assumes (no-ops if Omarchy already ships them)
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 omarchy-install-editor-zed
