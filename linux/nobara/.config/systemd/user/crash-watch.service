@@ -1,0 +1,15 @@
+[Unit]
+Description=Notify when one of my processes crashes (systemd-coredump), offer a Claude diagnosis
+
+[Service]
+ExecStart=%h/.local/bin/nobara-crash-watch
+# journalctl exits nonzero when the user can't read the system journal (needs
+# the wheel/adm/systemd-journal group); retry slowly instead of spinning
+Restart=on-failure
+RestartSec=30
+
+[Install]
+# default.target rather than graphical-session.target: that one only fires
+# when the session is started through systemd (uwsm), which isn't guaranteed
+# for how Hyprland is launched from SDDM here
+WantedBy=default.target

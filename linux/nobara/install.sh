@@ -92,8 +92,10 @@ sudo dnf install -y ghostty zed golang spotify-launcher discord
 sudo dnf install -y gh   # GitHub CLI, in Fedora's own repos
 rpm -q gh &>/dev/null || log "WARNING: gh not installed."
 
-sudo dnf install -y fzf zoxide fd-find bat fastfetch jq
-for pkg in fzf zoxide fd-find bat fastfetch jq; do
+# Crash watcher deps too: libnotify (notify-send), gdb (backtraces for the
+# diagnose-crash skill), systemd-coredump (usually already there on Nobara).
+sudo dnf install -y fzf zoxide fd-find bat fastfetch jq libnotify gdb systemd-coredump
+for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb systemd-coredump; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
@@ -184,6 +186,20 @@ if systemctl --user enable proton-pass-agent.service; then
   fi
 else
   log "WARNING: could not enable proton-pass-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-agent.service from a desktop session."
+fi
+
+# Crash watcher: follows systemd-coredump entries in the journal and pops a
+# "Process crashed" notification with a "Diagnose with Claude" action (the
+# Nobara counterpart of Omarchy's). The scripts in ~/.local/bin and the unit
+# were just symlinked above. Reading the system journal needs wheel/adm/
+# systemd-journal - the service would otherwise fail in a retry loop.
+if ! id -nG | tr ' ' '\n' | grep -qxE 'wheel|adm|systemd-journal'; then
+  log "WARNING: $USER isn't in wheel/adm/systemd-journal, so the crash watcher can't read the journal - run: sudo usermod -aG systemd-journal $USER (then log out and in)."
+fi
+if systemctl --user enable --now crash-watch.service; then
+  log "Crash watcher running (mute a program with: nobara-crash-mute <program>)."
+else
+  log "WARNING: could not enable crash-watch (no user systemd session?) - run: systemctl --user enable --now crash-watch.service from a desktop session."
 fi
 
 mkdir -p "$(dirname "$END4_PC_DIR")"

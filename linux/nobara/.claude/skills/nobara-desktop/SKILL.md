@@ -62,6 +62,14 @@ sessions). `/model <name>` switches models; `/key` sets API keys for the others.
 **Terminal/shell** - kitty (patched to `shell zsh`), zsh config from the
 dotfiles repo (`common/.config/zsh`): aliases, starship, fzf-tab, zoxide.
 
+**Crash watcher** - the `crash-watch` user service (`systemctl --user status crash-watch`)
+follows systemd-coredump entries in the journal and notifies "Process crashed" with a
+*Diagnose with Claude* action, which runs `nobara-crash-diagnose <pid>` (kitty + `claude`
++ the diagnose-crash skill). `nobara-crash-mute <program> [off]` silences one program
+(list is `~/.config/nobara-crash/muted`); scripts are in `~/.local/bin`, sources in
+`linux/nobara/.local/bin/` of the dotfiles repo. It needs journal read access
+(wheel/adm/systemd-journal group).
+
 ## Useful default keybinds (ii)
 
 SUPER+Return terminal, SUPER+W browser, SUPER+E files, SUPER+C editor,
