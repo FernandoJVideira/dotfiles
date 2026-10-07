@@ -5,7 +5,7 @@ Documentation=man:systemd.special(7)
 # nothing else ever activates graphical-session.target - and xdg-desktop-portal
 # (Requisite=graphical-session.target) then refuses to start, taking every portal
 # (screen sharing, file chooser, ...) with it. Hyprland starts this target from
-# ~/.config/hypr/custom/execs.lua once the session environment is imported.
+# ~/.config/hypr/autostart.lua once the session environment is imported.
 BindsTo=graphical-session.target
 Wants=graphical-session-pre.target
 After=graphical-session-pre.target
