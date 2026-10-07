@@ -4,32 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
-
-if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
-  log "Adding the omarchy edge repo..."
-  sudo tee -a /etc/pacman.conf <<'EOF'
-
-[omarchy]
-SigLevel = Optional TrustAll
-Server = https://pkgs.omarchy.org/stable/$arch
-EOF
-fi
-
-log "Installing omarchy packages..."
-sudo pacman -S --noconfirm omarchy-keyring omarchy omarchy-settings
-
-log "Preserving CachyOS's custom repos..."
-awk '
-  /^\[core\]/ { exit }
-  /^\[options\]/ { skip=1; next }
-  /^\[/ { skip=0 }
-  !skip && !/^[[:space:]]*#/ && !/^[[:space:]]*$/ { print }
-' /etc/pacman.conf | sudo tee /etc/pacman.d/custom-repos.conf > /dev/null
-
-log "Activating the custom-repo preservation hook..."
-mkdir -p ~/.config/omarchy/hooks/pre-refresh-pacman.d
-cp /usr/share/omarchy/config/omarchy/hooks/pre-refresh-pacman.d/add-custom-repo.sample \
-   ~/.config/omarchy/hooks/pre-refresh-pacman.d/add-custom-repo
+source "$SCRIPT_DIR/../../lib/omarshell.sh"
 
 # Check if the user wants to set up gaming tools
 if gum confirm "Set up gaming tools too?"; then
@@ -43,106 +18,73 @@ log "Installing zsh..."
 sudo pacman -S --needed --noconfirm zsh
 sudo chsh -s "$(which zsh)" "$USER"
 
-# Install Omarchy base packages
-log "Installing Omarchy base packages..."
-mapfile -t base_packages < <(grep -v '^#' /usr/share/omarchy/install/omarchy-base.packages | grep -v '^$')
-omarchy-pkg-add "${base_packages[@]}"
+# Hyprland + the runtime deps omarshell's quickshell UI and bar scripts need.
+# None of this touches pacman.conf - omarshell doesn't rewrite it like the
+# omarchy package does, so there's nothing to preserve across it.
+log "Installing Hyprland and omarshell's runtime dependencies..."
+sudo pacman -S --needed --noconfirm \
+  hyprland quickshell uwsm sddm xdg-desktop-portal-hyprland \
+  wireplumber pipewire gnome-keyring jq gum wl-clipboard slurp hyprpicker \
+  wtype brightnessctl bluez-utils networkmanager qrencode libnotify \
+  ttf-jetbrains-mono-nerd pacman-contrib
 
-OMARCHY_NVIDIA_SCRIPT="/usr/share/omarchy/install/hardware/nvidia.sh"
-restore_omarchy_nvidia_script() {
-  if [[ -f "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig" ]]; then
-    sudo mv -f "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig" "$OMARCHY_NVIDIA_SCRIPT"
-  fi
-}
-if pacman -Q linux-cachyos-nvidia-open &>/dev/null || pacman -Q linux-cachyos-lts-nvidia-open &>/dev/null; then
-  log "Skipping Omarchy's NVIDIA driver setup (CachyOS's chwd-managed nvidia-open packages are already installed)..."
-  trap restore_omarchy_nvidia_script EXIT
-  sudo cp "$OMARCHY_NVIDIA_SCRIPT" "$OMARCHY_NVIDIA_SCRIPT.dotfiles-orig"
-  echo '# Skipped by dotfiles install.sh: CachyOS nvidia-open packages already installed.' |
-    sudo tee "$OMARCHY_NVIDIA_SCRIPT" > /dev/null
-fi
+install_omarshell_repo
+setup_omarshell_session_env
 
-# Set up Omarchy system and user
-log "Applying Omarchy system setup..."
-sudo omarchy-apply-system --install-user "$USER" --first-install
-restore_omarchy_nvidia_script
-trap - EXIT
-
-log "Finalizing Omarchy user setup..."
-OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --force --first-install
-
-
-log "Unlinking dotfiles-managed configs before Omarchy's config reset..."
-unlink_dotfiles "$SCRIPT_DIR"
-unlink_dotfiles "$SCRIPT_DIR/../../common"
-
-log "Seeding Omarchy's shipped configs..."
-omarchy-reinstall-configs
-
-log "Relinking dotfiles-managed configs Omarchy's reset just overwrote..."
+log "Symlinking Linux-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
-symlink_dotfiles "$SCRIPT_DIR/../../common"
 
-log "Reloading Hyprland..."
-hyprctl reload
-
-# Prune unnecessary preinstalled apps (like Kdenlive and LibreOffice) to save space
-log "Removing unused preinstalled apps..."
-omarchy-pkg-drop kdenlive libreoffice-fresh
-
-selected_webapps=$(gum choose --no-limit \
-  "HEY" "Basecamp" "Google Contacts" "Google Maps" "Google Messages" \
-  "Google Photos" "WhatsApp" "X" "YouTube")
-
-while IFS= read -r webapp; do
-  [[ -n "$webapp" ]] && omarchy-webapp-remove "$webapp"
-done <<< "$selected_webapps"
+seed_hypr_personal_overrides
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli
-# Tools the shared zsh config assumes (no-ops if Omarchy already ships them)
+sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli zed
+# Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
-omarchy-install-editor-zed
-yay -S --noconfirm brave-origin-bin proton-pass-cli
-# Same call omarchy-install-service-spotify makes (its launch keybind also
-# expects /usr/bin/spotify), just without the launch-after-install step.
-omarchy-pkg-add spotify
+yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 
-# kitty as the default terminal (Ghostty stays installed, just not default).
-# Omarchy already has first-class kitty theming (default/themed/kitty.conf.tpl,
-# and bin/omarchy-theme-set's INSTALLED_THEME_DENIED list both name it
-# alongside alacritty/foot/ghostty/vscode) - it just hadn't been installed
-# before, so re-apply the current theme now to generate its themed colors file.
-log "Re-applying the current Omarchy theme to generate kitty's themed config..."
-CURRENT_OMARCHY_THEME="$(basename "$(readlink -f "$HOME/.local/state/omarchy/current/theme")")"
-omarchy-theme-set "$CURRENT_OMARCHY_THEME"
+# Re-apply the current theme now that omarshell's theme catalog is in place
+# (generates kitty's themed colors file, among others). Defaults to
+# matte-black on a machine that's never had a theme set before.
+log "Re-applying the current theme..."
+mkdir -p "$HOME/.local/state/omarchy/current"
+CURRENT_THEME_FILE="$HOME/.local/state/omarchy/current/theme.name"
+[[ -f "$CURRENT_THEME_FILE" ]] || echo "matte-black" >"$CURRENT_THEME_FILE"
+omarchy-theme-set "$(cat "$CURRENT_THEME_FILE")"
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
 xdg-settings set default-web-browser brave-origin.desktop
 
-if gum confirm "Replace Discord webapp with the native app (better screen-share)?"; then
-  log "Installing native Discord..."
-  yay -S --noconfirm discord
-  omarchy-webapp-remove "Discord"
+if gum confirm "Install Discord (native app)?"; then
+  log "Installing Discord..."
+  yay -S --needed --noconfirm discord
 fi
 
-if ! gum confirm "Keep OBS installed?" --default; then
-  log "Removing OBS..."
-  omarchy-pkg-drop obs-studio
+if gum confirm "Install OBS Studio?"; then
+  log "Installing OBS Studio..."
+  sudo pacman -S --needed --noconfirm obs-studio
 fi
 
 if [[ "$GAMING" == true ]]; then
   log "Installing gaming tools..."
-  omarchy-install-gaming-steam
-  omarchy-install-gaming-lutris
-  sudo pacman -S --needed --noconfirm mangohud lib32-mangohud
-  yay -S --noconfirm hydra-launcher-bin
+  # multilib ships commented out on a stock Arch pacman.conf; Steam needs it.
+  if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
+    sudo sed -i '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
+    sudo pacman -Sy
+  fi
+  sudo pacman -S --needed --noconfirm steam lutris mangohud lib32-mangohud
+  # Lutris ships with `#!/usr/bin/env python3`, which resolves to mise's Python
+  # and fails to import the lutris module. Pin the shebang to system Python.
+  sudo sed -i '/env python3/ c\#!/bin/python3' /usr/bin/lutris
+  yay -S --needed --noconfirm hydra-launcher-bin
 fi
 
-log "Symlinking Linux-specific dotfiles..."
-symlink_dotfiles "$SCRIPT_DIR"
+if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+  log "Reloading Hyprland and restarting the shell..."
+  hyprctl reload
+  omarchy-restart-shell || log "WARNING: shell restart failed - check 'journalctl --user -t omarchy-shell'."
+fi
 
 log "Configuring monitors..."
 "$SCRIPT_DIR/configure-monitors.sh"
