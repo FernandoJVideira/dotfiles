@@ -1,5 +1,5 @@
 hl.config({
   input = {
-    kb_layout = "pt",
+    kb_layout = "us",
   },
 })
