@@ -11,7 +11,7 @@ bootstrap.sh         entry point, dispatches by OS (and by distro, on Linux)
 common/               dotfiles shared by all machines (zsh, nvim, tmux, ghostty, git)
 macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
-  arch/                CachyOS + Omarchy install flow, Hyprland config
+  arch/                Arch + Omadora (arch branch) install flow, Hyprland config
   nobara/              Nobara + Omadora install flow
 lib/                  shared bash helpers (symlinking, logging)
 ```
@@ -37,18 +37,18 @@ A few things only happen conditionally:
 
 Once packages and symlinks are in place, `macos-defaults.sh` applies the actual macOS preferences I care about (Finder view style, Dock size and autohide, trackpad tap-to-click, dark mode) and restarts Finder and Dock so they take effect without a logout.
 
-## Linux (CachyOS + Omarchy)
+## Linux (Arch + Omadora)
 
-`linux/arch/install.sh` assumes you're starting from a CachyOS install with a user account already created, and layers Omarchy's stable channel on top of it. Concretely, it:
+`linux/arch/install.sh` assumes a minimal Arch install (archinstall, no desktop environment or display manager, NetworkManager) with a user account already created. The desktop itself comes from my [Omadora](https://github.com/FernandoJVideira/omadora) fork (`arch` branch): Hyprland, the Quickshell shell, the SDDM login screen and their packages. Concretely, it:
 
-1. Adds Omarchy's pacman repo and installs the `omarchy` package family, while preserving CachyOS's own repos (they'd otherwise get dropped when Omarchy takes over `pacman.conf`).
-2. Runs Omarchy's own setup commands (`omarchy-apply-system`, `omarchy-provision-user`) and clones the Omarchy repo into `~/.local/share/omarchy`, since the packaged install doesn't do that clone itself and several of Omarchy's own scripts assume it's there.
-3. Asks a few questions interactively via `gum`: whether to set up gaming tools, which of Omarchy's bundled webapps to remove, whether to swap the Discord webapp for the native client, whether to keep OBS.
-4. Symlinks the Linux-specific dotfiles and enables the Proton Pass SSH agent as a systemd user service.
+1. Installs `gum` (for the prompts below), `zsh` (set as the default shell), `git` and `base-devel`.
+2. Asks a few questions interactively via `gum`: whether to set up gaming tools, install Discord, and install OBS.
+3. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a first install that installer ends with a reboot, so run `./bootstrap.sh` again afterwards to finish. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
+4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Go, Element, kitty, `gh`, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
+5. Enables the Proton Pass SSH agent. It only starts once your personal access token is in `~/.config/proton-pass-cli/pat`; until then the unit is skipped.
+6. Runs the shared dotfiles installer, re-applies the current theme with `omactl theme set`, and renders the starship prompt.
 
-One CachyOS installer gotcha worth knowing before you get there: leave "shell configuration" unticked in the CachyOS installer. It pulls in `tealdeer`, which conflicts with the `tldr` package Omarchy wants.
-
-Separately, `linux/arch/configure-monitors.sh` is a standalone script, not part of install, for picking which connected monitors to use and which one is primary. Rerun it whenever your monitor setup changes; it regenerates `hypr/monitors.lua` and, if you've got two or more screens, splits workspaces five-per-monitor and swaps in a custom bar widget that shows each monitor's own workspace range instead of the same global one on every screen.
+The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the `arch-omarshell-final` tag. This flow has been tested in a VM only; Plymouth, NVIDIA driver packages and real-hardware features (Bluetooth, fingerprint, FIDO2) are not set up or verified yet. On Arch, monitors are set directly in `~/.config/hypr/monitors.lua`.
 
 ## Linux (Nobara + Omadora)
 
