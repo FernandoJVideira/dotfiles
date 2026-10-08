@@ -3,8 +3,8 @@
 -- Seeded from the Arch box's config (same DP-1/HDMI-A-1 output names) -
 -- verify against this machine's actual outputs and adjust if they differ.
 
-local omarchy_gdk_scale = 2
-local omarchy_monitor_scale = "auto"
+local omarchy_gdk_scale = 1
+local omarchy_monitor_scale = 1
 
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 
