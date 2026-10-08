@@ -51,6 +51,13 @@ done
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 
+# NVIDIA-only extras live in a sibling tree so an AMD/Intel machine never gets
+# them. nvidia-settings-load needs an X server and fails on every Wayland login.
+if lspci 2>/dev/null | grep -E "VGA|3D|Display" | grep -qi nvidia || [[ -d /proc/driver/nvidia ]]; then
+  log "NVIDIA GPU detected - symlinking NVIDIA-specific dotfiles..."
+  symlink_dotfiles "$SCRIPT_DIR/../nobara-nvidia"
+fi
+
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop" + zed; Ghostty is deliberately not installed here - kitty is
 # the terminal on this machine). go is in Fedora's own repos; Zed isn't - its

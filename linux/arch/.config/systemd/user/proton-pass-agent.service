@@ -6,6 +6,8 @@ StartLimitIntervalSec=60
 StartLimitBurst=5
 
 [Service]
+# network-online.target means nothing in a user manager, so wait for DNS before logging in.
+ExecStartPre=/bin/sh -c 'for i in $(seq 30); do getent hosts proton.me >/dev/null && exit 0; sleep 1; done; exit 0'
 ExecStartPre=/bin/sh -c 'pass-cli info >/dev/null 2>&1 || pass-cli login --pat "$(cat %h/.config/proton-pass-cli/pat)"'
 ExecStart=/usr/bin/pass-cli ssh-agent start --create-new-identities SSH --socket-path %h/.ssh/proton-pass-agent.sock
 Restart=on-failure
