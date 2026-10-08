@@ -86,6 +86,16 @@ fi
 # discord is also packaged in Terra (Fedora's own repos can't ship it).
 sudo dnf install -y --skip-unavailable zed golang spotify-launcher discord
 
+# OpenDeck (Stream Deck controller; the AUR package on Arch). Upstream's own
+# installer picks the .rpm from GitHub Releases on Fedora-family systems and
+# installs the udev rules. It asks a few questions (Wine, Node.js, launch) on
+# /dev/tty, so this step is interactive. Skipped once opendeck is installed.
+if ! command -v opendeck >/dev/null; then
+  log "Installing OpenDeck..."
+  curl -sSL https://raw.githubusercontent.com/nekename/OpenDeck/main/install_opendeck.sh | bash \
+    || log "WARNING: OpenDeck install failed - re-run: curl -sSL https://raw.githubusercontent.com/nekename/OpenDeck/main/install_opendeck.sh | bash"
+fi
+
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
 # start).
