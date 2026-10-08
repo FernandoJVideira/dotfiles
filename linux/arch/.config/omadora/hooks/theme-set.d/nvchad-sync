@@ -1,5 +1,5 @@
 #!/bin/bash
-# Called by omarchy-hook (see /usr/share/omarchy's theme-set.d docs) with
+# Called by omadora-hook with
 # the new theme's slug as $1. Maps it to an NvChad base46 theme name, writes
 # that to a state file NvChad's chadrc.lua reads on startup
 # (common/.config/nvim/lua/omarchy_theme.lua), then nudges any already-running
@@ -9,9 +9,9 @@ set -euo pipefail
 
 THEME_SLUG=$1
 STATE_FILE="$HOME/.local/state/nvim/omarchy_theme"
-COLORS_TOML="$HOME/.local/state/omarchy/current/theme/colors.toml"
+COLORS_TOML="$HOME/.config/omadora/current/theme/colors.toml"
 
-# Only stock Omarchy themes with an equivalent NvChad base46 theme are
+# Only stock Omadora themes with an equivalent NvChad base46 theme are
 # mapped by name; anything else falls back to NvChad's default-dark/light
 # based on the theme's declared mode.
 declare -A THEME_MAP=(

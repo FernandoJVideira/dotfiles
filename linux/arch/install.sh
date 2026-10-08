@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
-source "$SCRIPT_DIR/../../lib/omarshell.sh"
+
+# gum (the prompts below) is not on a minimal install yet
+sudo pacman -S --needed --noconfirm gum
 
 # Check if the user wants to set up gaming tools
 if gum confirm "Set up gaming tools too?"; then
@@ -18,23 +20,33 @@ log "Installing zsh..."
 sudo pacman -S --needed --noconfirm zsh
 sudo chsh -s "$(which zsh)" "$USER"
 
-# Hyprland + the runtime deps omarshell's quickshell UI and bar scripts need.
-# None of this touches pacman.conf - omarshell doesn't rewrite it like the
-# omarchy package does, so there's nothing to preserve across it.
-log "Installing Hyprland and omarshell's runtime dependencies..."
-sudo pacman -S --needed --noconfirm \
-  hyprland quickshell uwsm sddm xdg-desktop-portal-hyprland \
-  wireplumber pipewire gnome-keyring jq gum wl-clipboard slurp hyprpicker \
-  wtype brightnessctl bluez-utils networkmanager qrencode libnotify \
-  ttf-jetbrains-mono-nerd pacman-contrib
-
-install_omarshell_repo
-setup_omarshell_session_env
+# Omadora (my fork, arch branch) provides the Hyprland session, the Quickshell
+# shell, SDDM and their packages. It goes in before the dotfiles are symlinked so
+# my own configs win over its defaults. HTTPS, since a fresh machine has no SSH
+# key yet. A first install runs its installer (which ends by rebooting, so run
+# this script again afterwards); an existing checkout is only fast-forwarded
+# (update it afterwards with `omactl update`).
+OMADORA_DIR="$HOME/.local/share/omadora"
+OMADORA_REPO_URL="${OMADORA_REPO_URL:-https://github.com/FernandoJVideira/omadora.git}"
+OMADORA_REF="${OMADORA_REF:-arch}"
+sudo pacman -S --needed --noconfirm git base-devel
+if [[ -d "$OMADORA_DIR/.git" ]]; then
+  log "Updating Omadora..."
+  git -C "$OMADORA_DIR" pull --ff-only \
+    || log "WARNING: couldn't fast-forward Omadora - resolve it in $OMADORA_DIR by hand."
+else
+  log "Cloning Omadora ($OMADORA_REF)..."
+  mkdir -p "$(dirname "$OMADORA_DIR")"
+  git clone --branch "$OMADORA_REF" "$OMADORA_REPO_URL" "$OMADORA_DIR"
+  log "Running the Omadora installer..."
+  # Its last step reboots; tolerate that failing (e.g. over SSH) so this script can finish.
+  bash "$OMADORA_DIR/install.sh" || log "WARNING: the Omadora installer ended with an error - check ~/omadora-install.log."
+fi
+export OMADORA_PATH="$OMADORA_DIR"
+export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 log "Symlinking Linux-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
-
-seed_hypr_personal_overrides
 
 # Install workstation tools
 log "Installing workstation tools..."
@@ -43,14 +55,11 @@ sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli 
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 
-# Re-apply the current theme now that omarshell's theme catalog is in place
-# (generates kitty's themed colors file, among others). Defaults to
-# matte-black on a machine that's never had a theme set before.
+# Re-apply the current theme so kitty's themed colors file exists (Omadora defaults to
+# its own theme on a machine that's never had one set).
 log "Re-applying the current theme..."
-mkdir -p "$HOME/.local/state/omarchy/current"
-CURRENT_THEME_FILE="$HOME/.local/state/omarchy/current/theme.name"
-[[ -f "$CURRENT_THEME_FILE" ]] || echo "matte-black" >"$CURRENT_THEME_FILE"
-omarchy-theme-set "$(cat "$CURRENT_THEME_FILE")"
+omactl theme set "$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)" \
+  || log "WARNING: theme re-apply failed - run: omactl theme set <name> from the desktop."
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
@@ -81,13 +90,9 @@ if [[ "$GAMING" == true ]]; then
 fi
 
 if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-  log "Reloading Hyprland and restarting the shell..."
+  log "Reloading Hyprland..."
   hyprctl reload
-  omarchy-restart-shell || log "WARNING: shell restart failed - check 'journalctl --user -t omarchy-shell'."
 fi
-
-log "Configuring monitors..."
-"$SCRIPT_DIR/configure-monitors.sh"
 
 log "Enabling Proton Pass SSH agent..."
 systemctl --user enable --now proton-pass-agent.service
