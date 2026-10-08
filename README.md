@@ -1,6 +1,6 @@
 # dotfiles
 
-My personal machine setup: shell, editor, window manager, and the scripts that lay all of it down on a fresh install. It covers the machines I actually use: a MacBook running Hyprspace as a tiling window manager, a CachyOS desktop running Omarchy (the Hyprland-based "quattro" layer), and a Nobara machine running Hyprland + Quickshell via illogical-impulse and the [end4-pC](https://github.com/pctrade/end4-pC) shell. Everything else, this README included, assumes you're one of those.
+My personal machine setup: shell, editor, window manager, and the scripts that lay all of it down on a fresh install. It covers the machines I actually use: a MacBook running Hyprspace as a tiling window manager, a CachyOS desktop running Omarchy (the Hyprland-based "quattro" layer), and a Nobara machine running Hyprland + Quickshell via my [Omadora](https://github.com/FernandoJVideira/omadora) fork. Everything else, this README included, assumes you're one of those.
 
 If you found this by browsing GitHub: feel free to steal whatever's useful, but don't run it as-is. The package lists, keybindings, and window manager choices are tuned to how I work, not a general-purpose starting point.
 
@@ -12,7 +12,7 @@ common/               dotfiles shared by all machines (zsh, nvim, tmux, ghostty,
 macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
   arch/                CachyOS + Omarchy install flow, Hyprland config
-  nobara/              Nobara + illogical-impulse/end4-pC install flow
+  nobara/              Nobara + Omadora install flow
 lib/                  shared bash helpers (symlinking, logging)
 ```
 
@@ -50,14 +50,14 @@ One CachyOS installer gotcha worth knowing before you get there: leave "shell co
 
 Separately, `linux/arch/configure-monitors.sh` is a standalone script, not part of install, for picking which connected monitors to use and which one is primary. Rerun it whenever your monitor setup changes; it regenerates `hypr/monitors.lua` and, if you've got two or more screens, splits workspaces five-per-monitor and swaps in a custom bar widget that shows each monitor's own workspace range instead of the same global one on every screen.
 
-## Linux (Nobara + end4-pC)
+## Linux (Nobara + Omadora)
 
-`linux/nobara/install.sh` assumes a Nobara (or other Fedora-family) install with a user account already created. Rather than hand-rolling a `dnf` package list, it leans on illogical-impulse's ([end-4/dots-hyprland](https://github.com/end-4/dots-hyprland)) own installer, which already knows how to detect Fedora-family distros and pull in Hyprland, Quickshell, and everything else it needs. Concretely, it:
+`linux/nobara/install.sh` assumes a Nobara (or other Fedora-family) install with a user account already created. The desktop itself comes from my [Omadora](https://github.com/FernandoJVideira/omadora) fork (`nobara` branch): Hyprland, the Quickshell shell, the login screen and their packages. Concretely, it:
 
-1. Installs `zsh` and sets it as the default shell, same as the Arch flow.
-2. Clones illogical-impulse into `~/.local/share/illogical-impulse` (or updates it if already present) and runs its own `./setup install`.
-3. Clones [end4-pC](https://github.com/pctrade/end4-pC) into `~/.config/quickshell/end4-pC` and flips `qsConfig` in illogical-impulse's `variables.lua` from `"ii"` to `"end4-pC"`, so it's the shell that actually loads.
-4. Symlinks the Nobara-specific dotfiles and restarts Quickshell with the new config.
+1. Installs `zsh` and sets it as the default shell, same as the Arch flow, plus `git`.
+2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
+3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, Claude Code).
+4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
 ## Common
 

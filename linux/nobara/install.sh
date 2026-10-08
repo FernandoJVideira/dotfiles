@@ -4,38 +4,52 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
-source "$SCRIPT_DIR/../../lib/omarshell.sh"
 
 # Install zsh and set it as the default shell (mirrors linux/arch/install.sh)
 log "Installing zsh..."
 sudo dnf install -y zsh
 sudo chsh -s "$(which zsh)" "$USER"
 
-log "Installing git (needed to clone omarshell)..."
+log "Installing git..."
 sudo dnf install -y git
 
-# Hyprland + omarshell's runtime deps, dnf side. UNTESTED - no Fedora/Nobara
+# Omadora (my fork, nobara branch) provides the Hyprland session, the Quickshell
+# shell and their packages. It goes in before the dotfiles are symlinked so my
+# own configs win over its defaults. HTTPS, since a fresh machine has no SSH key
+# yet. A first install runs its installer; an existing checkout is only fast-
+# forwarded (update it afterwards with `omactl update`).
+OMADORA_DIR="$HOME/.local/share/omadora"
+OMADORA_REPO_URL="${OMADORA_REPO_URL:-https://github.com/FernandoJVideira/omadora.git}"
+OMADORA_REF="${OMADORA_REF:-nobara}"
+if [[ -d "$OMADORA_DIR/.git" ]]; then
+  log "Updating Omadora..."
+  git -C "$OMADORA_DIR" pull --ff-only \
+    || log "WARNING: couldn't fast-forward Omadora - resolve it in $OMADORA_DIR by hand."
+else
+  log "Cloning Omadora ($OMADORA_REF)..."
+  mkdir -p "$(dirname "$OMADORA_DIR")"
+  git clone --branch "$OMADORA_REF" "$OMADORA_REPO_URL" "$OMADORA_DIR"
+  log "Running the Omadora installer..."
+  bash "$OMADORA_DIR/install.sh"
+fi
+
+# Hyprland + quickshell runtime deps, dnf side. UNTESTED - no Fedora/Nobara
 # box was available while writing this; treat every package name here as a
 # starting point to debug with `dnf search`, not a known-good list. Some of
 # these (quickshell, gum, hyprpicker, the nerd-fonts package) may need a COPR
 # repo that isn't identified yet.
-log "Installing Hyprland and omarshell's runtime dependencies..."
+log "Installing Hyprland and quickshell runtime dependencies..."
 sudo dnf install -y --skip-unavailable \
   hyprland quickshell xdg-desktop-portal-hyprland \
   wireplumber pipewire gnome-keyring jq gum wl-clipboard slurp hyprpicker \
   wtype brightnessctl bluez networkmanager qrencode libnotify \
   jetbrains-mono-nerd-fonts
 for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker; do
-  rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - omarshell needs it. Check for a COPR."
+  rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - check for a COPR."
 done
-
-install_omarshell_repo
-setup_omarshell_session_env
 
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
-
-seed_hypr_personal_overrides
 
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop" + zed; Ghostty is deliberately not installed here - kitty is
@@ -148,14 +162,6 @@ if ! "$HOME/.local/bin/mise" use --global claude-code; then
   log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' by hand to find the right name."
 fi
 
-# Re-apply the current theme now that omarshell's theme catalog is in place.
-# Defaults to matte-black on a machine that's never had a theme set before.
-log "Re-applying the current theme..."
-mkdir -p "$HOME/.local/state/omarchy/current"
-CURRENT_THEME_FILE="$HOME/.local/state/omarchy/current/theme.name"
-[[ -f "$CURRENT_THEME_FILE" ]] || echo "matte-black" >"$CURRENT_THEME_FILE"
-omarchy-theme-set "$(cat "$CURRENT_THEME_FILE")" || log "WARNING: omarchy-theme-set failed - check that quickshell/omarshell deps installed above."
-
 # Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
 # shared .zshenv). The unit logs in with a personal access token read from
 # ~/.config/proton-pass-cli/pat - a secret, so this script can't create it:
@@ -190,20 +196,9 @@ else
   log "WARNING: could not enable crash-watch (no user systemd session?) - run: systemctl --user enable --now crash-watch.service from a desktop session."
 fi
 
-# Only relaunch Quickshell if we're actually inside a Hyprland session
-# ($HYPRLAND_INSTANCE_SIGNATURE is set by Hyprland for every process it spawns).
-# Quickshell speaks Wayland's layer-shell protocol, which KDE's compositor
-# (KWin) also implements - running this unconditionally from a KDE session
-# (Nobara's default) would render omarshell's bar as a floating overlay on top
-# of a live KDE desktop, with none of Hyprland's own behavior actually running.
-if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-  log "Reloading Hyprland (picks up the Omarchy config + omarshell paths)..."
-  hyprctl reload
-  log "Restarting the shell..."
-  omarchy-restart-shell || log "WARNING: shell restart failed - check 'journalctl --user -t omarchy-shell'."
-else
-  log "Not in a Hyprland session - skipping Hyprland reload/shell relaunch. Log out and pick 'Hyprland' at the SDDM login screen to use it."
-fi
-
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
+
+# Themed starship prompt: needs the shared symlinks (script + template) from above
+log "Rendering the starship prompt for the current theme..."
+"$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."
