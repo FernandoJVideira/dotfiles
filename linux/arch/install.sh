@@ -55,12 +55,6 @@ sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli 
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 
-# Re-apply the current theme so kitty's themed colors file exists (Omadora defaults to
-# its own theme on a machine that's never had one set).
-log "Re-applying the current theme..."
-omactl theme set "$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)" \
-  || log "WARNING: theme re-apply failed - run: omactl theme set <name> from the desktop."
-
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
 xdg-settings set default-web-browser brave-origin.desktop
@@ -94,11 +88,25 @@ if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
   hyprctl reload
 fi
 
+# The unit logs in with a personal access token from ~/.config/proton-pass-cli/pat - a secret
+# this script can't create, so enable the unit always but only start it once the file exists.
 log "Enabling Proton Pass SSH agent..."
-systemctl --user enable --now proton-pass-agent.service
+mkdir -p -m 700 "$HOME/.ssh"
+systemctl --user enable proton-pass-agent.service
+if [[ -f "$HOME/.config/proton-pass-cli/pat" ]]; then
+  systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
+else
+  log "Proton Pass agent enabled but NOT started: put your personal access token in ~/.config/proton-pass-cli/pat, then run: systemctl --user start proton-pass-agent.service"
+fi
 
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
+
+# Re-apply the current theme so kitty's themed colors file exists (Omadora defaults to
+# its own theme on a machine that's never had one set).
+log "Re-applying the current theme..."
+omactl theme set "$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)" \
+  || log "WARNING: theme re-apply failed - run: omactl theme set <name> from the desktop."
 
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."
