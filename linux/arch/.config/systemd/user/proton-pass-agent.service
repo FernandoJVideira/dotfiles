@@ -4,6 +4,8 @@ After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=60
 StartLimitBurst=5
+# Needs a personal access token (a secret this repo cannot ship); without it the unit is skipped instead of failing every login.
+ConditionPathExists=%h/.config/proton-pass-cli/pat
 
 [Service]
 # network-online.target means nothing in a user manager, so wait for DNS before logging in.
