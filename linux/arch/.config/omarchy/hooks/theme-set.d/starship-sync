@@ -1,0 +1,4 @@
+#!/bin/bash
+# Re-render the themed starship prompt for the new theme (see
+# common/.local/bin/starship-theme-sync).
+exec "$HOME/.local/bin/starship-theme-sync"

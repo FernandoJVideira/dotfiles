@@ -94,3 +94,7 @@ systemctl --user enable --now proton-pass-agent.service
 
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
+
+# Themed starship prompt: needs the shared symlinks (script + template) from above
+log "Rendering the starship prompt for the current theme..."
+"$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Render the themed starship config from the current OS theme.
+#   starship-theme-sync [colors.toml]
+# Without an argument it looks for the current theme's colors.toml under Omadora
+# (~/.config/omadora) and then Omarchy (~/.local/state/omarchy). Called by the
+# theme-set hook; the result is ~/.local/state/starship/starship.toml, which
+# .zshenv uses in preference to the static starship.toml. On any problem the
+# previous output is left in place.
+set -euo pipefail
+
+TEMPLATE="${ZDOTDIR:-$HOME/.config/zsh}/starship.toml.tpl"
+OUT="$HOME/.local/state/starship/starship.toml"
+
+colors="${1:-}"
+if [[ -z $colors ]]; then
+  for candidate in \
+    "$HOME/.config/omadora/current/theme/colors.toml" \
+    "$HOME/.local/state/omarchy/current/theme/colors.toml"; do
+    [[ -f $candidate ]] && { colors=$candidate; break; }
+  done
+fi
+[[ -f $colors && -f $TEMPLATE ]] || { echo "starship-theme-sync: no theme colors or template found" >&2; exit 1; }
+
+declare -A c
+while IFS= read -r line; do
+  if [[ $line =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*[\"\']([^\"\']*)[\"\'] ]]; then
+    c[${BASH_REMATCH[1]}]=${BASH_REMATCH[2]}
+  fi
+done <"$colors"
+
+hex() { [[ ${1:-} =~ ^#[0-9A-Fa-f]{6}$ ]] && printf '%s' "$1"; }
+
+accent=$(hex "${c[accent]:-}") || accent=$(hex "${c[color4]:-}") || accent="#89b4fa"
+background=$(hex "${c[background]:-}") || { echo "starship-theme-sync: no background in $colors" >&2; exit 1; }
+foreground=$(hex "${c[foreground]:-}") || { echo "starship-theme-sync: no foreground in $colors" >&2; exit 1; }
+error=$(hex "${c[red]:-}") || error=$(hex "${c[color1]:-}") || error="#e06c75"
+
+# mix <from> <to> <percent of "to">
+mix() {
+  local a=${1#\#} b=${2#\#} pct=$3 out="#" i x y
+  for i in 0 2 4; do
+    x=$((16#${a:i:2})) y=$((16#${b:i:2}))
+    out+=$(printf '%02x' $(((x * (100 - pct) + y * pct) / 100)))
+  done
+  printf '%s' "$out"
+}
+surface=$(mix "$background" "$foreground" 18)
+dim=$(mix "$background" "$foreground" 45)
+
+mkdir -p "$(dirname "$OUT")"
+tmp=$(mktemp "$OUT.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+sed -e "s|{{ accent }}|$accent|g" \
+  -e "s|{{ background }}|$background|g" \
+  -e "s|{{ foreground }}|$foreground|g" \
+  -e "s|{{ surface }}|$surface|g" \
+  -e "s|{{ dim }}|$dim|g" \
+  -e "s|{{ error }}|$error|g" "$TEMPLATE" >"$tmp"
+
+if grep -q '{{' "$tmp"; then
+  echo "starship-theme-sync: unresolved placeholder in $TEMPLATE" >&2
+  exit 1
+fi
+mv "$tmp" "$OUT"
+trap - EXIT
