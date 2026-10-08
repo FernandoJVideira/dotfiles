@@ -1,34 +1,24 @@
 -- Learn how to configure Hyprland: https://wiki.hypr.land/Configuring/Start/
 
--- Omarchy's bootstrap keeps path setup out of this user config.
-dofile((os.getenv("OMARCHY_PATH") or "/usr/share/omarchy") .. "/default/hypr/bootstrap.lua")
+-- Load user modules from ~/.config and Omadora defaults from $OMADORA_PATH.
+package.path = os.getenv("HOME")
+  .. "/.config/?.lua;"
+  .. (os.getenv("OMADORA_PATH") or (os.getenv("HOME") .. "/.local/share/omadora"))
+  .. "/?.lua;"
+  .. package.path
 
--- Disable all Omarchy default bindings. Add your own in hypr/bindings.lua.
--- omarchy_default_bindings = false
---
--- Or disable only bindings for Omarchy's preinstalled apps/web apps while
--- keeping core window-manager bindings:
--- omarchy_preinstalled_bindings = false
+-- All Omadora default setups
+require("default.hypr.omadora")
 
--- Load Omarchy defaults.
-require("default.hypr.omarchy")
-
--- Put your personal overrides in these files. They're loaded after Omarchy's
--- defaults so package updates can improve the defaults without rewriting your
--- ~/.config/hypr files.
+---- Change your own setup in these files and override defaults.
 require("hypr.monitors")
 require("hypr.input")
 require("hypr.bindings")
 require("hypr.looknfeel")
 require("hypr.autostart")
 
--- Toggle config flags dynamically.
+---- Toggle config flags dynamically
 require("default.hypr.toggles")
 
 -- Add any other personal Hyprland configuration below.
 -- o.window("qemu", { workspace = "5" })
-
--- Steam/Proton game windows (Warframe included) sometimes remember a stale
--- off-screen position from a previous monitor layout. Force any of them to
--- open on the main monitor (DP-1, see monitors.lua) at a fixed, visible spot.
-o.window({ class = "^steam_app_.*$" }, { monitor = "DP-1", move = { 100, 100 } })
