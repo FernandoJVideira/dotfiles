@@ -18,7 +18,7 @@ fi
 # Install zsh and set it as the default shell
 log "Installing zsh..."
 sudo pacman -S --needed --noconfirm zsh
-sudo chsh -s "$(which zsh)" "$USER"
+sudo chsh -s "$(command -v zsh)" "$USER"
 
 # Omadora (my fork, arch branch) provides the Hyprland session, the Quickshell
 # shell, SDDM and their packages. It goes in before the dotfiles are symlinked so
