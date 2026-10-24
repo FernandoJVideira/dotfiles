@@ -13,13 +13,15 @@ hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 -- catch-all per the docs.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
 
--- Chosen via configure-monitors.sh: which outputs to configure, and
--- their position. First entry is the main monitor, at 0x0; the rest
--- chain to its right in the order picked.
+-- Written by lib/monitors.sh (run from the install script): the monitor with
+-- the highest refresh rate is the main one at 0x0; the rest chain to its
+-- right, fastest first.
+-- BEGIN generated: monitors (lib/monitors.sh)
 local configured_positions = {
   ["DP-1"] = "0x0",
   ["HDMI-A-1"] = "auto-right",
 }
+-- END generated: monitors
 
 -- Pin every configured monitor to its true max mode: highest resolution,
 -- then highest refresh rate available at that resolution. Hyprland's own
@@ -76,6 +78,7 @@ end)
 -- the next monitor 6-10, and so on. Keeps the top bar's per-monitor
 -- workspace ranges (workspaces-per-monitor.qml) and SUPER+N in sync
 -- with what's actually bound to each screen.
+-- BEGIN generated: workspaces (lib/monitors.sh)
 hl.workspace_rule({ workspace = "1", monitor = "DP-1", default = true, persistent = true })
 hl.workspace_rule({ workspace = "2", monitor = "DP-1", default = false, persistent = true })
 hl.workspace_rule({ workspace = "3", monitor = "DP-1", default = false, persistent = true })
@@ -86,3 +89,4 @@ hl.workspace_rule({ workspace = "7", monitor = "HDMI-A-1", default = false, pers
 hl.workspace_rule({ workspace = "8", monitor = "HDMI-A-1", default = false, persistent = true })
 hl.workspace_rule({ workspace = "9", monitor = "HDMI-A-1", default = false, persistent = true })
 hl.workspace_rule({ workspace = "10", monitor = "HDMI-A-1", default = false, persistent = true })
+-- END generated: workspaces

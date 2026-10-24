@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# SDDM Xsetup (installed by linux/arch/install.sh): the greeter runs on X11 and
+# ignores Hyprland's monitors.lua, so lay the screens out the same way here -
+# every connected monitor at its best mode (largest resolution, then highest
+# refresh rate), the fastest one primary at the left, the rest chained to its
+# right in the same order.
+xrandr --query | awk '
+  function flush() { if (out != "") print best_rate, out, best_mode, best_w; out = "" }
+  /^[^ ]/ { flush() }
+  / connected/ { out = $1; best_area = 0; best_rate = 0; best_mode = ""; best_w = 0; next }
+  out != "" && $1 ~ /^[0-9]+x[0-9]+$/ {
+    split($1, d, "x"); area = d[1] * d[2]
+    for (i = 2; i <= NF; i++) {
+      r = $i; gsub(/[*+]/, "", r); if (r !~ /^[0-9.]+$/) continue
+      if (area > best_area || (area == best_area && r + 0 > best_rate + 0)) {
+        best_area = area; best_rate = r; best_mode = $1; best_w = d[1]
+      }
+    }
+  }
+  END { flush() }' | sort -k1,1nr -k2,2 | {
+  args=(); x=0; first=1
+  while read -r rate out mode width; do
+    args+=(--output "$out" --mode "$mode" --rate "$rate" --pos "${x}x0")
+    ((first)) && args+=(--primary)
+    first=0; x=$((x + width))
+  done
+  ((${#args[@]})) && xrandr "${args[@]}"
+}
+exit 0

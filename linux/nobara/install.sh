@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/monitors.sh"
 
 # Install zsh and set it as the default shell (mirrors linux/arch/install.sh)
 log "Installing zsh..."
@@ -32,6 +33,8 @@ else
   log "Running the Omadora installer..."
   bash "$OMADORA_DIR/install.sh"
 fi
+export OMADORA_PATH="$OMADORA_DIR"
+export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 # Hyprland + quickshell runtime deps, dnf side. UNTESTED - no Fedora/Nobara
 # box was available while writing this; treat every package name here as a
@@ -50,6 +53,15 @@ done
 
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+# Monitor layout: the fastest monitor becomes the primary at 0x0, the rest chain
+# to its right. Written into the (symlinked) monitors.lua and into the plasmalogin
+# login screen. Needs a running Hyprland to read the mode lists, so on a first
+# install from a TTY it is skipped - re-run this script from the desktop.
+log "Detecting monitors..."
+MONITORS="$(detect_monitors || true)"
+sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$MONITORS" || true
+sync_plasmalogin_monitors "$MONITORS" || true
 
 # NVIDIA-only extras live in a sibling tree so an AMD/Intel machine never gets
 # them. nvidia-settings-load needs an X server and fails on every Wayland login.
@@ -85,6 +97,20 @@ fi
 # official package itself on first run, since Spotify isn't in Fedora's repos.
 # discord is also packaged in Terra (Fedora's own repos can't ship it).
 sudo dnf install -y --skip-unavailable zed golang spotify-launcher discord
+
+# Helium (browser) comes from Nobara's own repo. Steam and Heroic are in Terra;
+# they're only installed when you say yes, same as the gaming prompt on Arch.
+sudo dnf install -y --skip-unavailable helium-bin
+if command -v gum >/dev/null && gum confirm "Set up gaming tools too (Steam, Heroic)?"; then
+  log "Installing gaming tools..."
+  sudo dnf install -y --skip-unavailable steam heroic-games-launcher
+fi
+
+# Flatpak apps (no rpm for these): LocalSend and GPU Screen Recorder.
+log "Installing Flatpak apps (LocalSend, GPU Screen Recorder)..."
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+  && flatpak install -y --noninteractive flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder \
+  || log "WARNING: Flatpak apps failed to install - run: flatpak install flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder"
 
 # OpenDeck (Stream Deck controller; the AUR package on Arch). Upstream's own
 # installer picks the .rpm from GitHub Releases on Fedora-family systems and
@@ -215,6 +241,25 @@ fi
 
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
+
+# Omadora preferences: Claude as the default agent and the idle
+# screensaver off. Both are plain state files; omadora-default-agent would also
+# launch the agent, and `omactl toggle screensaver` flips instead of setting.
+log "Applying Omadora preferences..."
+mkdir -p "$HOME/.config/omadora/defaults" "$HOME/.local/state/omadora/toggles"
+echo claude >"$HOME/.config/omadora/defaults/agent"
+touch "$HOME/.local/state/omadora/toggles/screensaver-off"
+# The matte-black theme is re-applied so kitty's and starship's themed files exist.
+theme="$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)"
+# First run only: start from matte-black instead of Omadora's own default theme; later
+# runs keep whatever theme was picked since.
+theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
+if [[ ! -f "$theme_marker" ]]; then
+  theme=matte-black
+  mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
+fi
+omactl theme set "$theme" \
+  || log "WARNING: theme re-apply failed - run: omactl theme set matte-black from the desktop."
 
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."
