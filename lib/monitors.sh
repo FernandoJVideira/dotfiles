@@ -26,7 +26,9 @@ detect_monitors() {
                | {w: (.w|tonumber), h: (.h|tonumber), r: (.r|tonumber)};
     [ .[] | select(.disabled | not) | . as $m
       | ($m.availableModes | map(parse)
-         | sort_by([.w * .h, .r]) | last) as $b
+         | sort_by([.w * .h, .r]) | last
+         # nested/virtual outputs can report no mode list: use the current mode
+         // {w: $m.width, h: $m.height, r: $m.refreshRate}) as $b
       | { name: $m.name, w: $b.w, h: $b.h,
           r: (if $m.width == $b.w and $m.height == $b.h
                  and (($m.refreshRate * 100 | round) == ($b.r * 100 | round))
