@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/monitors.sh"
 
 # gum (the prompts below) is not on a minimal install yet
 sudo pacman -S --needed --noconfirm gum
@@ -29,7 +30,8 @@ sudo chsh -s "$(command -v zsh)" "$USER"
 OMADORA_DIR="$HOME/.local/share/omadora"
 OMADORA_REPO_URL="${OMADORA_REPO_URL:-https://github.com/FernandoJVideira/omadora.git}"
 OMADORA_REF="${OMADORA_REF:-arch}"
-sudo pacman -S --needed --noconfirm git base-devel
+# python-filelock: pipx (used by the Omadora installer) imports it but the package does not depend on it
+sudo pacman -S --needed --noconfirm git base-devel python-filelock
 if [[ -d "$OMADORA_DIR/.git" ]]; then
   log "Updating Omadora..."
   git -C "$OMADORA_DIR" pull --ff-only \
@@ -48,12 +50,32 @@ export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PA
 log "Symlinking Linux-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 
+# Monitor layout: the fastest monitor becomes the primary at 0x0, the rest chain
+# to its right. Written into the (symlinked) monitors.lua; needs a running
+# Hyprland to read the mode lists, so on a first install from a TTY it is
+# skipped - re-run this script from the desktop.
+log "Detecting monitors..."
+sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$(detect_monitors || true)" || true
+
+# The SDDM greeter runs on X11 and ignores monitors.lua, so give it an Xsetup
+# script that lays the screens out the same way (works at login time, no
+# detection needed here).
+log "Matching the SDDM login screen to the monitor layout..."
+sudo install -D -m 755 "$SCRIPT_DIR/../../lib/sddm-monitors.xsetup" /usr/local/bin/omadora-sddm-monitors
+sudo install -d /etc/sddm.conf.d
+printf '[X11]\nDisplayCommand=/usr/local/bin/omadora-sddm-monitors\n' \
+  | sudo tee /etc/sddm.conf.d/omadora-monitors.conf >/dev/null
+
 # Install workstation tools
 log "Installing workstation tools..."
 sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli zed
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
+# LocalSend and GPU Screen Recorder (Flatpaks on Nobara); a separate call so a
+# wrong package name can't take the list above down with it.
+yay -S --needed --noconfirm localsend-bin gpu-screen-recorder \
+  || log "WARNING: localsend-bin / gpu-screen-recorder failed to install - check the AUR names."
 
 # Set Brave Origin as the default browser
 log "Setting Brave Origin as the default browser..."
@@ -102,10 +124,26 @@ fi
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
 
+# Omadora preferences (same as Nobara): Claude as the default agent and the idle
+# screensaver off. Both are plain state files; omadora-default-agent would also
+# launch the agent, and `omactl toggle screensaver` flips instead of setting.
+log "Applying Omadora preferences..."
+mkdir -p "$HOME/.config/omadora/defaults" "$HOME/.local/state/omadora/toggles"
+echo claude >"$HOME/.config/omadora/defaults/agent"
+touch "$HOME/.local/state/omadora/toggles/screensaver-off"
+
 # Re-apply the current theme so kitty's themed colors file exists (Omadora defaults to
 # its own theme on a machine that's never had one set).
 log "Re-applying the current theme..."
-omactl theme set "$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)" \
+theme="$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)"
+# First run only: start from matte-black instead of Omadora's own default theme; later
+# runs keep whatever theme was picked since.
+theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
+if [[ ! -f "$theme_marker" ]]; then
+  theme=matte-black
+  mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
+fi
+omactl theme set "$theme" \
   || log "WARNING: theme re-apply failed - run: omactl theme set <name> from the desktop."
 
 # Themed starship prompt: needs the shared symlinks (script + template) from above
