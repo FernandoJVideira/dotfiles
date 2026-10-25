@@ -46,8 +46,8 @@ sudo dnf install -y --skip-unavailable \
   hyprland quickshell xdg-desktop-portal-hyprland \
   wireplumber pipewire gnome-keyring jq gum wl-clipboard slurp hyprpicker \
   wtype brightnessctl bluez networkmanager qrencode libnotify \
-  jetbrains-mono-nerd-fonts
-for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker; do
+  jetbrains-mono-nerd-fonts hack-nerd-fonts
+for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker hack-nerd-fonts; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - check for a COPR."
 done
 
@@ -266,3 +266,7 @@ omactl theme set "$theme" \
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."
 "$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."
+
+# Zed's theme follows the OS theme too (same shared-symlinks dependency)
+log "Rendering the Zed theme for the current theme..."
+"$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."

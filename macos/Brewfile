@@ -77,6 +77,8 @@ cask "element"
 # Voice/text chat (native app: better screen-share than the webapp)
 cask "discord"
 cask "font-jetbrains-mono-nerd-font"
+# Zed's terminal font
+cask "font-hack-nerd-font"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
 # Default terminal - fast, GPU-accelerated, kept in sync with the Nobara/Arch style

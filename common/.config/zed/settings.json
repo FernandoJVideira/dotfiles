@@ -1,0 +1,63 @@
+{
+  "agent_servers": {
+    "claude-acp": {
+      "default_config_options": {
+        "mode": "auto",
+        "model": "sonnet"
+      },
+      "type": "registry"
+    }
+  },
+  "cli_default_open_behavior": "existing_window",
+  "ssh_connections": [
+    {
+      "host": "nexus.fernandovideira.com",
+      "args": [],
+      "projects": [
+        {
+          "paths": [
+            "/home/fvideira/deployment"
+          ]
+        },
+        {
+          "paths": [
+            "/var/lib/casaos/apps/gitea"
+          ]
+        }
+      ]
+    },
+    {
+      "host": "ssh.nexus.fernandovideira.com",
+      "username": "fvideira",
+      "args": [],
+      "projects": []
+    }
+  ],
+  // Same name on every OS, different source: macOS symlinks a static Gruvbox file,
+  // Linux renders it from the OS theme (common/.local/bin/zed-theme-sync).
+  "theme": "Desktop Theme",
+  // Installed on first launch on every machine. Extensions added from Zed's UI
+  // only exist on that machine until they're listed here.
+  "auto_install_extensions": {
+    "csharp": true,
+    "dockerfile": true,
+    "emmet": true,
+    "env": true,
+    "git-firefly": true,
+    "html": true,
+    "just": true,
+    "latex": true,
+    "log": true,
+    "lua": true,
+    "make": true,
+    "proto": true,
+    "sql": true,
+    "toml": true,
+    "unity-snippets": true,
+    "vue": true
+  },
+  "terminal": {
+    "font_family": "Hack Nerd Font Mono",
+    "font_size": 14.0
+  }
+}

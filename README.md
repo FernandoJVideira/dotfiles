@@ -46,7 +46,7 @@ Once packages and symlinks are in place, `macos-defaults.sh` applies the actual 
 3. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a first install that installer ends with a reboot, so run `./bootstrap.sh` again afterwards to finish. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
 4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Go, Element, kitty, `gh`, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
 5. Enables the Proton Pass SSH agent. It only starts once your personal access token is in `~/.config/proton-pass-cli/pat`; until then the unit is skipped.
-6. Runs the shared dotfiles installer, re-applies the current theme with `omactl theme set`, and renders the starship prompt.
+6. Runs the shared dotfiles installer, re-applies the current theme with `omactl theme set`, and renders the starship prompt and the Zed theme.
 
 The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the `arch-omarshell-final` tag. This flow has been tested in a VM only; Plymouth, NVIDIA driver packages and real-hardware features (Bluetooth, fingerprint, FIDO2) are not set up or verified yet. On Arch, monitors are set directly in `~/.config/hypr/monitors.lua`.
 
@@ -62,6 +62,10 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 ## Common
 
 All platforms end at `common/install.sh`: it symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`) - the same prefix on every OS is what lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you. Nothing here is platform-specific by design, if a tool or config only makes sense on one OS or distro, it lives under `macos/`, `linux/arch/`, or `linux/nobara/` instead.
+
+### Zed
+
+`common/.config/zed/` holds Zed's `settings.json`, `keymap.json` and the extension list (`auto_install_extensions`, installed on first launch, so a new extension added through Zed's UI has to be added there to reach the other machines). The theme is always called "Desktop Theme", but its source depends on the OS: macOS symlinks a static Gruvbox file (`macos/.config/zed/themes/desktop-theme.json`), while on Linux `zed-theme-sync` renders `desktop-theme.json.tpl` from the current Omadora theme's `colors.toml`, at install time and from a `theme-set` hook, and Zed re-applies it live. The template is a conversion of Zed's own Gruvbox theme (MIT) with the palette swapped in, so it covers the whole UI, not just the editor. Zed's terminal font is Hack Nerd Font Mono, installed on every OS.
 
 ## A note on safety
 
