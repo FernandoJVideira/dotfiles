@@ -26,7 +26,8 @@
 #      (starship, zed, neovim, sketchybar, borders, btop, and the macOS accent / folder
 #      color: macos/.config/omadora/hooks)
 #
-# THEME_SKIP="wallpaper,appearance,reload,hooks,accent" skips those steps (used for testing).
+# THEME_SKIP="wallpaper,appearance,reload,hooks,accent,finder" skips those steps (used for testing;
+# "finder" only skips restarting Finder and the Dock after a folder color change).
 set -euo pipefail
 
 REPO_URL="${OMADORA_REPO:-https://github.com/FernandoJVideira/omadora.git}"
