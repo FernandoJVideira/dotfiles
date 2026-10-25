@@ -24,6 +24,9 @@ alias grep='rg --color=auto'
 alias diff='diff --color=auto'
 alias df='df -h'
 alias sz='source ~/.config/zsh/.zshrc'
+alias ssh='TERM=xterm-256color ssh'
+alias nexus='TERM=xterm-256color ssh fvideira@ssh.nexus.fernandovideira.com'
+alias atlas='TERM=xterm-256color ssh fvideira@ssh.atlas.fernandovideira.com'
 
 # Local IP (Grabs all active local inet addresses, ignoring localhost)
 alias ip="ifconfig | grep 'inet ' | grep -v 127.0.0.1 | awk '{print \$2}'"
