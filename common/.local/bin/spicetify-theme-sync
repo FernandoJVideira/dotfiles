@@ -8,9 +8,9 @@
 #   first run / --force   `spicetify backup apply`, falling back to `restore backup apply`
 #                         when Spotify has updated itself since the backup
 #   after that            `spicetify refresh`, which only reloads the colors
-# Spotify is never restarted, so music keeps playing; a running Spotify shows the new
-# colors after you restart it. (The full apply does start Spotify if it isn't running,
-# once; `refresh` never does, so a normal theme switch doesn't open it.) Spotify updates undo Spicetify's patch: run this with
+# A Spotify that is running is restarted afterwards to show the new colors (playback
+# stops; THEME_SKIP=spotify leaves it running instead). One that isn't running stays
+# closed on a normal theme switch: `refresh` never launches it. (The full apply does, once.) Spotify updates undo Spicetify's patch: run this with
 # --force afterwards.
 #
 # Needs Spotify started at least once (it creates the prefs file Spicetify patches
@@ -20,6 +20,11 @@ set -euo pipefail
 
 force=0
 [[ ${1:-} == --force ]] && force=1
+
+spotify_running() { pgrep -x Spotify >/dev/null 2>&1 || pgrep -x spotify >/dev/null 2>&1; }
+# before anything below: the full apply starts Spotify when it is closed
+was_running=0
+spotify_running && was_running=1
 
 SRC="$HOME/.config/omadora/current/theme/spicetify-color.ini"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/spicetify-theme-sync"
@@ -114,8 +119,14 @@ else
   exit 0
 fi
 
-if pgrep -x Spotify >/dev/null 2>&1 || pgrep -x spotify >/dev/null 2>&1; then
-  echo "Spotify themed - restart Spotify to see the new colors"
+if (( was_running )); then
+  if [[ ,${THEME_SKIP:-}, == *,spotify,* ]]; then
+    echo "Spotify themed - restart Spotify to see the new colors"
+  elif "$spice" -q restart >/dev/null 2>&1; then
+    echo "Spotify themed and restarted"
+  else
+    echo "Spotify themed - couldn't restart it, restart Spotify to see the new colors" >&2
+  fi
 else
   echo "Spotify themed"
 fi
