@@ -10,11 +10,13 @@
 #                                 1 orange, 2 yellow, 3 green, 4 blue, 5 purple, 6 pink)
 #   AppleAquaColorVariant         6 for graphite, 1 otherwise
 #   AppleIconAppearanceTintColor  Finder folders and the tinted icon style, by name
-# Running apps pick the new accent up from the notification below; Finder keeps the
-# folder icons it already drew, so those change in newly opened windows (or after
-# `killall Finder`, which is left to you since it interrupts file operations).
+# Running apps pick the new accent up from the notification below. Finder and the Dock
+# do not reliably redraw folder icons they already drew (a stale color can stick even
+# across later changes), so when the folder color changes they are restarted; both come
+# straight back, but a Finder copy that is in progress at that moment is interrupted.
 #
-# THEME_SKIP=accent skips this hook; THEME_ACCENT_DRYRUN=1 only prints the mapping.
+# THEME_SKIP=accent skips this hook, THEME_SKIP=finder only the Finder/Dock restart;
+# THEME_ACCENT_DRYRUN=1 only prints the mapping.
 set -euo pipefail
 
 [[ ,${THEME_SKIP:-}, == *,accent,* ]] && exit 0
@@ -71,6 +73,7 @@ defaults write -g AppleIconAppearanceTintColor -string "$name"
 # What System Settings posts after a change; running apps repaint with the new accent.
 osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately($("AppleColorPreferencesChangedNotification"), $(), $(), true)' >/dev/null 2>&1 || true
 
-if [[ $old_tint != "$name" ]]; then
-  echo "macOS accent and folder color: $name (open Finder windows keep the old folder color until reopened, or run: killall Finder)"
+echo "macOS accent and folder color: $name"
+if [[ $old_tint != "$name" && ,${THEME_SKIP:-}, != *,finder,* ]]; then
+  killall Finder Dock >/dev/null 2>&1 || true
 fi
