@@ -130,6 +130,10 @@ fi
 sudo dnf install -y --skip-unavailable gh   # GitHub CLI, in Fedora's own repos
 rpm -q gh &>/dev/null || log "WARNING: gh not installed."
 
+# .NET SDK (Fedora's own repos): Zed's C# extension; the macOS Brewfile has the dotnet-sdk cask
+sudo dnf install -y --skip-unavailable dotnet-sdk-10.0
+rpm -q dotnet-sdk-10.0 &>/dev/null || log "WARNING: dotnet-sdk-10.0 not installed - check 'dnf search dotnet-sdk'."
+
 # Crash watcher deps too: libnotify (notify-send), gdb (backtraces for the
 # diagnose-crash skill). There's no systemd-coredump package on current Fedora -
 # it was folded into `systemd` itself (confirmed live: dnf reports "No match for

@@ -44,7 +44,7 @@ Once packages and symlinks are in place, `macos-defaults.sh` applies the actual 
 1. Installs `gum` (for the prompts below), `zsh` (set as the default shell), `git` and `base-devel`.
 2. Asks a few questions interactively via `gum`: whether to set up gaming tools, install Discord, and install OBS.
 3. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a first install that installer ends with a reboot, so run `./bootstrap.sh` again afterwards to finish. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
-4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Go, Element, kitty, `gh`, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
+4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Go, the .NET SDK, Element, kitty, `gh`, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
 5. Enables the Proton Pass SSH agent. It only starts once your personal access token is in `~/.config/proton-pass-cli/pat`; until then the unit is skipped.
 6. Runs the shared dotfiles installer, re-applies the current theme with `omactl theme set`, and renders the starship prompt and the Zed theme.
 
@@ -56,7 +56,7 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 1. Installs `zsh` and sets it as the default shell, same as the Arch flow, plus `git`.
 2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
-3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, Claude Code).
+3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, the .NET SDK, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, Claude Code).
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
 ## Common

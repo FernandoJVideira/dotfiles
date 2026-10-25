@@ -71,6 +71,8 @@ log "Installing workstation tools..."
 sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli zed
 # Zed's terminal font (common/.config/zed/settings.json)
 sudo pacman -S --needed --noconfirm ttf-hack-nerd
+# .NET SDK: Zed's C# extension (the macOS Brewfile has the dotnet-sdk cask)
+sudo pacman -S --needed --noconfirm dotnet-sdk
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
