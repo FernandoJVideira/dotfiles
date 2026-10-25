@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Compare the extensions Zed has installed on this machine with the list in
+# settings.json (auto_install_extensions), the one place that decides what every
+# machine gets. Zed installs the missing ones the next time it starts, so "missing"
+# right after a fresh install just means Zed hasn't been opened yet (or was offline).
+# "Unlisted" are extensions added through Zed's UI on this machine only: add them to
+# the list to carry them to the others.
+#   zed-extensions-check        exits 1 if anything is missing
+set -euo pipefail
+
+settings="${XDG_CONFIG_HOME:-$HOME/.config}/zed/settings.json"
+if [[ $(uname -s) == Darwin ]]; then
+  installed_dir="$HOME/Library/Application Support/Zed/extensions/installed"
+else
+  installed_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zed/extensions/installed"
+fi
+
+[[ -f $settings ]] || { echo "zed-extensions-check: $settings not found" >&2; exit 1; }
+
+# Keys of the "auto_install_extensions" object (settings.json is JSONC, so no jq)
+wanted=$(awk '
+  /"auto_install_extensions"[[:space:]]*:/ { in_block = 1; next }
+  in_block && /}/ { exit }
+  in_block && match($0, /"[^"]+"[[:space:]]*:[[:space:]]*true/) {
+    id = substr($0, RSTART + 1, RLENGTH); sub(/".*/, "", id); print id
+  }' "$settings" | sort)
+[[ -n $wanted ]] || { echo "zed-extensions-check: no auto_install_extensions in $settings" >&2; exit 1; }
+
+have=
+[[ -d $installed_dir ]] && have=$(find "$installed_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+
+missing=$(comm -23 <(echo "$wanted") <(echo "$have"))
+unlisted=$(comm -13 <(echo "$wanted") <(echo "$have"))
+
+echo "$(echo "$wanted" | wc -l | tr -d ' ') extensions listed, $(echo -n "$have" | grep -c . || true) installed"
+[[ -z $unlisted ]] || echo "installed but not in settings.json: $(echo $unlisted)"
+if [[ -n $missing ]]; then
+  echo "listed but not installed: $(echo $missing) - open Zed (online) to install them"
+  exit 1
+fi
+echo "all listed extensions are installed"

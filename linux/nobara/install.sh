@@ -270,3 +270,4 @@ log "Rendering the starship prompt for the current theme..."
 # Zed's theme follows the OS theme too (same shared-symlinks dependency)
 log "Rendering the Zed theme for the current theme..."
 "$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."
+log "Zed installs its extensions (settings.json) the first time it starts - run zed-extensions-check afterwards to confirm."
