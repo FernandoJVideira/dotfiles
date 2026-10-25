@@ -41,6 +41,30 @@ export PATH=$PATH:$HOME/.spicetify
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
+# ---------- Miniconda ----------
+# Installed by lib/miniconda.sh to the same prefix on every OS, so this block is
+# universal. It replaces the `conda init` block, which belongs in .zshrc and is
+# written by conda itself. Two parts:
+#  - condabin on PATH (a plain assignment, free): `conda` is reachable from
+#    scripts and tools too, not only from interactive zsh.
+#  - the shell hook that makes `conda activate` work is loaded on first use.
+#    Generating it runs Python (~0.2s) and .zshenv is read by *every* zsh,
+#    scripts included, so doing it eagerly would tax them all. The hook ends
+#    with an unconditional `conda activate base`; CONDA_AUTO_ACTIVATE=false
+#    turns that off so the first `conda` call doesn't silently put conda's
+#    Python ahead of everything. Activate when you want one. (Only this name:
+#    also setting the older CONDA_AUTO_ACTIVATE_BASE makes conda 26 abort with
+#    MultipleKeysError, so the hook never loads.)
+export CONDA_ROOT="$HOME/miniconda3"
+if [[ -d "$CONDA_ROOT/condabin" ]]; then
+  export PATH="$CONDA_ROOT/condabin:$PATH"
+  conda() {
+    unfunction conda
+    eval "$(CONDA_AUTO_ACTIVATE=false "$CONDA_ROOT/bin/conda" shell.zsh hook)"
+    conda "$@"
+  }
+fi
+
 
 # ---------- SSH (Proton Pass agent) ----------
 export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock"

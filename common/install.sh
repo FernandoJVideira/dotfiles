@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/../lib/symlink.sh"
+source "$SCRIPT_DIR/../lib/miniconda.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
@@ -16,5 +17,9 @@ fi
 
 log "Installing tmux plugins..."
 "$HOME/.config/tmux/plugins/tpm/scripts/install_plugins.sh"
+
+# Same prefix and installer on every OS, so the config in .zshenv is universal.
+# Non-fatal: a flaky download shouldn't fail the rest of the dotfiles.
+install_miniconda || log "WARNING: Miniconda wasn't installed (see above) - rerun ./bootstrap.sh to retry."
 
 log "common/install.sh complete."
