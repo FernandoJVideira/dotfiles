@@ -67,6 +67,10 @@ All platforms end at `common/install.sh`: it symlinks the shared configs and, on
 
 `common/.config/zed/` holds Zed's `settings.json`, `keymap.json` and the extension list (`auto_install_extensions`, installed on first launch, so a new extension added through Zed's UI has to be added there to reach the other machines). The theme is always called "Desktop Theme", but its source depends on the OS: macOS symlinks a static Gruvbox file (`macos/.config/zed/themes/desktop-theme.json`), while on Linux `zed-theme-sync` renders `desktop-theme.json.tpl` from the current Omadora theme's `colors.toml`, at install time and from a `theme-set` hook, and Zed re-applies it live. The template is a conversion of Zed's own Gruvbox theme (MIT) with the palette swapped in, so it covers the whole UI, not just the editor. Zed's terminal font is Hack Nerd Font Mono, installed on every OS. `zed-extensions-check` compares what Zed has installed on the current machine with that list (missing ones, and ones installed here but not listed); Zed only installs the missing ones when it starts, so run it after the first launch on a new machine. Zed's prompt library (`~/.config/zed/prompts`) is a binary database Zed manages itself, so it isn't tracked.
 
+### tmux
+
+The status line in `tmux.conf` uses plain ANSI color names, so it follows whatever palette the terminal has: on Linux that's the Omadora theme (kitty is re-rendered on every theme change), live, with no hook or reload. macOS keeps Gruvbox for now through `macos/.config/tmux/theme.conf`, which `tmux.conf` sources just before TPM starts and which lists the `tmux-gruvbox` plugin. TPM follows `source-file` lines, so the plugin is only installed and loaded where that file is linked.
+
 ## A note on safety
 
 Some of what these scripts touch is not easily undone: NVIDIA driver setup, `mkinitcpio` regeneration, macOS system defaults. I've run each install path against my own hardware before trusting it, but "works on my machine" is doing a lot of lifting here. Read a script before you run it, especially on Linux.
