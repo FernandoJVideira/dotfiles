@@ -28,8 +28,10 @@
 #      (starship, zed, neovim, sketchybar, borders, btop, and the macOS accent / folder
 #      color: macos/.config/omadora/hooks)
 #
-# THEME_SKIP="wallpaper,appearance,reload,hooks,accent,finder" skips those steps (used for testing;
-# "finder" only skips restarting Finder and the Dock after a folder color change).
+# THEME_SKIP="wallpaper,appearance,reload,hooks,accent,finder,spotify" skips those steps
+# (used for testing; "finder" only skips restarting Finder and the Dock after a folder color
+# change, "spotify" the restart of a running Spotify, and "signal" / "osc" only one of the two
+# ways the terminals are recolored).
 set -euo pipefail
 
 REPO_URL="${OMADORA_REPO:-https://github.com/FernandoJVideira/omadora.git}"
@@ -185,6 +187,51 @@ apply_appearance() {
     warn "couldn't switch the macOS appearance to $mode (System Events needs Automation permission for this terminal)"
 }
 
+# Terminal colors, pushed straight into every terminal on the machine (kitty, ghostty,
+# Terminal.app...), the way pywal does: the palette, foreground, background, cursor and
+# selection colors of the rendered kitty.conf as OSC escape sequences, written to each tty
+# device. Signalling the terminals to reload their config does the same job, but only if
+# the signal lands; this doesn't depend on it, and a config reload that comes after sets
+# the very same colors.
+push_terminal_colors() {
+  local conf="$CURRENT_THEME_DIR/kitty.conf" seq= key val n tty
+  [[ -f $conf ]] || return 0
+  while read -r key val; do
+    [[ $val =~ ^#[0-9a-fA-F]{6}$ ]] || continue
+    case "$key" in
+      foreground) seq+=$(printf '\033]10;%s\033\\' "$val") ;;
+      background) seq+=$(printf '\033]11;%s\033\\' "$val") ;;
+      cursor) seq+=$(printf '\033]12;%s\033\\' "$val") ;;
+      selection_background) seq+=$(printf '\033]17;%s\033\\' "$val") ;;
+      selection_foreground) seq+=$(printf '\033]19;%s\033\\' "$val") ;;
+      color[0-9] | color1[0-5])
+        n=${key#color}
+        seq+=$(printf '\033]4;%s;%s\033\\' "$n" "$val")
+        ;;
+    esac
+  done <"$conf"
+  [[ -n $seq ]] || return 0
+  # Only devices that are mine: macOS also has world-writable, root-owned legacy ptys
+  # (/dev/ttys0-9) that nothing ever opened, and writing to those blocks forever.
+  # THEME_TTYS: space-separated device list instead of all of them (for testing).
+  local pids=() alive i p
+  for tty in ${THEME_TTYS:-/dev/ttys[0-9]*}; do
+    [[ -O $tty && -w $tty ]] || continue
+    ( printf '%s' "$seq" >"$tty" ) 2>/dev/null &
+    pids[${#pids[@]}]=$!
+  done
+  # a terminal that doesn't read (stopped, wedged) must not stall a theme switch: 2s at most
+  for ((i = 0; i < 20; i++)); do
+    alive=0
+    for p in ${pids[@]+"${pids[@]}"}; do kill -0 "$p" 2>/dev/null && alive=1; done
+    ((alive)) || break
+    sleep 0.1
+  done
+  for p in ${pids[@]+"${pids[@]}"}; do kill -9 "$p" 2>/dev/null || true; done
+  wait 2>/dev/null || true
+  return 0
+}
+
 reload_app() {
   local signal=$1 app=$2
   pgrep -x "$app" >/dev/null 2>&1 && pkill -"$signal" -x "$app" 2>/dev/null || true
@@ -231,8 +278,8 @@ set_theme() {
   skipped wallpaper || apply_background "$name"
   skipped appearance || apply_appearance
   if ! skipped reload; then
-    reload_app USR1 kitty
-    reload_app USR2 ghostty
+    skipped signal || { reload_app USR1 kitty; reload_app USR2 ghostty; }
+    skipped osc || push_terminal_colors
   fi
   skipped hooks || run_hooks "$name"
   skipped reload || reload_app USR2 btop
