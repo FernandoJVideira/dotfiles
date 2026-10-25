@@ -62,7 +62,7 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 1. Installs `zsh` and sets it as the default shell, same as the Arch flow, plus `git`.
 2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
-3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, the .NET SDK, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, Claude Code).
+3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, the .NET SDK, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, pnpm, Claude Code).
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
 ## Common

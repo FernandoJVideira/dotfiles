@@ -36,10 +36,6 @@ export GOPATH="$HOME/go"
 export PATH="$PATH:$GOPATH/bin"
 export PATH=$PATH:$HOME/.spicetify
 
-#----------- Bun ----------
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
 # ---------- Miniconda ----------
 # Installed by lib/miniconda.sh to the same prefix on every OS, so this block is
 # universal. It replaces the `conda init` block, which belongs in .zshrc and is

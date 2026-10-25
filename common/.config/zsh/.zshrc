@@ -123,7 +123,5 @@ source "$ZDOTDIR/prompt.zsh"
 eval "$(mise activate zsh)"
 
 
-# bun completions
-[ -s "/Users/fvideira/.bun/_bun" ] && source "/Users/fvideira/.bun/_bun"
 
 export PATH=$PATH:/home/fvideira/.spicetify
