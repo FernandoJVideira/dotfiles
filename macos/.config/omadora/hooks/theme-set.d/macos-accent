@@ -1,0 +1,76 @@
+#!/bin/bash
+# Match macOS's accent color and its icon/folder tint to the new theme's accent.
+#
+# macOS only offers eight colors for both (Red, Orange, Yellow, Green, Blue, Purple,
+# Pink, Graphite), so the theme's accent is mapped to the nearest one by hue; an accent
+# with almost no saturation (or a nearly black/white one) becomes Graphite. Both
+# settings move together, like the "Match accent" behaviour in System Settings >
+# Appearance:
+#   AppleAccentColor              controls, selection, focus rings (-1 graphite, 0 red,
+#                                 1 orange, 2 yellow, 3 green, 4 blue, 5 purple, 6 pink)
+#   AppleAquaColorVariant         6 for graphite, 1 otherwise
+#   AppleIconAppearanceTintColor  Finder folders and the tinted icon style, by name
+# Running apps pick the new accent up from the notification below; Finder keeps the
+# folder icons it already drew, so those change in newly opened windows (or after
+# `killall Finder`, which is left to you since it interrupts file operations).
+#
+# THEME_SKIP=accent skips this hook; THEME_ACCENT_DRYRUN=1 only prints the mapping.
+set -euo pipefail
+
+[[ ,${THEME_SKIP:-}, == *,accent,* ]] && exit 0
+
+COLORS_TOML="$HOME/.config/omadora/current/theme/colors.toml"
+accent=$(grep -m1 '^accent' "$COLORS_TOML" 2>/dev/null | sed -E 's/^accent *= *"([^"]*)".*/\1/' || true)
+[[ $accent =~ ^#[0-9A-Fa-f]{6}$ ]] || { echo "macos-accent: no accent color in $COLORS_TOML" >&2; exit 0; }
+
+hex=${accent#\#}
+name=$(awk -v r=$((16#${hex:0:2})) -v g=$((16#${hex:2:2})) -v b=$((16#${hex:4:2})) '
+  function abs(x) { return x < 0 ? -x : x }
+  function dist(a, b,   d) { d = abs(a - b); return d > 180 ? 360 - d : d }
+  BEGIN {
+    r /= 255; g /= 255; b /= 255
+    mx = r > g ? (r > b ? r : b) : (g > b ? g : b)
+    mn = r < g ? (r < b ? r : b) : (g < b ? g : b)
+    d = mx - mn; l = (mx + mn) / 2
+    s = (d == 0) ? 0 : d / (1 - abs(2 * l - 1))
+    if (s < 0.15 || l < 0.12 || l > 0.92) { print "Graphite"; exit }
+    if (mx == r) h = 60 * ((g - b) / d); else if (mx == g) h = 60 * ((b - r) / d + 2); else h = 60 * ((r - g) / d + 4)
+    if (h < 0) h += 360
+    n = split("Red 4 Orange 28 Yellow 50 Green 130 Blue 215 Purple 285 Pink 340", t, " ")
+    best = 999
+    for (i = 1; i <= n; i += 2) { x = dist(h, t[i + 1]); if (x < best) { best = x; pick = t[i] } }
+    print pick
+  }')
+
+case $name in
+  Red) index=0 ;;
+  Orange) index=1 ;;
+  Yellow) index=2 ;;
+  Green) index=3 ;;
+  Blue) index=4 ;;
+  Purple) index=5 ;;
+  Pink) index=6 ;;
+  *) name=Graphite index=-1 ;;
+esac
+variant=1
+[[ $name == Graphite ]] && variant=6
+
+if [[ -n ${THEME_ACCENT_DRYRUN:-} ]]; then
+  echo "$accent -> $name (AppleAccentColor=$index)"
+  exit 0
+fi
+
+old_index=$(defaults read -g AppleAccentColor 2>/dev/null || echo "")
+old_tint=$(defaults read -g AppleIconAppearanceTintColor 2>/dev/null || echo "")
+[[ $old_index == "$index" && $old_tint == "$name" ]] && exit 0
+
+defaults write -g AppleAccentColor -int "$index"
+defaults write -g AppleAquaColorVariant -int "$variant"
+defaults write -g AppleIconAppearanceTintColor -string "$name"
+
+# What System Settings posts after a change; running apps repaint with the new accent.
+osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately($("AppleColorPreferencesChangedNotification"), $(), $(), true)' >/dev/null 2>&1 || true
+
+if [[ $old_tint != "$name" ]]; then
+  echo "macOS accent and folder color: $name (open Finder windows keep the old folder color until reopened, or run: killall Finder)"
+fi
