@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/../lib/symlink.sh"
 source "$SCRIPT_DIR/../lib/miniconda.sh"
+source "$SCRIPT_DIR/../lib/spicetify.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
@@ -21,5 +22,9 @@ log "Installing tmux plugins..."
 # Same prefix and installer on every OS, so the config in .zshenv is universal.
 # Non-fatal: a flaky download shouldn't fail the rest of the dotfiles.
 install_miniconda || log "WARNING: Miniconda wasn't installed (see above) - rerun ./bootstrap.sh to retry."
+
+# Same for Spicetify (Spotify theming): one installer for every OS. Non-fatal too. The
+# colors are applied by the theme-set hook (spicetify-sync), once Spotify has been started.
+install_spicetify || log "WARNING: Spicetify wasn't installed (see above) - rerun ./bootstrap.sh to retry."
 
 log "common/install.sh complete."

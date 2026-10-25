@@ -1,0 +1,4 @@
+#!/bin/bash
+# Re-theme Spotify (through Spicetify) for the new theme; see
+# common/.local/bin/spicetify-theme-sync. Runs on every OS, so it lives in common.
+exec "$HOME/.local/bin/spicetify-theme-sync"
