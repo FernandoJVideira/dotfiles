@@ -5,6 +5,9 @@ vim.g.mapleader = " "
 -- Neovim instance re-reads lua/omarchy_theme.lua and repaints instantly,
 -- the same mechanism NvChad's own theme picker uses to hot-swap themes.
 _G.OmarchyReloadTheme = function()
+  -- the generated theme file keeps its name from one switch to the next, so Lua's
+  -- module cache has to forget it or the old palette would be served again
+  package.loaded["themes.omadora"] = nil
   require("nvchad.utils").reload "omarchy_theme"
 end
 

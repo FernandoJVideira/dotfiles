@@ -1,0 +1,42 @@
+#!/bin/bash
+# Make Neovim (NvChad) follow the new theme. Called with the theme's slug as $1 on every
+# OS (Linux's omactl, macOS's `theme` command). Omadora's template engine renders the
+# palette as an NvChad theme (common/.config/omadora/themed/nvchad-theme.lua.tpl); this
+#   1. installs it as ~/.config/nvim/lua/themes/omadora.lua (a user theme for base46),
+#   2. points the state file NvChad's chadrc.lua reads (lua/omarchy_theme.lua) at it,
+#   3. recompiles NvChad's highlight cache, so a Neovim started later is already themed
+#      (a running one only repaints when told to, below; without this the cache would
+#      keep the previous theme until one was running at switch time),
+#   4. tells running Neovim instances to reload (OmarchyReloadTheme in init.lua).
+set -euo pipefail
+
+SRC="$HOME/.config/omadora/current/theme/nvchad-theme.lua"
+STATE_FILE="$HOME/.local/state/nvim/omarchy_theme"
+DEST_DIR="$HOME/.config/nvim/lua/themes"
+
+if [[ ! -f $SRC ]]; then
+  echo "nvchad-sync: no rendered NvChad theme at $SRC - Neovim keeps its theme" >&2
+  exit 0
+fi
+
+mkdir -p "$DEST_DIR" "$(dirname "$STATE_FILE")"
+cmp -s "$SRC" "$DEST_DIR/omadora.lua" 2>/dev/null || cp "$SRC" "$DEST_DIR/omadora.lua"
+echo omadora >"$STATE_FILE"
+
+command -v nvim >/dev/null 2>&1 || exit 0
+
+# Recompile the cache in a throwaway headless instance; never let it hold up a theme switch.
+nvim --headless "+lua require('nvchad.utils').reload()" +qa >/dev/null 2>&1 &
+pid=$!
+for ((i = 0; i < 100; i++)); do
+  kill -0 "$pid" 2>/dev/null || break
+  sleep 0.1
+done
+kill -9 "$pid" 2>/dev/null || true
+wait "$pid" 2>/dev/null || true
+
+# Running instances: Linux keeps its sockets in $XDG_RUNTIME_DIR, macOS under $TMPDIR/nvim.<user>/<random>/
+for sock in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/nvim.*.0 "${TMPDIR:-/tmp}"/nvim.*/*/nvim.*.0 "${TMPDIR:-/tmp}"/nvim.*/nvim.*.0; do
+  [[ -S $sock ]] || continue
+  nvim --server "$sock" --remote-send '<C-\><C-n>:lua pcall(OmarchyReloadTheme)<CR>' >/dev/null 2>&1 || true
+done

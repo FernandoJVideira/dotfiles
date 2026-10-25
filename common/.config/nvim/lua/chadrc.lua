@@ -8,6 +8,10 @@ local M = {}
 M.base46 = {
 	theme = require("omarchy_theme").current(),
 
+	-- Let the terminal's own background (its opacity and blur) show through, like every
+	-- other window; nvim's colors come from the OS theme (see nvchad-sync)
+	transparency = true,
+
 	-- hl_override = {
 	-- 	Comment = { italic = true },
 	-- 	["@comment"] = { italic = true },

@@ -1,7 +1,7 @@
 -- Resolves the NvChad base46 theme name from the state file that the theme-set hook
--- (nvchad-sync, in linux/arch/.config/omadora/hooks/theme-set.d and
--- macos/.config/omadora/hooks/theme-set.d) writes on every theme change. Falls back
--- to "gruvbox" when the file doesn't exist (fresh install).
+-- (nvchad-sync, common/.config/omadora/hooks/theme-set.d) writes on every theme change:
+-- "omadora", a theme generated from the OS palette. Falls back to "gruvbox" when the
+-- file doesn't exist (fresh install).
 local M = {}
 
 local state_file = vim.fn.stdpath "state" .. "/omarchy_theme"
