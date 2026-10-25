@@ -24,7 +24,7 @@ Every `.config` folder under `common/`, `macos/`, `linux/arch/`, or `linux/nobar
 ./bootstrap.sh
 ```
 
-It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release` and routes Nobara (or anything else `ID_LIKE=fedora`) to `linux/nobara/install.sh`, everything else to `linux/arch/install.sh`. All three eventually call `common/install.sh`, which symlinks the shared dotfiles and bootstraps tmux's plugin manager. Everything is idempotent: rerunning any of these scripts after the fact just reapplies the current state, it won't duplicate work or break anything already in place.
+It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release` and routes Nobara (or anything else `ID_LIKE=fedora`) to `linux/nobara/install.sh`, everything else to `linux/arch/install.sh`. All three eventually call `common/install.sh`, which symlinks the shared dotfiles, bootstraps tmux's plugin manager, and installs Miniconda. Everything is idempotent: rerunning any of these scripts after the fact just reapplies the current state, it won't duplicate work or break anything already in place.
 
 ## macOS
 
@@ -61,7 +61,7 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 ## Common
 
-All platforms end at `common/install.sh`: it symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing tmux plugins. Nothing here is platform-specific by design, if a tool or config only makes sense on one OS or distro, it lives under `macos/`, `linux/arch/`, or `linux/nobara/` instead.
+All platforms end at `common/install.sh`: it symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`) - the same prefix on every OS is what lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you. Nothing here is platform-specific by design, if a tool or config only makes sense on one OS or distro, it lives under `macos/`, `linux/arch/`, or `linux/nobara/` instead.
 
 ## A note on safety
 
