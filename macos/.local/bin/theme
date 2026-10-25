@@ -56,8 +56,23 @@ done
 [[ -n $BASH5 ]] || die "needs Homebrew's bash (brew install bash) to run Omadora's scripts"
 export PATH="$(dirname "$BASH5"):$PATH"
 
+# A git run that gets killed (Ctrl-C, or fzf dropping a preview) leaves its lock files
+# behind, and every later fetch then fails with "another git process seems to be
+# running". With no git process alive they can only be stale.
+clear_stale_git_locks() {
+  local lock
+  pgrep -x git >/dev/null 2>&1 && return 0
+  for lock in index.lock config.lock shallow.lock info/sparse-checkout.lock; do
+    [[ -f $OMADORA_ROOT/.git/$lock ]] && rm -f "$OMADORA_ROOT/.git/$lock"
+  done
+  return 0
+}
+
 ensure_repo() {
-  [[ -d $OMADORA_ROOT/.git ]] && return 0
+  if [[ -d $OMADORA_ROOT/.git ]]; then
+    clear_stale_git_locks
+    return 0
+  fi
   [[ ! -e $OMADORA_ROOT ]] || die "$OMADORA_ROOT exists but is not a git checkout"
   command -v git >/dev/null || die "git is required"
   echo "Fetching the Omadora themes (sparse clone, no wallpapers yet)..."
@@ -69,6 +84,17 @@ ensure_repo() {
     '/lib/common/' '/libexec/omadora-theme-color' '/libexec/omadora-theme-set-templates' \
     '/themes/' '/default/themed/' '!/themes/*/backgrounds/' '!/themes/*/preview.png' ||
     die "couldn't set up the sparse checkout"
+}
+
+# The menu shows every theme's screenshot, and fzf may kill a preview at any moment, so
+# the ~14 MB of them are fetched once, here, instead of one by one inside the preview
+# (a kill in the middle of a git run is what leaves lock files behind).
+fetch_all_previews() {
+  git -C "$OMADORA_ROOT" sparse-checkout list 2>/dev/null | grep -qxF '/themes/*/preview.png' && return 0
+  echo "Fetching the theme previews (once, ~14 MB)..."
+  git -C "$OMADORA_ROOT" sparse-checkout add '/themes/*/preview.png' >/dev/null 2>&1 ||
+    warn "couldn't fetch the theme previews (offline?) - the menu will show palettes only"
+  return 0
 }
 
 normalize() {
@@ -214,6 +240,13 @@ set_theme() {
 # Lines of text the preview prints above the screenshot; the image is placed below them.
 PREVIEW_TEXT_LINES=9
 
+# Can this terminal draw images with the kitty graphics protocol (kitty, ghostty; tmux
+# passes it through, and kitten icat detects tmux by itself)?
+can_draw_images() {
+  command -v kitten >/dev/null 2>&1 &&
+    [[ -n ${KITTY_WINDOW_ID:-}${GHOSTTY_RESOURCES_DIR:-} || ${TERM_PROGRAM:-} == ghostty ]]
+}
+
 # 24-bit color helpers for the preview: "#rrggbb" -> "r;g;b"
 rgb() { local h=${1#\#}; printf '%d;%d;%d' "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}"; }
 
@@ -228,6 +261,10 @@ preview() {
   pal=$("$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-color" --file "$file" --all) || die "couldn't read the palette of $name"
   c() { printf '%s\n' "$pal" | awk -F'\t' -v k="$1" '$1==k{print $2}'; }
   mode=$(c mode)
+
+  # Drop the previous theme's screenshot first: images outlive the text around them,
+  # and a theme without a preview.png must not show the last theme's.
+  can_draw_images && kitten icat --clear --stdin=no >/dev/null 2>&1 </dev/null
 
   local bg fg
   bg=$(rgb "$(c background)"); fg=$(rgb "$(c foreground)")
@@ -250,10 +287,10 @@ preview() {
   if [[ ! -f $img ]]; then
     img="$THEMES_DIR/$name/preview.png"
     [[ -f $img || ! -d $THEMES_DIR/$name ]] ||
-      git -C "$OMADORA_ROOT" sparse-checkout add "/themes/$name/preview.png" >/dev/null 2>&1
+      git -C "$OMADORA_ROOT" sparse-checkout add "/themes/$name/preview.png" >/dev/null 2>&1 || true
   fi
   [[ -f $img ]] || return 0
-  if command -v kitten >/dev/null 2>&1 && [[ -n ${KITTY_WINDOW_ID:-}${GHOSTTY_RESOURCES_DIR:-} || ${TERM_PROGRAM:-} == ghostty ]]; then
+  if can_draw_images; then
     if [[ -n ${FZF_PREVIEW_COLUMNS:-} ]]; then
       # inside fzf's preview pane: draw into the rectangle below the text
       w=$FZF_PREVIEW_COLUMNS; h=$((FZF_PREVIEW_LINES - PREVIEW_TEXT_LINES - 1))
@@ -273,6 +310,7 @@ menu() {
   ensure_repo
   if command -v fzf >/dev/null 2>&1 && [[ -t 0 && -t 1 ]]; then
     # fzf rather than gum: it can show a preview pane next to the list
+    fetch_all_previews
     self=$(printf '%q' "$0")
     index=$(list_themes | grep -n -x -F -- "${current:-}" | head -n 1 | cut -d: -f1 || true)
     choice=$(list_themes | fzf --prompt 'Theme > ' --header "current: ${current:-none}" \
