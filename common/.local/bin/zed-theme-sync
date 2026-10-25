@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Render Zed's theme from the current OS theme.
+#   zed-theme-sync [colors.toml]
+# Fills in ~/.config/zed/desktop-theme.json.tpl from the current theme's
+# colors.toml (Omadora's, then Omarchy's - same lookup as starship-theme-sync)
+# and writes ~/.config/zed/themes/desktop-theme.json. settings.json names the
+# theme "Desktop Theme" on every OS; this is where Linux gets its colors. Zed
+# watches the themes directory and re-applies the active theme when a file in
+# it changes, so a theme switch shows up in open editors without a restart.
+# Called by the theme-set hook and once at install time. On any problem the
+# previous output is left in place.
+#
+# macOS has no OS theme: its desktop-theme.json is a static Gruvbox file
+# symlinked from the repo. A symlink at the output path means "static theme in
+# use", and is never overwritten (the rename below would replace the link).
+#
+# Template syntax (same as Omadora's own templates):
+#   {{ key }}           a color from colors.toml, or mode ("dark"/"light")
+#   {{ mix a b N }}     a blended with b, N percent of b
+# Colors come out as #rrggbb; the template appends the alpha digits itself.
+set -euo pipefail
+
+ZED_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zed"
+TEMPLATE="$ZED_DIR/desktop-theme.json.tpl"
+OUT="$ZED_DIR/themes/desktop-theme.json"
+
+if [[ -L $OUT ]]; then
+  echo "zed-theme-sync: $OUT is a symlink (static theme, e.g. macOS's Gruvbox) - leaving it alone" >&2
+  exit 0
+fi
+
+colors="${1:-}"
+if [[ -z $colors ]]; then
+  for candidate in \
+    "$HOME/.config/omadora/current/theme/colors.toml" \
+    "$HOME/.local/state/omarchy/current/theme/colors.toml"; do
+    [[ -f $candidate ]] && { colors=$candidate; break; }
+  done
+fi
+[[ -f $colors && -f $TEMPLATE ]] || { echo "zed-theme-sync: no theme colors or template found" >&2; exit 1; }
+
+# Palette values live in variables c_<key> (colors.toml) and p_<key> (resolved),
+# so this runs on macOS's bash 3.2 too, where the static-theme case is the only
+# one that matters in practice but the renderer can still be tested.
+while IFS= read -r line; do
+  if [[ $line =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*[\"\']([^\"\']*)[\"\'] ]]; then
+    printf -v "c_${BASH_REMATCH[1]}" '%s' "${BASH_REMATCH[2]}"
+  fi
+done <"$colors"
+
+hex() { [[ ${1:-} =~ ^#[0-9A-Fa-f]{6}$ ]] && printf '%s' "$1"; }
+
+# mix <from> <to> <percent of "to">
+mix() {
+  local a=${1#\#} b=${2#\#} pct=$3 out="#" i x y
+  for i in 0 2 4; do
+    x=$((16#${a:i:2})) y=$((16#${b:i:2}))
+    out+=$(printf '%02x' $(((x * (100 - pct) + y * pct + 50) / 100)))
+  done
+  printf '%s' "$out"
+}
+
+# set_p <key> <value>
+set_p() { printf -v "p_$1" '%s' "$2"; }
+# get <prefix> <key>: empty when unset
+get() { local v="$1_$2"; printf '%s' "${!v:-}"; }
+
+# Always present in an Omadora theme; without them there is nothing sensible to render.
+for key in background foreground accent red green yellow blue magenta cyan; do
+  val=$(hex "$(get c "$key")") || { echo "zed-theme-sync: no valid $key in $colors" >&2; exit 1; }
+  set_p "$key" "$val"
+done
+
+# Optional in some themes (orange: 21 of 24 stock ones): fall back to something derived.
+for key in red green yellow blue magenta cyan; do
+  val=$(hex "$(get c "bright_$key")") || val=$(get p "$key")
+  set_p "bright_$key" "$val"
+done
+val=$(hex "$(get c bright_foreground)") || val=$(get p foreground)
+set_p bright_foreground "$val"
+val=$(hex "$(get c orange)") || val=$(mix "$(get p red)" "$(get p yellow)" 50)
+set_p orange "$val"
+val=$(hex "$(get c darker_background)") || val=$(mix "$(get p background)" "#000000" 25)
+set_p darker_background "$val"
+set_p mode dark
+[[ $(get c mode) == light ]] && set_p mode light
+
+sed_script=$(mktemp)
+tmp=
+cleanup() { rm -f "$sed_script" ${tmp:+"$tmp"}; }
+trap cleanup EXIT
+
+for key in mode background foreground accent darker_background orange bright_foreground \
+  red green yellow blue magenta cyan \
+  bright_red bright_green bright_yellow bright_blue bright_magenta bright_cyan; do
+  printf 's|{{ %s }}|%s|g\n' "$key" "$(get p "$key")" >>"$sed_script"
+done
+
+seen=" "
+while IFS= read -r token; do
+  [[ $seen == *" $token "* ]] && continue
+  seen+="$token "
+  read -r _ a b n <<<"${token//[\{\}]/ }"
+  pa=$(get p "$a") pb=$(get p "$b")
+  [[ -n $pa && -n $pb ]] || continue   # left unresolved -> caught below
+  printf 's|%s|%s|g\n' "$token" "$(mix "$pa" "$pb" "$n")" >>"$sed_script"
+done < <(grep -Eo '\{\{ mix [a-z_]+ [a-z_]+ [0-9]+ \}\}' "$TEMPLATE" || true)
+
+# Rendered outside the themes directory: Zed reloads on any file event in there,
+# and would try to parse a half-written temp file.
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/zed-theme-sync"
+mkdir -p "$state_dir" "$(dirname "$OUT")"
+tmp=$(mktemp "$state_dir/desktop-theme.XXXXXX")
+sed -f "$sed_script" "$TEMPLATE" >"$tmp"
+
+if grep -q '{{' "$tmp"; then
+  echo "zed-theme-sync: unresolved placeholder in $TEMPLATE" >&2
+  exit 1
+fi
+if command -v jq >/dev/null 2>&1 && ! jq empty "$tmp" 2>/dev/null; then
+  echo "zed-theme-sync: rendered theme is not valid JSON - keeping the previous one" >&2
+  exit 1
+fi
+
+chmod 644 "$tmp"
+mv -f "$tmp" "$OUT"
+tmp=

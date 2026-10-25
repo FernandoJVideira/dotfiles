@@ -69,6 +69,8 @@ printf '[X11]\nDisplayCommand=/usr/local/bin/omadora-sddm-monitors\n' \
 # Install workstation tools
 log "Installing workstation tools..."
 sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli zed
+# Zed's terminal font (common/.config/zed/settings.json)
+sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
@@ -149,3 +151,7 @@ omactl theme set "$theme" \
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."
 "$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."
+
+# Zed's theme follows the OS theme too (same shared-symlinks dependency)
+log "Rendering the Zed theme for the current theme..."
+"$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."
