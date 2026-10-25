@@ -24,7 +24,7 @@ brew "fd"
 brew "fzf"
 # GitHub from the command line
 brew "gh"
-# Glamourous shell scripts (the menu in the `theme` command)
+# Glamourous shell scripts (the `theme` command falls back to it when fzf is missing)
 brew "gum"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
