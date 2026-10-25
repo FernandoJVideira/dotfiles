@@ -253,7 +253,7 @@ rgb() { local h=${1#\#}; printf '%d;%d;%d' "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}
 # Show a theme: its palette rendered in the terminal's own colors, then its
 # preview.png (what the Linux menu shows) where the terminal can draw images.
 preview() {
-  local name=$1 file pal mode k v img w h left top
+  local name=$1 file pal mode k v img h
   ensure_repo
   file="$USER_THEMES_DIR/$name/colors.toml"
   [[ -f $file ]] || file="$THEMES_DIR/$name/colors.toml"
@@ -261,10 +261,6 @@ preview() {
   pal=$("$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-color" --file "$file" --all) || die "couldn't read the palette of $name"
   c() { printf '%s\n' "$pal" | awk -F'\t' -v k="$1" '$1==k{print $2}'; }
   mode=$(c mode)
-
-  # Drop the previous theme's screenshot first: images outlive the text around them,
-  # and a theme without a preview.png must not show the last theme's.
-  can_draw_images && kitten icat --clear --stdin=no >/dev/null 2>&1 </dev/null
 
   local bg fg
   bg=$(rgb "$(c background)"); fg=$(rgb "$(c foreground)")
@@ -292,10 +288,17 @@ preview() {
   [[ -f $img ]] || return 0
   if can_draw_images; then
     if [[ -n ${FZF_PREVIEW_COLUMNS:-} ]]; then
-      # inside fzf's preview pane: draw into the rectangle below the text
-      w=$FZF_PREVIEW_COLUMNS; h=$((FZF_PREVIEW_LINES - PREVIEW_TEXT_LINES - 1))
-      left=$FZF_PREVIEW_LEFT; top=$((FZF_PREVIEW_TOP + PREVIEW_TEXT_LINES + 1))
-      ((h > 3)) && kitten icat --stdin=no --transfer-mode=memory --place="${w}x${h}@${left}x${top}" "$img" 2>/dev/null
+      # Inside fzf's preview pane, fzf's own recipe (see fzf-preview.sh in its repo): icat
+      # prints the image as unicode placeholder characters, i.e. as text, which fzf lays
+      # out like the palette above. No cursor positioning, and nothing is left on screen
+      # when the next theme's preview replaces this one.
+      h=$((FZF_PREVIEW_LINES - PREVIEW_TEXT_LINES - 1))
+      if ((h > 3)); then
+        kitten icat --clear --transfer-mode=memory --unicode-placeholder --stdin=no \
+          --place="${FZF_PREVIEW_COLUMNS}x${h}@0x0" "$img" 2>/dev/null | sed '$d' || true
+        # the last line icat prints is an ANSI reset without a newline, which confuses fzf
+        printf '\033[m'
+      fi
     else
       printf '\n'
       kitten icat --stdin=no --transfer-mode=memory "$img" 2>/dev/null
