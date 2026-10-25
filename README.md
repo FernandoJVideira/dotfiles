@@ -37,6 +37,12 @@ A few things only happen conditionally:
 
 Once packages and symlinks are in place, `macos-defaults.sh` applies the actual macOS preferences I care about (Finder view style, Dock size and autohide, trackpad tap-to-click, dark mode) and restarts Finder and Dock so they take effect without a logout.
 
+### Switching themes
+
+`theme` (in `macos/.local/bin`, on the PATH through `~/.local/bin`) is the macOS stand-in for `omactl theme set`: run it for a gum menu of the same 24 themes the Linux machines have, or `theme set <name>`, `theme list`, `theme bg` (next wallpaper), `theme update`. It keeps a sparse clone of my Omadora fork in `~/.local/share/omadora` (just the themes, the templates and the two scripts that resolve a palette and render the templates, a few hundred KB; a theme's wallpapers are only fetched the first time it's picked) and runs Omadora's own scripts from it, so palettes and derived colors are identical to Linux. Those scripts need bash 4+, hence Homebrew's `bash` in the Brewfile; `theme` itself runs on the system bash.
+
+Applying a theme renders the templates into `~/.config/omadora/current/theme`, sets the wallpaper and flips macOS between light and dark to match the theme's mode, reloads the running kitty, ghostty and btop, and then runs the hooks in `~/.config/omadora/hooks/theme-set.d` (`macos/.config/omadora/hooks`), the same mechanism Linux uses: starship and Zed re-render, Neovim switches its NvChad theme, sketchybar and the window borders get new colors from `themed/macos-colors.sh.tpl`, btop is pointed at the rendered theme. tmux needs nothing: its colors are the terminal's. The installer applies gruvbox the first time only, so rerunning it never undoes a theme picked since.
+
 ## Linux (Arch + Omadora)
 
 `linux/arch/install.sh` assumes a minimal Arch install (archinstall, no desktop environment or display manager, NetworkManager) with a user account already created. The desktop itself comes from my [Omadora](https://github.com/FernandoJVideira/omadora) fork (`arch` branch): Hyprland, the Quickshell shell, the SDDM login screen and their packages. Concretely, it:
@@ -65,11 +71,11 @@ All platforms end at `common/install.sh`: it symlinks the shared configs and, on
 
 ### Zed
 
-`common/.config/zed/` holds Zed's `settings.json`, `keymap.json` and the extension list (`auto_install_extensions`, installed on first launch, so a new extension added through Zed's UI has to be added there to reach the other machines). The theme is always called "Desktop Theme", but its source depends on the OS: macOS symlinks a static Gruvbox file (`macos/.config/zed/themes/desktop-theme.json`), while on Linux `zed-theme-sync` renders `desktop-theme.json.tpl` from the current Omadora theme's `colors.toml`, at install time and from a `theme-set` hook, and Zed re-applies it live. The template is a conversion of Zed's own Gruvbox theme (MIT) with the palette swapped in, so it covers the whole UI, not just the editor. Zed's terminal font is Hack Nerd Font Mono, installed on every OS. `zed-extensions-check` compares what Zed has installed on the current machine with that list (missing ones, and ones installed here but not listed); Zed only installs the missing ones when it starts, so run it after the first launch on a new machine. Zed's prompt library (`~/.config/zed/prompts`) is a binary database Zed manages itself, so it isn't tracked.
+`common/.config/zed/` holds Zed's `settings.json`, `keymap.json` and the extension list (`auto_install_extensions`, installed on first launch, so a new extension added through Zed's UI has to be added there to reach the other machines). The theme is always called "Desktop Theme": `zed-theme-sync` renders `desktop-theme.json.tpl` from the current Omadora theme's `colors.toml`, at install time and from the `theme-set` hook (`omactl theme set` on Linux, the `theme` command on macOS), and Zed re-applies it live. The template is a conversion of Zed's own Gruvbox theme (MIT) with the palette swapped in, so it covers the whole UI, not just the editor. Zed's terminal font is Hack Nerd Font Mono, installed on every OS. `zed-extensions-check` compares what Zed has installed on the current machine with that list (missing ones, and ones installed here but not listed); Zed only installs the missing ones when it starts, so run it after the first launch on a new machine. Zed's prompt library (`~/.config/zed/prompts`) is a binary database Zed manages itself, so it isn't tracked.
 
 ### tmux
 
-The status line in `tmux.conf` uses plain ANSI color names, so it follows whatever palette the terminal has: on Linux that's the Omadora theme (kitty is re-rendered on every theme change), live, with no hook or reload. macOS keeps Gruvbox for now through `macos/.config/tmux/theme.conf`, which `tmux.conf` sources just before TPM starts and which lists the `tmux-gruvbox` plugin. TPM follows `source-file` lines, so the plugin is only installed and loaded where that file is linked.
+The status line in `tmux.conf` uses plain ANSI color names, so it follows whatever palette the terminal has: the current theme's, live, with no hook or reload (kitty is re-rendered on every theme change on both Linux and macOS).
 
 ## A note on safety
 

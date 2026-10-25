@@ -1,0 +1,18 @@
+#!/bin/bash
+# Recolor the bar and the window borders for the new theme. The colors come from
+# macos-colors.sh, rendered from themed/macos-colors.sh.tpl; sketchybarrc and its
+# plugins source it, so a reload is all the bar needs. borders takes new colors
+# from a second invocation while it runs (it's started by Hyprspace on login).
+set -euo pipefail
+
+COLORS="$HOME/.config/omadora/current/theme/macos-colors.sh"
+[[ -f $COLORS ]] || exit 0
+# shellcheck source=/dev/null
+source "$COLORS"
+
+if pgrep -x sketchybar >/dev/null; then
+  sketchybar --reload
+fi
+if pgrep -x borders >/dev/null; then
+  borders active_color="$BORDER_ACTIVE" inactive_color="$BORDER_INACTIVE" >/dev/null 2>&1 || true
+fi

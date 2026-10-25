@@ -4,13 +4,21 @@
 CONFIG_DIR="$HOME/.config/sketchybar"
 PLUGIN_DIR="$CONFIG_DIR/plugins"
 
-# === COLORS (Gruvbox Dark) ===
-CLR_BG=0x00000000          # Transparent bar background
-CLR_COMP_BG=0xff3c3836     # Compartment background (Gruvbox bg1)
-CLR_COMP_BORDER=0xff665c54 # Compartment border (Gruvbox bg3)
-CLR_FG=0xffebdbb2          # Foreground (Gruvbox fg1)
-CLR_ACCENT=0xfffe8019      # Accent / focused state (Gruvbox orange)
-CLR_FG_DIM=0x77ebdbb2      # Dimmed foreground (Gruvbox fg1 @ ~47% alpha)
+# === COLORS ===
+# Rendered from the current theme by the `theme` command (macos/.config/omadora/
+# themed/macos-colors.sh.tpl); Gruvbox Dark values until the first theme is set.
+COLORS_FILE="$HOME/.config/omadora/current/theme/macos-colors.sh"
+if [[ -f $COLORS_FILE ]]; then
+  # shellcheck source=/dev/null
+  source "$COLORS_FILE"
+else
+  CLR_BG=0x00000000
+  CLR_COMP_BG=0xff3c3836
+  CLR_COMP_BORDER=0xff665c54
+  CLR_FG=0xffebdbb2
+  CLR_ACCENT=0xfffe8019
+  CLR_FG_DIM=0x77ebdbb2
+fi
 
 # === PADDING CONSTANTS
 BAR_PADDING=8             # Outer bar padding (use compartments for outer spacing)

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Re-render Zed's "Desktop Theme" for the new theme (see
+# common/.local/bin/zed-theme-sync). Zed re-applies it live.
+exec "$HOME/.local/bin/zed-theme-sync"
