@@ -74,8 +74,13 @@ sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # .NET SDK: Zed's C# extension (the macOS Brewfile has the dotnet-sdk cask)
 sudo pacman -S --needed --noconfirm dotnet-sdk
 # Tools the shared zsh config assumes
-sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch
+sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
+# Spicetify patches Spotify in place, and the AUR package installs it root-owned in /opt/spotify
+if [[ -d /opt/spotify ]]; then
+  sudo chmod a+wr /opt/spotify
+  sudo chmod -R a+wr /opt/spotify/Apps
+fi
 # LocalSend and GPU Screen Recorder (Flatpaks on Nobara); a separate call so a
 # wrong package name can't take the list above down with it.
 yay -S --needed --noconfirm localsend-bin gpu-screen-recorder \

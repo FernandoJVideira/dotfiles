@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Theme Spotify from the current OS theme, through Spicetify.
+#   spicetify-theme-sync [--force]
+# The colors come from current/theme/spicetify-color.ini, which Omadora's template engine
+# renders from common/.config/omadora/themed/spicetify-color.ini.tpl (Linux's omactl and
+# macOS's `theme` command alike). This copies them into the Spicetify theme "omadora" (a
+# colors-only theme: Spotify's own layout), points Spicetify at it, and applies:
+#   first run / --force   `spicetify backup apply`, falling back to `restore backup apply`
+#                         when Spotify has updated itself since the backup
+#   after that            `spicetify refresh`, which only reloads the colors
+# Spotify is never restarted, so music keeps playing; a running Spotify shows the new
+# colors after you restart it. (The full apply does start Spotify if it isn't running,
+# once; `refresh` never does, so a normal theme switch doesn't open it.) Spotify updates undo Spicetify's patch: run this with
+# --force afterwards.
+#
+# Needs Spotify started at least once (it creates the prefs file Spicetify patches
+# against). Spicetify itself is installed by lib/spicetify.sh. Called by the theme-set
+# hook and at install time; every problem is reported but never fatal to a theme switch.
+set -euo pipefail
+
+force=0
+[[ ${1:-} == --force ]] && force=1
+
+SRC="$HOME/.config/omadora/current/theme/spicetify-color.ini"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/spicetify-theme-sync"
+
+spice=$(command -v spicetify 2>/dev/null || true)
+[[ -n $spice ]] || spice="$HOME/.spicetify/spicetify"
+if [[ ! -x $spice ]]; then
+  echo "spicetify-theme-sync: Spicetify isn't installed - skipping Spotify" >&2
+  exit 0
+fi
+if [[ ! -f $SRC ]]; then
+  echo "spicetify-theme-sync: no rendered theme at $SRC (set a theme first)" >&2
+  exit 1
+fi
+
+# Where Spotify lives differs per OS and package; the config is only filled in when
+# Spicetify hasn't found it itself.
+case "$(uname -s)" in
+  Darwin)
+    spotify_candidates=("/Applications/Spotify.app/Contents/Resources")
+    prefs_candidates=("$HOME/Library/Application Support/Spotify/prefs")
+    ;;
+  *)
+    spotify_candidates=(
+      "/opt/spotify"                                                    # AUR spotify
+      "$HOME/.local/share/spotify-launcher/install/usr/share/spotify"   # spotify-launcher
+      "/usr/share/spotify"
+    )
+    prefs_candidates=("$HOME/.config/spotify/prefs")
+    ;;
+esac
+
+cfg() { "$spice" config "$1" 2>/dev/null || true; }
+
+# Spicetify writes its config on first use; ask for the path so it exists
+config_file=$("$spice" -c 2>/dev/null || true)
+theme_dir="$(dirname "${config_file:-$HOME/.config/spicetify/config-xpui.ini}")/Themes/omadora"
+
+spotify_path=$(cfg spotify_path)
+if [[ -z $spotify_path || ! -d $spotify_path ]]; then
+  spotify_path=
+  for candidate in "${spotify_candidates[@]}"; do
+    [[ -d $candidate ]] && { spotify_path=$candidate; break; }
+  done
+  [[ -n $spotify_path ]] || {
+    echo "spicetify-theme-sync: Spotify isn't installed (looked in: ${spotify_candidates[*]}) - skipping" >&2
+    exit 0
+  }
+  "$spice" config spotify_path "$spotify_path" >/dev/null
+fi
+prefs_path=$(cfg prefs_path)
+if [[ -z $prefs_path || ! -f $prefs_path ]]; then
+  for candidate in "${prefs_candidates[@]}"; do
+    [[ -f $candidate ]] && { prefs_path=$candidate; break; }
+  done
+  if [[ ! -f $prefs_path ]]; then
+    echo "spicetify-theme-sync: start Spotify once (it creates its prefs file), then run spicetify-theme-sync again" >&2
+    exit 0
+  fi
+  "$spice" config prefs_path "$prefs_path" >/dev/null
+fi
+
+# the theme: user.css comes from the dotfiles (an empty file is enough), color.ini is the render
+mkdir -p "$theme_dir" "$STATE_DIR"
+[[ -e $theme_dir/user.css ]] || : >"$theme_dir/user.css"
+changed=0
+cmp -s "$SRC" "$theme_dir/color.ini" 2>/dev/null || { cp "$SRC" "$theme_dir/color.ini"; changed=1; }
+
+# select it (only writes the config when something differs)
+[[ $(cfg current_theme) == omadora ]] || { "$spice" config current_theme omadora >/dev/null; changed=1; }
+[[ $(cfg color_scheme) == omadora ]] || { "$spice" config color_scheme omadora >/dev/null; changed=1; }
+[[ $(cfg inject_css) == 1 ]] || "$spice" config inject_css 1 >/dev/null
+[[ $(cfg replace_colors) == 1 ]] || "$spice" config replace_colors 1 >/dev/null
+
+if (( force )) || [[ ! -f $STATE_DIR/applied ]]; then
+  if ! "$spice" -q backup apply >/dev/null 2>"$STATE_DIR/error.log"; then
+    # a backup of an older Spotify is in the way: rebuild it from the current one
+    "$spice" -q restore backup apply >/dev/null 2>"$STATE_DIR/error.log" || {
+      echo "spicetify-theme-sync: spicetify apply failed:" >&2
+      cat "$STATE_DIR/error.log" >&2
+      exit 1
+    }
+  fi
+  : >"$STATE_DIR/applied"
+elif (( changed )); then
+  "$spice" -q refresh >/dev/null 2>"$STATE_DIR/error.log" || {
+    echo "spicetify-theme-sync: refresh failed (Spotify updated since? try: spicetify-theme-sync --force):" >&2
+    cat "$STATE_DIR/error.log" >&2
+    exit 1
+  }
+else
+  exit 0
+fi
+
+if pgrep -x Spotify >/dev/null 2>&1 || pgrep -x spotify >/dev/null 2>&1; then
+  echo "Spotify themed - restart Spotify to see the new colors"
+else
+  echo "Spotify themed"
+fi
