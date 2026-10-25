@@ -31,6 +31,10 @@ brew tap felixkratz/formulae
 log "Installing packages from Brewfile..."
 brew bundle --file="$SCRIPT_DIR/Brewfile"
 
+# pnpm comes from mise (installed by the Brewfile) so every OS manages it the same way.
+log "Installing pnpm via mise..."
+mise use --global pnpm
+
 # Initialize Hyprspace (creates a default config if one doesn't exist yet).
 # Runs before symlink_dotfiles so our own hyprspace/config.toml correctly
 # overwrites whatever this creates, same ordering reason as

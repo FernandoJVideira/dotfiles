@@ -75,6 +75,11 @@ sudo pacman -S --needed --noconfirm ttf-hack-nerd
 sudo pacman -S --needed --noconfirm dotnet-sdk
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
+
+# pnpm via mise (ships with Omarchy), same as the other OSes
+log "Installing pnpm via mise..."
+mise use --global pnpm
+
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 # Spicetify patches Spotify in place, and the AUR package installs it root-owned in /opt/spotify
 if [[ -d /opt/spotify ]]; then

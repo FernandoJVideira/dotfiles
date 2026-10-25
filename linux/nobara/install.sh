@@ -193,14 +193,14 @@ fi
 
 # mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
 # whatever's frozen in Fedora's repos - matches Omarchy's own approach on the
-# Arch side. Covers neovim, tmux, and node (Vue/Nuxt work) - all present in
+# Arch side. Covers neovim, tmux, node and pnpm (Vue/Nuxt work) - all present in
 # mise's registry under their plain names.
 if [[ ! -x "$HOME/.local/bin/mise" ]]; then
   log "Installing mise..."
   curl https://mise.run | sh
 fi
-log "Installing neovim, tmux, and node via mise..."
-"$HOME/.local/bin/mise" use --global neovim tmux node
+log "Installing neovim, tmux, node, and pnpm via mise..."
+"$HOME/.local/bin/mise" use --global neovim tmux node pnpm
 
 # claude-code is a separate call from the group above: its exact registry
 # short name is less certain than neovim/tmux/node, and mise's failure mode
