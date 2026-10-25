@@ -23,9 +23,10 @@
 #   3. wallpaper and the macOS light/dark appearance
 #   4. reload the running terminals (kitty, ghostty) and btop
 #   5. run ~/.config/omadora/hooks/theme-set.d/* with the theme name
-#      (starship, zed, neovim, sketchybar, borders, btop: macos/.config/omadora/hooks)
+#      (starship, zed, neovim, sketchybar, borders, btop, and the macOS accent / folder
+#      color: macos/.config/omadora/hooks)
 #
-# THEME_SKIP="wallpaper,appearance,reload,hooks" skips those steps (used for testing).
+# THEME_SKIP="wallpaper,appearance,reload,hooks,accent" skips those steps (used for testing).
 set -euo pipefail
 
 REPO_URL="${OMADORA_REPO:-https://github.com/FernandoJVideira/omadora.git}"
