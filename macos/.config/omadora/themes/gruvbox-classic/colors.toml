@@ -1,0 +1,33 @@
+# Classic Gruvbox Dark (morhetz), the palette this Mac used before it switched to
+# Omadora's themes. Omadora's own "gruvbox" is the softer gruvbox-material variant.
+# A user theme: `theme` lists it next to the stock ones; it has no wallpapers, so
+# picking it leaves the desktop picture alone. Unlisted keys (dark_background,
+# darker_background, brown, ...) are derived by Omadora's palette rules.
+mode = "dark"
+
+accent = "#83a598"
+selection = "#504945"
+muted = "#928374"
+
+background = "#282828"
+lighter_background = "#3c3836"
+
+foreground = "#ebdbb2"
+dark_foreground = "#a89984"
+light_foreground = "#d5c4a1"
+bright_foreground = "#fbf1c7"
+
+red = "#cc241d"
+green = "#98971a"
+yellow = "#d79921"
+blue = "#458588"
+magenta = "#b16286"
+cyan = "#689d6a"
+orange = "#d65d0e"
+
+bright_red = "#fb4934"
+bright_green = "#b8bb26"
+bright_yellow = "#fabd2f"
+bright_blue = "#83a598"
+bright_magenta = "#d3869b"
+bright_cyan = "#8ec07c"

@@ -63,8 +63,8 @@ log "Running shared dotfiles installer..."
 # After common/install.sh, which provides the starship and Zed sync scripts the
 # theme hooks call. Also fetches the Omadora themes (see macos/.local/bin/theme).
 if [[ -z "$("$HOME/.local/bin/theme" current 2>/dev/null)" ]]; then
-  log "Applying the default theme (gruvbox)..."
-  "$HOME/.local/bin/theme" set gruvbox || log "WARNING: couldn't apply the default theme - run: theme"
+  log "Applying the default theme (gruvbox-classic)..."
+  "$HOME/.local/bin/theme" set gruvbox-classic || log "WARNING: couldn't apply the default theme - run: theme"
 fi
 
 log "macOS setup complete."
