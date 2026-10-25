@@ -24,11 +24,10 @@ export GPG_TTY=$(tty)
 
 # ---------- Starship ----------
 export STARSHIP_CONFIG="$ZDOTDIR/starship.toml"
-# Linux: colors follow the current OS theme (rendered by starship-theme-sync from
-# the theme-set hook); falls back to the static file until the first theme is set
+# Colors follow the current theme (rendered by starship-theme-sync from the theme-set
+# hook: Linux's omactl, macOS's `theme` command); falls back to the static file until
+# the first theme is set
 [[ -f "$HOME/.local/state/starship/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.local/state/starship/starship.toml"
-# macOS ships a Gruvbox-colored variant (only symlinked there), so no OS check needed
-[[ -f "$ZDOTDIR/starship.macos.toml" ]] && export STARSHIP_CONFIG="$ZDOTDIR/starship.macos.toml"
 
 # ---------- PATH ----------
 # Personal binaries/scripts

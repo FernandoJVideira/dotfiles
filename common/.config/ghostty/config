@@ -1,8 +1,8 @@
-# Dynamic theme colors (Omarchy only; silently skipped elsewhere)
+# Dynamic theme colors, rendered from the current Omadora theme (`omactl theme set` on
+# Linux, the `theme` command on macOS); Omarchy's path kept for machines still on it.
+# Both are silently skipped when absent.
 config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
-# Static fallback theme (macOS; loaded after the line above so it only
-# takes effect where the Omarchy state file doesn't exist)
-config-file = ?"~/.config/ghostty/theme.conf"
+config-file = ?"~/.config/omadora/current/theme/ghostty.conf"
 
 # Font
 font-family = "JetBrainsMono Nerd Font"

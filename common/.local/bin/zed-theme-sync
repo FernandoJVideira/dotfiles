@@ -7,12 +7,8 @@
 # theme "Desktop Theme" on every OS; this is where Linux gets its colors. Zed
 # watches the themes directory and re-applies the active theme when a file in
 # it changes, so a theme switch shows up in open editors without a restart.
-# Called by the theme-set hook and once at install time. On any problem the
-# previous output is left in place.
-#
-# macOS has no OS theme: its desktop-theme.json is a static Gruvbox file
-# symlinked from the repo. A symlink at the output path means "static theme in
-# use", and is never overwritten (the rename below would replace the link).
+# Called by the theme-set hook (Linux: omactl theme set; macOS: the `theme` command) and
+# once at install time. On any problem the previous output is left in place.
 #
 # Template syntax (same as Omadora's own templates):
 #   {{ key }}           a color from colors.toml, or mode ("dark"/"light")
@@ -23,11 +19,6 @@ set -euo pipefail
 ZED_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zed"
 TEMPLATE="$ZED_DIR/desktop-theme.json.tpl"
 OUT="$ZED_DIR/themes/desktop-theme.json"
-
-if [[ -L $OUT ]]; then
-  echo "zed-theme-sync: $OUT is a symlink (static theme, e.g. macOS's Gruvbox) - leaving it alone" >&2
-  exit 0
-fi
 
 colors="${1:-}"
 if [[ -z $colors ]]; then
@@ -40,8 +31,7 @@ fi
 [[ -f $colors && -f $TEMPLATE ]] || { echo "zed-theme-sync: no theme colors or template found" >&2; exit 1; }
 
 # Palette values live in variables c_<key> (colors.toml) and p_<key> (resolved),
-# so this runs on macOS's bash 3.2 too, where the static-theme case is the only
-# one that matters in practice but the renderer can still be tested.
+# so this runs on macOS's bash 3.2 as well as on Linux.
 while IFS= read -r line; do
   if [[ $line =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*[\"\']([^\"\']*)[\"\'] ]]; then
     printf -v "c_${BASH_REMATCH[1]}" '%s' "${BASH_REMATCH[2]}"

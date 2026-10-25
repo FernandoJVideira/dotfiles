@@ -2,6 +2,8 @@ tap "felixkratz/formulae", "https://github.com/FelixKratz/homebrew-formulae", tr
 tap "PeachlifeAB/tap"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
+# Bash 5: the macOS one is 3.2, too old for Omadora's theme scripts that the `theme` command runs
+brew "bash"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
 # XML-based font configuration API for X Windows
@@ -22,6 +24,8 @@ brew "fd"
 brew "fzf"
 # GitHub from the command line
 brew "gh"
+# Glamourous shell scripts (the menu in the `theme` command)
+brew "gum"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Database migrations CLI tool

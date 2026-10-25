@@ -1,0 +1,16 @@
+#!/bin/bash
+# Point btop at the rendered theme. btop looks for themes in ~/.config/btop/themes
+# by file name, so link it there once and make sure btop.conf selects it. Skipped
+# while btop runs: it rewrites btop.conf on exit and would undo the edit.
+set -euo pipefail
+
+SRC="$HOME/.config/omadora/current/theme/btop.theme"
+[[ -f $SRC ]] || exit 0
+
+mkdir -p "$HOME/.config/btop/themes"
+ln -sf "$SRC" "$HOME/.config/btop/themes/omadora.theme"
+
+CONF="$HOME/.config/btop/btop.conf"
+if [[ -f $CONF ]] && ! grep -q '^color_theme = "omadora"' "$CONF" && ! pgrep -x btop >/dev/null; then
+  sed -i '' 's|^color_theme = .*|color_theme = "omadora"|' "$CONF"
+fi

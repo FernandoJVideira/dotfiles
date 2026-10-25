@@ -59,4 +59,12 @@ log "Applying macOS defaults..."
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../common/install.sh"
 
+# Default theme, the first time only: a rerun must not undo a theme picked since.
+# After common/install.sh, which provides the starship and Zed sync scripts the
+# theme hooks call. Also fetches the Omadora themes (see macos/.local/bin/theme).
+if [[ -z "$("$HOME/.local/bin/theme" current 2>/dev/null)" ]]; then
+  log "Applying the default theme (gruvbox)..."
+  "$HOME/.local/bin/theme" set gruvbox || log "WARNING: couldn't apply the default theme - run: theme"
+fi
+
 log "macOS setup complete."

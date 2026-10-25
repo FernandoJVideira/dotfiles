@@ -1,0 +1,48 @@
+#!/bin/bash
+# Called by the theme command with the new theme's slug as $1. Maps it to an
+# NvChad base46 theme name, writes it to the state file NvChad's chadrc.lua reads
+# on startup (common/.config/nvim/lua/omarchy_theme.lua), then nudges running
+# Neovim instances to hot-reload via OmarchyReloadTheme() (common/.config/nvim/init.lua).
+# Same mapping as linux/arch/.config/omadora/hooks/theme-set.d/nvchad-sync; only the
+# place Neovim keeps its sockets differs (macOS: $TMPDIR/nvim.<user>/<random>/).
+set -euo pipefail
+
+THEME_SLUG=$1
+STATE_FILE="$HOME/.local/state/nvim/omarchy_theme"
+COLORS_TOML="$HOME/.config/omadora/current/theme/colors.toml"
+
+# Only stock Omadora themes with an equivalent NvChad base46 theme are mapped by
+# name; anything else falls back to NvChad's default-dark/light by the theme's mode.
+declare -A THEME_MAP=(
+  [catppuccin]=catppuccin
+  [catppuccin-latte]=catppuccin-latte
+  [everforest]=everforest
+  [flexoki-light]=flexoki-light
+  [gruvbox]=gruvbox
+  [kanagawa]=kanagawa
+  [nord]=nord
+  [rose-pine]=rosepine
+  [tokyo-night]=tokyonight
+)
+
+nvchad_theme=${THEME_MAP[$THEME_SLUG]:-}
+
+if [[ -z $nvchad_theme ]]; then
+  mode=dark
+  if [[ -f $COLORS_TOML ]]; then
+    mode=$(grep -m1 '^mode' "$COLORS_TOML" | sed -E 's/^mode *= *"([^"]*)".*/\1/')
+  fi
+  if [[ $mode == light ]]; then
+    nvchad_theme=default-light
+  else
+    nvchad_theme=default-dark
+  fi
+fi
+
+mkdir -p "$(dirname "$STATE_FILE")"
+echo "$nvchad_theme" >"$STATE_FILE"
+
+for sock in "${TMPDIR%/}"/nvim.*/*/nvim.*.0; do
+  [[ -S $sock ]] || continue
+  nvim --server "$sock" --remote-send '<C-\><C-n>:lua pcall(OmarchyReloadTheme)<CR>' >/dev/null 2>&1 || true
+done

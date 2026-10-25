@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# Switch the macOS theme the way `omactl theme set` does on Linux.
+#   theme                 pick from a gum menu
+#   theme set <name>      apply a theme
+#   theme list            all themes, the current one marked
+#   theme current         name of the current theme
+#   theme bg              next wallpaper of the current theme
+#   theme update          pull the latest themes from the Omadora fork
+#
+# The themes, the palette rules and the templates are Omadora's own, so a theme looks
+# the same here as on the Linux machines: this keeps a sparse clone of the fork in
+# ~/.local/share/omadora (themes + templates + the two scripts below, a few hundred KB;
+# a theme's wallpapers are fetched the first time it is picked) and runs
+# omadora-theme-color / omadora-theme-set-templates from it. Those need bash 4+, hence
+# Homebrew's bash; this driver itself runs on the system bash 3.2.
+#
+# What happens on `theme set`, same order as omadora-theme-set:
+#   1. stage the theme in ~/.config/omadora/current/next-theme and render every
+#      template into it (default/themed/*.tpl plus ~/.config/omadora/themed/*.tpl,
+#      which is where macos/.config/omadora/themed/ lands)
+#   2. swap it in as ~/.config/omadora/current/theme, record the name
+#   3. wallpaper and the macOS light/dark appearance
+#   4. reload the running terminals (kitty, ghostty) and btop
+#   5. run ~/.config/omadora/hooks/theme-set.d/* with the theme name
+#      (starship, zed, neovim, sketchybar, borders, btop: macos/.config/omadora/hooks)
+#
+# THEME_SKIP="wallpaper,appearance,reload,hooks" skips those steps (used for testing).
+set -euo pipefail
+
+REPO_URL="${OMADORA_REPO:-https://github.com/FernandoJVideira/omadora.git}"
+export OMADORA_ROOT="${OMADORA_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/omadora}"
+export OMADORA_CONFIG_HOME="${OMADORA_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}/omadora}"
+
+THEMES_DIR="$OMADORA_ROOT/themes"
+USER_THEMES_DIR="$OMADORA_CONFIG_HOME/themes"
+USER_BACKGROUNDS_DIR="$OMADORA_CONFIG_HOME/backgrounds"
+CURRENT_DIR="$OMADORA_CONFIG_HOME/current"
+CURRENT_THEME_DIR="$CURRENT_DIR/theme"
+NEXT_THEME_DIR="$CURRENT_DIR/next-theme"
+THEME_NAME_FILE="$CURRENT_DIR/theme.name"
+BACKGROUND_LINK="$CURRENT_DIR/background"
+HOOKS_DIR="$OMADORA_CONFIG_HOME/hooks"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/omadora"
+
+die() { echo "theme: $*" >&2; exit 1; }
+warn() { echo "theme: warning: $*" >&2; }
+skipped() { [[ ,${THEME_SKIP:-}, == *",$1,"* ]]; }
+
+# Omadora's scripts start with `#!/usr/bin/env bash` and call each other, so
+# Homebrew's bash has to win on PATH for all of them, not just the first.
+BASH5=
+for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+  [[ -x $candidate ]] && { BASH5=$candidate; break; }
+done
+[[ -n $BASH5 ]] || die "needs Homebrew's bash (brew install bash) to run Omadora's scripts"
+export PATH="$(dirname "$BASH5"):$PATH"
+
+ensure_repo() {
+  [[ -d $OMADORA_ROOT/.git ]] && return 0
+  [[ ! -e $OMADORA_ROOT ]] || die "$OMADORA_ROOT exists but is not a git checkout"
+  command -v git >/dev/null || die "git is required"
+  echo "Fetching the Omadora themes (sparse clone, no wallpapers yet)..."
+  git clone -q --depth 1 --filter=blob:none --sparse "$REPO_URL" "$OMADORA_ROOT" ||
+    die "couldn't clone $REPO_URL"
+  # Only what rendering needs. Wallpapers and previews are the big files; a theme's
+  # wallpapers are added by fetch_backgrounds the first time it is applied.
+  git -C "$OMADORA_ROOT" sparse-checkout set --no-cone \
+    '/lib/common/' '/libexec/omadora-theme-color' '/libexec/omadora-theme-set-templates' \
+    '/themes/' '/default/themed/' '!/themes/*/backgrounds/' '!/themes/*/preview.png' ||
+    die "couldn't set up the sparse checkout"
+}
+
+normalize() {
+  printf '%s' "$1" | sed -E 's/<[^>]+>//g' | tr '[:upper:] ' '[:lower:]-'
+}
+
+list_themes() {
+  {
+    [[ -d $USER_THEMES_DIR ]] && find "$USER_THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
+    [[ -d $THEMES_DIR ]] && find "$THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
+    true
+  } | sort -u
+}
+
+current_theme() {
+  [[ -s $THEME_NAME_FILE ]] && head -n 1 "$THEME_NAME_FILE"
+  return 0
+}
+
+fetch_backgrounds() {
+  local name=$1
+  [[ -d $THEMES_DIR/$name ]] || return 0
+  [[ -d $THEMES_DIR/$name/backgrounds ]] && return 0
+  git -C "$OMADORA_ROOT" sparse-checkout add "/themes/$name/backgrounds/" >/dev/null 2>&1 ||
+    warn "couldn't fetch the wallpapers for $name (offline?)"
+}
+
+# Next wallpaper after the current one, wrapping; the first one when the current
+# wallpaper belongs to another theme. Prints nothing if the theme has none.
+next_background() {
+  local name=$1 file current= count=0 i next= found=-1
+  local files=()
+  current=$(readlink "$BACKGROUND_LINK" 2>/dev/null || true)
+  while IFS= read -r file; do
+    [[ -n $file ]] || continue
+    files[count]=$file
+    count=$((count + 1))
+  done < <(find -L "$USER_BACKGROUNDS_DIR/$name" "$CURRENT_THEME_DIR/backgrounds" \
+    -maxdepth 1 -type f ! -name '.*' 2>/dev/null | sort)
+  ((count > 0)) || return 0
+  for ((i = 0; i < count; i++)); do
+    [[ ${files[i]} == "$current" ]] && { found=$i; break; }
+  done
+  if ((found < 0)); then next=${files[0]}; else next=${files[(found + 1) % count]}; fi
+  printf '%s' "$next"
+}
+
+set_wallpaper() {
+  local file=$1 name=$2 jpg
+  # Desktop pictures are happiest with JPEG/PNG/HEIC; the themes also ship WebP.
+  case "$file" in
+    *.webp | *.WEBP | *.avif)
+      mkdir -p "$CACHE_DIR/backgrounds"
+      jpg="$CACHE_DIR/backgrounds/$name-$(basename "${file%.*}").jpg"
+      [[ -f $jpg ]] || sips -s format jpeg "$file" --out "$jpg" >/dev/null 2>&1 || {
+        warn "couldn't convert $file for the desktop"
+        return 1
+      }
+      file=$jpg
+      ;;
+  esac
+  osascript \
+    -e 'on run argv' \
+    -e 'tell application "System Events" to tell every desktop to set picture to POSIX file (item 1 of argv)' \
+    -e 'end run' "$file" >/dev/null
+}
+
+apply_background() {
+  local name=$1 file
+  file=$(next_background "$name")
+  if [[ -z $file ]]; then
+    rm -f "$BACKGROUND_LINK"
+    echo "No wallpapers available for $name."
+    return 0
+  fi
+  ln -sfn "$file" "$BACKGROUND_LINK"
+  set_wallpaper "$file" "$name" || warn "couldn't set the wallpaper (System Events needs Automation permission for this terminal)"
+}
+
+apply_appearance() {
+  local mode dark=true
+  mode=$("$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-color" --file "$CURRENT_THEME_DIR/colors.toml" mode 2>/dev/null || echo dark)
+  [[ $mode == light ]] && dark=false
+  osascript -e "tell application \"System Events\" to tell appearance preferences to set dark mode to $dark" >/dev/null 2>&1 ||
+    warn "couldn't switch the macOS appearance to $mode (System Events needs Automation permission for this terminal)"
+}
+
+reload_app() {
+  local signal=$1 app=$2
+  pgrep -x "$app" >/dev/null 2>&1 && pkill -"$signal" -x "$app" 2>/dev/null || true
+}
+
+run_hooks() {
+  local name=$1 hook
+  if [[ -f $HOOKS_DIR/theme-set ]]; then
+    "$BASH5" "$HOOKS_DIR/theme-set" "$name" || warn "hook failed: $HOOKS_DIR/theme-set"
+  fi
+  [[ -d $HOOKS_DIR/theme-set.d ]] || return 0
+  for hook in "$HOOKS_DIR"/theme-set.d/*; do
+    [[ -f $hook && $hook != *.sample ]] || continue
+    "$BASH5" "$hook" "$name" || warn "hook failed: $hook"
+  done
+}
+
+set_theme() {
+  local name
+  name=$(normalize "$1")
+  [[ -n $name && $name != .* && $name != */* ]] || die "invalid theme name: $1"
+  ensure_repo
+  [[ -d $THEMES_DIR/$name || -d $USER_THEMES_DIR/$name ]] || die "unknown theme: $name (try: theme list)"
+
+  echo "Applying theme: $name"
+  skipped wallpaper || fetch_backgrounds "$name"
+
+  mkdir -p "$CURRENT_DIR"
+  rm -rf "$NEXT_THEME_DIR"
+  mkdir -p "$NEXT_THEME_DIR"
+  [[ -d $THEMES_DIR/$name ]] && cp -R "$THEMES_DIR/$name/." "$NEXT_THEME_DIR/"
+  [[ -d $USER_THEMES_DIR/$name ]] && cp -R "$USER_THEMES_DIR/$name/." "$NEXT_THEME_DIR/"
+  [[ -f $NEXT_THEME_DIR/colors.toml ]] || die "theme $name has no colors.toml"
+
+  "$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-set-templates" || {
+    rm -rf "$NEXT_THEME_DIR"
+    die "failed to render the themed templates for $name"
+  }
+
+  rm -rf "$CURRENT_THEME_DIR"
+  mv "$NEXT_THEME_DIR" "$CURRENT_THEME_DIR"
+  printf '%s\n' "$name" >"$THEME_NAME_FILE"
+
+  skipped wallpaper || apply_background "$name"
+  skipped appearance || apply_appearance
+  if ! skipped reload; then
+    reload_app USR1 kitty
+    reload_app USR2 ghostty
+  fi
+  skipped hooks || run_hooks "$name"
+  skipped reload || reload_app USR2 btop
+
+  echo "Theme applied: $name"
+}
+
+menu() {
+  local current choice
+  current=$(current_theme)
+  ensure_repo
+  if command -v gum >/dev/null 2>&1 && [[ -t 0 && -t 1 ]]; then
+    choice=$(list_themes | gum choose --header "Theme (current: ${current:-none})" \
+      ${current:+--selected="$current"} --height 15) || exit 0
+  else
+    local themes=()
+    while IFS= read -r t; do themes[${#themes[@]}]=$t; done < <(list_themes)
+    PS3="Theme: "
+    select choice in "${themes[@]}"; do [[ -n $choice ]] && break; done
+  fi
+  [[ -n $choice ]] || exit 0
+  set_theme "$choice"
+}
+
+case "${1:-}" in
+  "") menu ;;
+  set)
+    [[ $# -eq 2 ]] || die "usage: theme set <name>"
+    set_theme "$2"
+    ;;
+  list)
+    ensure_repo
+    current=$(current_theme)
+    list_themes | while IFS= read -r t; do
+      if [[ $t == "$current" ]]; then echo "* $t"; else echo "  $t"; fi
+    done
+    ;;
+  current)
+    current=$(current_theme)
+    [[ -n $current ]] && echo "$current"
+    ;;
+  bg)
+    current=$(current_theme)
+    [[ -n $current ]] || die "no theme set yet"
+    fetch_backgrounds "$current"
+    # backgrounds live in the staged copy; refresh it from the checkout
+    rm -rf "$CURRENT_THEME_DIR/backgrounds"
+    [[ -d $THEMES_DIR/$current/backgrounds ]] && cp -R "$THEMES_DIR/$current/backgrounds" "$CURRENT_THEME_DIR/backgrounds"
+    apply_background "$current"
+    ;;
+  update)
+    ensure_repo
+    git -C "$OMADORA_ROOT" pull -q --ff-only && echo "Themes updated."
+    ;;
+  -h | --help | help)
+    sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+  *)
+    # `theme gruvbox` as shorthand for `theme set gruvbox`
+    set_theme "$1"
+    ;;
+esac
