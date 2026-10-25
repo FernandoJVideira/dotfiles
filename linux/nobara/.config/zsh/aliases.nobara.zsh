@@ -8,7 +8,7 @@
 alias update='sudo dnf upgrade --refresh'
 
 # Install a package
-alias install='sudo dnf install'
+alias install='sudo dnf install -y'
 
 # Search repos (name/description)
 alias search='dnf search'
