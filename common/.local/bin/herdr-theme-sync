@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Generate Herdr's config.toml from config.base.toml plus the current Omadora theme.
+
+    herdr-theme-sync [--colors FILE] [--base FILE] [--out FILE] [--print] [--no-reload]
+
+Herdr has no include and no theme files, so its colors have to live in config.toml itself. The
+tracked part is ~/.config/herdr/config.base.toml; this appends a [theme.custom] block built from the
+theme's palette (current/theme/colors.toml) and writes the result to ~/.config/herdr/config.toml,
+then tells a running server to reload it. Run by the herdr-sync theme hook on every theme change
+(Linux's omactl, macOS's `theme` command) and by common/install.sh.
+
+Everything Herdr draws as text sits on a background of the same theme, and the terminal's 16 ANSI
+colors only guarantee background against foreground, so each pair is checked here and moved
+toward the opposite end of the lightness scale until it reaches 4.5:1 (WCAG AA). Tokens not set
+here keep following the terminal's palette (the "terminal" theme in the base file).
+"""
+import argparse
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+MIN = 4.5
+HOME = os.path.expanduser("~")
+
+
+def rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def hexc(c):
+    return "#%02x%02x%02x" % tuple(max(0, min(255, round(v))) for v in c)
+
+
+def mix(a, b, t):
+    a, b = rgb(a), rgb(b)
+    return hexc(tuple(x + (y - x) * t for x, y in zip(a, b)))
+
+
+def lum(h):
+    def f(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = map(f, rgb(h))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+    la, lb = sorted((lum(a), lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def toward_contrast(color, bg, minimum=MIN):
+    """color, moved toward white or black (whichever the background is far from) until it
+    reaches `minimum` against bg."""
+    end = "#ffffff" if lum(bg) < 0.5 else "#000000"
+    for i in range(21):
+        c = mix(color, end, i / 20)
+        if contrast(c, bg) >= minimum:
+            return c
+    return end
+
+
+def surface(text, bg, candidates):
+    """First candidate that holds `text` at MIN and still shows against bg (1.2:1); else the
+    best compromise."""
+    best, best_score = None, -1
+    for c in candidates:
+        t, v = contrast(text, c), contrast(c, bg)
+        if t >= MIN and v >= 1.2:
+            return c
+        score = min(t / MIN, v / 1.2)
+        if score > best_score:
+            best, best_score = c, score
+    return best
+
+
+def palette(path):
+    p = {}
+    with open(path, encoding="utf-8") as f:
+        for m in re.finditer(r'^\s*([a-z_]+)\s*=\s*"(#[0-9a-fA-F]{6})"', f.read(), re.M):
+            p[m.group(1)] = m.group(2).lower()
+    return p
+
+
+def theme_block(p):
+    bg, fg = p["background"], p["foreground"]
+    text = toward_contrast(p.get("bright_foreground", fg), bg)
+    muted = p.get("muted", mix(fg, bg, 0.5))
+    # the label on accent buttons and the active tab is panel_bg, i.e. the background
+    accent = toward_contrast(p.get("accent", p.get("blue", fg)), bg)
+    tints = [mix(bg, text, t) for t in (0.16, 0.13, 0.19, 0.10, 0.22)]
+    row = surface(text, bg, [p.get("selection", tints[0])] + tints)
+    cursor = surface(text, bg, [mix(bg, accent, t) for t in (0.42, 0.35, 0.28, 0.22)] + tints)
+    button = surface(text, bg, [p.get("lighter_background", tints[0])] + tints)
+    tokens = {
+        "accent": accent,
+        "panel_bg": bg,
+        "text": text,
+        "subtext0": toward_contrast(mix(text, bg, 0.25), bg),
+        "overlay0": toward_contrast(muted, bg),
+        "overlay1": toward_contrast(mix(muted, text, 0.35), bg),
+        "active_row_bg": row,
+        "selection_bg": cursor,
+        "surface0": button,
+    }
+    lines = ["[theme.custom]"] + [f'{k} = "{v}"' for k, v in tokens.items()]
+    return "\n".join(lines) + "\n"
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--colors", default=f"{HOME}/.config/omadora/current/theme/colors.toml")
+    ap.add_argument("--base", default=f"{HOME}/.config/herdr/config.base.toml")
+    ap.add_argument("--out", default=f"{HOME}/.config/herdr/config.toml")
+    ap.add_argument("--print", action="store_true", help="print the theme block and write nothing")
+    ap.add_argument("--no-reload", action="store_true")
+    a = ap.parse_args()
+
+    block = ""
+    if os.path.isfile(a.colors):
+        p = palette(a.colors)
+        if "background" in p and "foreground" in p:
+            block = theme_block(p)
+    if a.print:
+        sys.stdout.write(block)
+        return 0
+
+    if not os.path.isfile(a.base):
+        print(f"herdr-theme-sync: no base config at {a.base}", file=sys.stderr)
+        return 1
+    with open(a.base, encoding="utf-8") as f:
+        text = f.read().rstrip("\n") + "\n"
+    if block:
+        text += "\n# Generated by herdr-theme-sync from the current theme; edit config.base.toml instead.\n" + block
+
+    out_dir = os.path.dirname(a.out)
+    os.makedirs(out_dir, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=out_dir, prefix=".config.toml.")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+
+    if subprocess.run(["sh", "-c", "command -v herdr >/dev/null 2>&1"]).returncode == 0:
+        check = subprocess.run(["herdr", "config", "check"], env={**os.environ, "HERDR_CONFIG_PATH": tmp},
+                               capture_output=True, text=True)
+        if check.returncode != 0:
+            os.unlink(tmp)
+            print("herdr-theme-sync: Herdr rejected the generated config; keeping the old one:\n" + check.stdout + check.stderr,
+                  file=sys.stderr)
+            return 1
+
+    os.replace(tmp, a.out)  # also replaces an old symlink to the repo instead of writing through it
+    os.chmod(a.out, 0o644)
+
+    if not a.no_reload:
+        subprocess.run(["sh", "-c", "herdr server reload-config >/dev/null 2>&1"], timeout=10)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

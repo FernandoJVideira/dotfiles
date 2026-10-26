@@ -2,7 +2,7 @@
 # Herdr (terminal multiplexer for coding agents) + Neovim: installs the herdr-nvim-nav plugin,
 # which makes Ctrl+h/j/k/l move across Neovim splits and Herdr panes as one set of windows (so
 # you can go from Neovim straight down into the Claude pane `hdev` opens). The keys are bound in
-# common/.config/herdr/config.toml, the Neovim half is common/.config/nvim/lua/plugins/herdr.lua.
+# common/.config/herdr/config.base.toml, the Neovim half is common/.config/nvim/lua/plugins/herdr.lua.
 #
 # Herdr itself comes from the Brewfile (macOS) or mise (Linux installers).
 #

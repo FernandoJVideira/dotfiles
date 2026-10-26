@@ -1,0 +1,15 @@
+#!/bin/bash
+# Re-theme Herdr for the new theme. herdr-theme-sync (common/.local/bin) regenerates its config
+# from the theme's palette, with every text/background pair checked for contrast, and reloads the
+# server; what that leaves to the "terminal" theme follows the terminal's palette, which Herdr only
+# re-reads when it redraws after SIGWINCH, so nudge each attached client (never the server) once the
+# terminal has had a moment to repaint. Runs on every OS (Linux's omactl, macOS's `theme`).
+"$HOME/.local/bin/herdr-theme-sync" >/dev/null 2>&1 || true
+(
+  sleep 1.5
+  ps -axo pid=,command= \
+    | awk '$2 ~ /(^|\/)herdr$/ && (NF == 2 || $3 == "--session" || ($3 == "session" && $4 == "attach")) {print $1}' \
+    | xargs kill -WINCH 2>/dev/null
+) >/dev/null 2>&1 &
+disown
+exit 0
