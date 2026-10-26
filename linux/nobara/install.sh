@@ -84,7 +84,7 @@ fi
 # restore it by reinstalling nobara-repos, not by installing terra-release.
 # For non-Nobara Fedora-family systems without nobara-repos, fall back to
 # the upstream bootstrap.
-log "Installing workstation tools (Zed, Go)..."
+log "Installing workstation tools (Zed)..."
 if [[ ! -f /etc/yum.repos.d/terra.repo ]]; then
   if rpm -q nobara-repos &>/dev/null; then
     log "Restoring Nobara's own terra.repo (owned by nobara-repos)..."
@@ -96,7 +96,7 @@ fi
 # spotify-launcher (also from Terra) is a small client that fetches Spotify's
 # official package itself on first run, since Spotify isn't in Fedora's repos.
 # discord is also packaged in Terra (Fedora's own repos can't ship it).
-sudo dnf install -y --skip-unavailable zed golang spotify-launcher discord
+sudo dnf install -y --skip-unavailable zed spotify-launcher discord
 
 # Helium (browser) comes from Nobara's own repo. Steam and Heroic are in Terra;
 # they're only installed when you say yes, same as the gaming prompt on Arch.
@@ -126,15 +126,7 @@ fi
 
 # The shared zsh config (common/.config/zsh) assumes these exist: fzf (+ fzf-tab),
 # zoxide (`z`/`j`), fd (fzf file source), bat (previews), fastfetch (runs at shell
-# start).
-sudo dnf install -y --skip-unavailable gh   # GitHub CLI, in Fedora's own repos
-rpm -q gh &>/dev/null || log "WARNING: gh not installed."
-
-# .NET SDK (Fedora's own repos): Zed's C# extension; the macOS Brewfile has the dotnet-sdk cask
-sudo dnf install -y --skip-unavailable dotnet-sdk-10.0
-rpm -q dotnet-sdk-10.0 &>/dev/null || log "WARNING: dotnet-sdk-10.0 not installed - check 'dnf search dotnet-sdk'."
-
-# Crash watcher deps too: libnotify (notify-send), gdb (backtraces for the
+# start). Crash watcher deps too: libnotify (notify-send), gdb (backtraces for the
 # diagnose-crash skill). There's no systemd-coredump package on current Fedora -
 # it was folded into `systemd` itself (confirmed live: dnf reports "No match for
 # argument"). dnf5 aborts the WHOLE transaction on an unavailable name unless
@@ -191,30 +183,13 @@ if [[ -f /usr/share/applications/brave-origin.desktop ]]; then
     || log "WARNING: xdg-settings couldn't set the default browser (no desktop session?)."
 fi
 
-# mise (https://mise.jdx.dev) manages dev tool versions instead of relying on
-# whatever's frozen in Fedora's repos - matches Omarchy's own approach on the
-# Arch side. Covers neovim, tmux, node and pnpm (Vue/Nuxt work) - all present in
-# mise's registry under their plain names.
+# mise (https://mise.jdx.dev) manages the dev tools (Go, Node, Java, .NET, Neovim, Herdr, Claude
+# Code...) instead of whatever's frozen in Fedora's repos, matching Omarchy's approach on the Arch
+# side. Only mise itself is installed here; common/install.sh installs the tools from the shared
+# list in common/.config/mise/conf.d, plus tmux from this OS's own conf.d.
 if [[ ! -x "$HOME/.local/bin/mise" ]]; then
   log "Installing mise..."
   curl https://mise.run | sh
-fi
-log "Installing neovim, tmux, node, and pnpm via mise..."
-"$HOME/.local/bin/mise" use --global neovim tmux node pnpm
-
-# claude-code is a separate call from the group above: its exact registry
-# short name is less certain than neovim/tmux/node, and mise's failure mode
-# for one bad name in a multi-tool `use` call isn't verified either - keeping
-# it isolated means a wrong name here can't take neovim/tmux/node down with it.
-log "Installing Claude Code CLI via mise..."
-if ! "$HOME/.local/bin/mise" use --global claude-code; then
-  log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' by hand to find the right name."
-fi
-
-# Herdr (terminal multiplexer for coding agents): `hdev` opens a project as Neovim + Claude Code in it
-log "Installing Herdr via mise..."
-if ! "$HOME/.local/bin/mise" use --global herdr; then
-  log "WARNING: 'mise use --global herdr' failed - run 'mise registry | grep -i herdr' by hand to find the right name."
 fi
 
 # Bootloader: BIOS+GRUB -> UEFI+Limine (see linux/nobara-boot/limine-migrate.sh). `auto` picks

@@ -9,9 +9,14 @@ source "$SCRIPT_DIR/../lib/miniconda.sh"
 source "$SCRIPT_DIR/../lib/spicetify.sh"
 source "$SCRIPT_DIR/../lib/herdr.sh"
 source "$SCRIPT_DIR/../lib/draft.sh"
+source "$SCRIPT_DIR/../lib/mise.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+# Dev tools (Go, Node, Java, .NET, Neovim, tmux, Herdr, Claude Code...) from the mise list just
+# linked above. Before the Herdr plugin step below, which needs herdr on the PATH. Non-fatal.
+install_mise_tools || log "WARNING: the mise dev tools weren't all installed (see above) - rerun ./bootstrap.sh to retry."
 
 if [[ ! -d "$HOME/.config/tmux/plugins/tpm" ]]; then
   log "Installing tmux plugin manager (TPM)..."

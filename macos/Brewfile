@@ -8,12 +8,6 @@ brew "bash"
 brew "btop"
 # XML-based font configuration API for X Windows
 brew "fontconfig"
-# Cloudflare Tunnel client (formerly Argo Tunnel)
-brew "cloudflared"
-# Open-source, cross-platform JavaScript runtime environment
-brew "node"
-# Package acting as bridge between Node projects and their package managers
-brew "corepack"
 # Modern, maintained replacement for ls
 brew "eza"
 # Like neofetch, but much faster because written mostly in C
@@ -22,32 +16,16 @@ brew "fastfetch"
 brew "fd"
 # Command-line fuzzy finder written in Go
 brew "fzf"
-# GitHub from the command line
-brew "gh"
 # Glamourous shell scripts (the `theme` command falls back to it when fzf is missing)
 brew "gum"
-# Agent multiplexer that lives in your terminal (the `hdev` project layout)
-brew "herdr"
-# Open source programming language to build simple/reliable/efficient software
-brew "go"
-# Database migrations CLI tool
-brew "golang-migrate"
 # Configurable static site generator
 brew "hugo"
-# Handy way to save and run project-specific commands
-brew "just"
 # Polyglot runtime manager (asdf rust clone)
 brew "mise"
 # Deep clean and optimize your Mac
 brew "mole"
 # Media player based on MPlayer and mplayer2
 brew "mpv"
-# Ambitious Vim-fork focused on extensibility and agility
-brew "neovim"
-# Development kit for the Java programming language
-brew "openjdk"
-# Development kit for the Java programming language
-brew "openjdk@17"
 # Command-line interface for Proton Pass
 brew "proton-pass-cli"
 # Search tool like grep and The Silver Searcher
@@ -76,8 +54,6 @@ cask "claude"
 cask "cleanshot"
 # Drivers for DisplayLink docks, adapters and monitors
 cask "displaylink"
-# Developer platform
-cask "dotnet-sdk"
 # Matrix collaboration client
 cask "element"
 # Voice/text chat (native app: better screen-share than the webapp)
