@@ -13,6 +13,7 @@ require("default.hypr.omadora")
 ---- Change your own setup in these files and override defaults.
 require("hypr.monitors")
 require("hypr.input")
+require("hypr.capslock")
 require("hypr.bindings")
 require("hypr.looknfeel")
 require("hypr.autostart")

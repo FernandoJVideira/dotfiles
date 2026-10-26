@@ -54,6 +54,8 @@ done
 
 log "Symlinking Nobara-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+# what both Linux distros share (Caps Lock as Super, see linux/common/.config/hypr/capslock.lua)
+symlink_dotfiles "$SCRIPT_DIR/../common"
 
 # Monitor layout: the fastest monitor becomes the primary at 0x0, the rest chain
 # to its right. Written into the (symlinked) monitors.lua and into the plasmalogin
