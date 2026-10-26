@@ -2,7 +2,7 @@
 
 [Herdr](https://herdr.dev) is a terminal multiplexer for coding agents (think tmux, plus it knows
 which agent is working, blocked or done). Keys below are Herdr 0.9.5's defaults; the config
-(`common/.config/herdr/config.toml`) only adds `Ctrl+h/j/k/l`. `prefix ?` shows the live list.
+(`common/.config/herdr/config.base.toml`) only adds `Ctrl+h/j/k/l`. `prefix ?` shows the live list.
 
 ## The model
 
@@ -106,8 +106,9 @@ mkdir -p ~/.config/herdr/old-session && mv ~/.config/herdr/session.json ~/.confi
 herdr
 ```
 
-Leave everything else in that folder alone: `config.toml` is your config, `plugins/` and
-`plugins.json` are the Neovim navigation plugin. To undo, stop the server and move the two
+Leave everything else in that folder alone: `config.toml` and `config.base.toml` are your config
+(the first is generated from the second), `plugins/` and `plugins.json` are the Neovim navigation
+plugin. To undo, stop the server and move the two
 items back. Tried on a throwaway session: stop + start brought the workspaces back, and moving
 those two items away gave a single empty workspace.
 
@@ -117,6 +118,12 @@ those two items away gave a single empty workspace.
   (the `herdr-nvim-nav` plugin, pinned in `lib/herdr.sh`).
 - In Neovim, `<leader>lt` opens the interactive NvChad lesson (`:Tutor nvchad`).
 - The first time Claude Code starts in a pane it asks for a text style and maybe a login. Once.
+
+## Theme
+
+Herdr follows every Omadora theme. Its base is the `terminal` theme (colors from your terminal's palette), and on each theme change the `herdr-sync` hook runs `herdr-theme-sync`, which builds the active row, button, tab and label colors from the theme's own palette so every text/background pair keeps at least 4.5:1 contrast. The new colors show within a couple of seconds. If something stays stale, resize the window or `prefix Shift+R`.
+
+Edit `common/.config/herdr/config.base.toml` (the keys, the settings), not `~/.config/herdr/config.toml`: that one is generated, and Herdr's own settings screen writes to it, so the next theme change overwrites those edits.
 
 ## When something is off
 

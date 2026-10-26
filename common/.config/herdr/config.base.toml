@@ -3,8 +3,13 @@ onboarding = false
 [ui.toast]
 delivery = "system"
 
+# This is the tracked half of Herdr's config. herdr-theme-sync appends a [theme.custom] block built
+# from the current Omadora theme and writes the result to ~/.config/herdr/config.toml, which is
+# what Herdr reads (so edits belong here, not there; Herdr's own settings screen writes to the
+# generated file and is overwritten on the next theme change).
+# "terminal" takes every color that block doesn't set from the host terminal's palette.
 [theme]
-name = "catppuccin"
+name = "terminal"
 auto_switch = false
 
 # Ctrl+h/j/k/l move across Neovim splits and Herdr panes as one set of windows. Herdr has no

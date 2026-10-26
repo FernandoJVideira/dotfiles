@@ -14,9 +14,14 @@ source "$SCRIPT_DIR/../lib/mise.sh"
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 
-# Dev tools (Go, Node, Java, .NET, Neovim, tmux, Herdr, Claude Code...) from the mise list just
-# linked above. Before the Herdr plugin step below, which needs herdr on the PATH. Non-fatal.
+# Dev tools (Go, Node, Java, .NET, Neovim, Herdr, Claude Code...) from the mise list just linked
+# above. Before the Herdr steps below, which need herdr on the PATH. Non-fatal.
 install_mise_tools || log "WARNING: the mise dev tools weren't all installed (see above) - rerun ./bootstrap.sh to retry."
+
+# Herdr's config.toml is generated from config.base.toml plus the current theme (and replaces the
+# old symlink to the repo). The plugin step below reloads it.
+log "Generating Herdr's config..."
+"$HOME/.local/bin/herdr-theme-sync" --no-reload || log "WARNING: Herdr's config wasn't generated (see above) - rerun ./bootstrap.sh to retry."
 
 if [[ ! -d "$HOME/.config/tmux/plugins/tpm" ]]; then
   log "Installing tmux plugin manager (TPM)..."
