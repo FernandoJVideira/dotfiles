@@ -211,6 +211,16 @@ if ! "$HOME/.local/bin/mise" use --global claude-code; then
   log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' by hand to find the right name."
 fi
 
+# Bootloader: BIOS+GRUB -> UEFI+Limine (see linux/nobara-boot/limine-migrate.sh). `auto` picks
+# whichever phase applies: phase 1 repartitions the boot disk (asks you to type YES first),
+# phase 2 runs after you've switched the firmware to UEFI and booted Limine. On an already
+# migrated machine it just refreshes the menu theme and the kernel hook. A failure here
+# never aborts the rest of the install.
+log "Setting up the Limine bootloader..."
+sudo dnf install -y --skip-unavailable gdisk dosfstools rsync efibootmgr limine
+sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
+  || log "WARNING: limine-migrate.sh auto failed - run it by hand: sudo linux/nobara-boot/limine-migrate.sh prepare|finish"
+
 # Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
 # shared .zshenv). The unit logs in with a personal access token read from
 # ~/.config/proton-pass-cli/pat - a secret, so this script can't create it:
