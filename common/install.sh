@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/symlink.sh"
 source "$SCRIPT_DIR/../lib/miniconda.sh"
 source "$SCRIPT_DIR/../lib/spicetify.sh"
+source "$SCRIPT_DIR/../lib/herdr.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
@@ -26,5 +27,9 @@ install_miniconda || log "WARNING: Miniconda wasn't installed (see above) - reru
 # Same for Spicetify (Spotify theming): one installer for every OS. Non-fatal too. The
 # colors are applied by the theme-set hook (spicetify-sync), once Spotify has been started.
 install_spicetify || log "WARNING: Spicetify wasn't installed (see above) - rerun ./bootstrap.sh to retry."
+
+# Herdr's Ctrl+h/j/k/l navigation plugin; after the symlinks above, since config.toml (with its
+# bindings) is one of them, and non-fatal like the rest.
+install_herdr_plugins || log "WARNING: the Herdr navigation plugin wasn't installed (see above) - rerun ./bootstrap.sh to retry."
 
 log "common/install.sh complete."

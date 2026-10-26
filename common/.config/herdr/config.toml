@@ -1,0 +1,35 @@
+onboarding = false
+
+[ui.toast]
+delivery = "system"
+
+[theme]
+name = "catppuccin"
+auto_switch = false
+
+# Ctrl+h/j/k/l move across Neovim splits and Herdr panes as one set of windows. Herdr has no
+# "is this pane running Neovim?" test the way tmux does, so the herdr-nvim-nav plugin
+# (installed by lib/herdr.sh, pinned) answers it with a marker file the Neovim half writes
+# (common/.config/nvim/lua/plugins/herdr.lua): when Neovim owns the focused pane the key is
+# handed to it, otherwise Herdr moves its own focus. These bindings need that plugin
+# installed, or Ctrl+h (also Backspace in many terminals) does nothing.
+# The prefix keys (prefix+h/j/k/l) keep working as the plain Herdr way.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "herdr-nvim-nav.left"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "herdr-nvim-nav.down"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "herdr-nvim-nav.up"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "herdr-nvim-nav.right"
