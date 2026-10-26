@@ -1,31 +1,44 @@
 #!/usr/bin/env bash
 # Open a project in Herdr: Neovim on top, Claude Code docked below it.
-#   hdev [dir]        dir defaults to the current directory
+#   hdev [--fresh] [dir]    dir defaults to the current directory
+#                           --fresh closes the project's existing "dev" tab and builds it again
+#                           (after a Herdr restart that tab comes back as plain shells)
 #
-# One workspace per project (labelled with the directory name) and one agent per project
-# (named claude-<project>), so running it again goes back to what is already there instead
-# of stacking up duplicates:
+# A project is its full path, not its folder name: two folders called "client" are two projects.
+# One workspace per project (labelled with the folder name, found again by the folder its panes
+# are in) and one agent per project (claude-<folder>-<4 hex digits of the path>), so running
+# hdev again goes back to what is already there instead of stacking up duplicates:
 #   - the project's agent is running      -> focus it
 #   - its workspace has a "dev" tab       -> focus that tab
 #   - its workspace exists, no "dev" tab  -> add a "dev" tab to it (what you already have there,
 #                                            a shell for instance, is left alone)
 #   - no workspace                        -> create it
 # The layout itself: nvim in the first pane, a pane split below it, the agent started there.
-# Outside Herdr it then attaches to the persistent session (starting it if need be); inside
-# Herdr the new workspace is simply focused.
 #
-# Only Herdr's own CLI is used (workspace / pane / agent). Knobs, all optional:
+# If the Herdr server isn't running it is started in the background first, so the layout is
+# built in one go (the saved layout of the last session comes back with it, as a normal start
+# does). Outside Herdr it then attaches to the session; inside Herdr the new workspace is
+# simply focused.
+#
+# Only Herdr's own CLI is used (workspace / tab / pane / agent). Knobs, all optional:
 #   HDEV_AGENT=claude   any kind `herdr agent start --kind` knows (codex, gemini, ...), or
 #                       "none" for just the editor
 #   HDEV_EDITOR=nvim    what runs in the top pane
 #   HDEV_RATIO=0.6      share of the height the editor keeps (the agent gets the rest)
+#   HDEV_SESSION=name   a named Herdr session instead of the default one
 #   HDEV_NO_FOCUS=1     don't switch focus or attach (for scripts and tests)
 set -euo pipefail
 
 die() { echo "hdev: $*" >&2; exit 1; }
 
+fresh=0
+if [[ ${1:-} == --fresh ]]; then fresh=1; shift; fi
+
 command -v herdr >/dev/null 2>&1 || die "herdr isn't installed"
 command -v jq >/dev/null 2>&1 || die "jq is needed to read herdr's replies"
+
+# every herdr call goes through here, so HDEV_SESSION applies to all of them
+h() { herdr ${HDEV_SESSION:+--session "$HDEV_SESSION"} "$@"; }
 
 dir=$(cd "${1:-.}" 2>/dev/null && pwd -P) || die "no such directory: ${1:-.}"
 label=$(basename "$dir")
@@ -35,60 +48,71 @@ ratio=${HDEV_RATIO:-0.6}
 focus=--focus
 [[ -n ${HDEV_NO_FOCUS:-} ]] && focus=--no-focus
 
-# herdr agent names: [a-z][a-z0-9_-]{0,31}, unique among live agents
-slug=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/^-+//; s/-+$//')
+# herdr agent names: [a-z][a-z0-9_-]{0,31}, unique among live agents. The folder name keeps it
+# readable, 4 hex digits of the full path keep two folders with the same name apart.
+slug=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/^-+//; s/-+$//' | cut -c1-16 | sed -E 's/-+$//')
 [[ -n $slug ]] || slug=project
-agent_name=$(printf '%s-%s' "$kind" "$slug" | cut -c1-32 | sed -E 's/-+$//')
+sum=$(printf '%s' "$dir" | cksum | cut -d' ' -f1)
+agent_name=$(printf '%s-%s-%04x' "$kind" "$slug" $((sum % 65536)) | cut -c1-32)
 
-# Reaching a running server also tells us whether there is one
-if ! herdr workspace list >/dev/null 2>&1; then
-  if [[ -z ${HERDR_PANE_ID:-} && -z ${HDEV_NO_FOCUS:-} ]]; then
-    echo "hdev: Herdr isn't running yet - starting it; run hdev again from inside it (it keeps running after you detach, so this only happens once)" >&2
-    exec herdr
-  fi
-  die "can't reach the Herdr server"
+# Is a server there? If not, start it headless and wait for it to answer.
+if ! h workspace list >/dev/null 2>&1; then
+  (nohup herdr ${HDEV_SESSION:+--session "$HDEV_SESSION"} server >/dev/null 2>&1 &)
+  for _ in $(seq 1 40); do
+    sleep 0.25
+    h workspace list >/dev/null 2>&1 && break
+  done
+  h workspace list >/dev/null 2>&1 || die "couldn't start the Herdr server (try: herdr)"
 fi
 
 finish() {
   # inside Herdr the focus change above is all there is to do; outside, show the session
   [[ -n ${HDEV_NO_FOCUS:-} || -n ${HERDR_PANE_ID:-} ]] && exit 0
+  if [[ -n ${HDEV_SESSION:-} ]]; then exec herdr session attach "$HDEV_SESSION"; fi
   exec herdr
 }
 
-if [[ $kind != none ]] && herdr agent get "$agent_name" >/dev/null 2>&1; then
+if [[ $kind != none ]] && h agent get "$agent_name" >/dev/null 2>&1; then
   echo "hdev: $agent_name is already running - going back to it"
-  [[ -n ${HDEV_NO_FOCUS:-} ]] || herdr agent focus "$agent_name" >/dev/null
+  [[ -n ${HDEV_NO_FOCUS:-} ]] || h agent focus "$agent_name" >/dev/null
   finish
 fi
 
-existing=$(herdr workspace list | jq -r --arg l "$label" '[.result.workspaces[]? | select(.label == $l)][0].workspace_id // empty')
+# the project's workspace: the one with a pane in this folder (not just the same name)
+existing=$(h pane list | jq -r --arg d "$dir" '[.result.panes[]? | select(.cwd == $d or .foreground_cwd == $d)][0].workspace_id // empty')
 if [[ -n $existing ]]; then
-  tab=$(herdr tab list --workspace "$existing" | jq -r '[.result.tabs[]? | select(.label == "dev")][0].tab_id // empty')
-  if [[ -n $tab ]]; then
-    echo "hdev: workspace '$label' already has a dev tab ($tab) - going back to it"
+  tab=$(h tab list --workspace "$existing" | jq -r '[.result.tabs[]? | select(.label == "dev")][0].tab_id // empty')
+  if [[ -n $tab && $fresh == 1 ]]; then
+    echo "hdev: closing the old dev tab ($tab) and building it again"
+    h tab close "$tab" >/dev/null
+    # it may have been the workspace's only tab, so look everything up again from scratch
+    exec "$0" "$dir"
+  elif [[ -n $tab ]]; then
+    echo "hdev: this project's workspace ($existing) already has a dev tab ($tab) - going back to it"
+    [[ $kind == none ]] || echo "hdev: ($agent_name isn't running, though - after a Herdr restart the tab is just shells. 'hdev --fresh' rebuilds it)" >&2
     if [[ -z ${HDEV_NO_FOCUS:-} ]]; then
-      herdr workspace focus "$existing" >/dev/null
-      herdr tab focus "$tab" >/dev/null
+      h workspace focus "$existing" >/dev/null
+      h tab focus "$tab" >/dev/null
     fi
     finish
   fi
   # the project's workspace is there (a plain shell, say): add the layout as a tab, don't touch it
-  created=$(herdr tab create --workspace "$existing" --cwd "$dir" --label dev $focus)
-  [[ -n ${HDEV_NO_FOCUS:-} ]] || herdr workspace focus "$existing" >/dev/null
+  created=$(h tab create --workspace "$existing" --cwd "$dir" --label dev $focus)
+  [[ -n ${HDEV_NO_FOCUS:-} ]] || h workspace focus "$existing" >/dev/null
 else
-  created=$(herdr workspace create --cwd "$dir" --label "$label" $focus)
+  created=$(h workspace create --cwd "$dir" --label "$label" $focus)
 fi
 root=$(printf '%s\n' "$created" | jq -r '.result.root_pane.pane_id // empty')
-[[ -n $root ]] || die "herdr didn't return the new workspace's pane: $created"
-herdr pane run "$root" "$editor" >/dev/null
+[[ -n $root ]] || die "herdr didn't return the new pane: $created"
+h pane run "$root" "$editor" >/dev/null
 
 if [[ $kind != none ]]; then
-  split=$(herdr pane split "$root" --direction down --ratio "$ratio" --cwd "$dir" --no-focus)
+  split=$(h pane split "$root" --direction down --ratio "$ratio" --cwd "$dir" --no-focus)
   bottom=$(printf '%s\n' "$split" | jq -r '.result.pane.pane_id // empty')
   [[ -n $bottom ]] || die "herdr didn't return the new pane: $split"
   if ! command -v "$kind" >/dev/null 2>&1; then
     echo "hdev: '$kind' isn't installed (or not on PATH) - the bottom pane is a plain shell; install it and run: herdr agent start $agent_name --kind $kind --pane $bottom" >&2
-  elif ! herdr agent start "$agent_name" --kind "$kind" --pane "$bottom" >/dev/null; then
+  elif ! h agent start "$agent_name" --kind "$kind" --pane "$bottom" >/dev/null; then
     echo "hdev: couldn't start $kind in $bottom (the pane stays a plain shell): herdr agent start $agent_name --kind $kind --pane $bottom" >&2
   fi
 fi
