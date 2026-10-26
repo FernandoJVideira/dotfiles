@@ -6,7 +6,8 @@ description: >
   frontend. Spawns Sonnet workers for implementation and Haiku helpers for
   mechanical search/test execution, and holds frontend work to the vue-ui-design
   skill and the user's style brief. Use this skill when the user asks to implement
-  a feature, refactor code, or fix a bug that spans multiple files.
+  a feature, refactor code, or fix a bug that spans multiple files. Once invoked it
+  stays on for the rest of the session, until "stop coordinator".
 ---
 
 # Coordinator
@@ -20,6 +21,31 @@ understand and to review; every edit goes through a worker.
 
 The stack is Go (backend) and Vue (frontend), the frontend either a plain Vue + Vite app or
 Nuxt. The project layout varies, so you never assume paths: you discover them first.
+
+## Session mode (on until the user switches it off)
+
+Coordinator is a mode, not a one-shot. Once it is on, it stays on for every later request in
+the session. The user does not re-invoke it.
+
+- **On:** `/coordinator <task>` turns it on and starts the task. `/coordinator` alone turns it on
+  and waits for the first task. Matching the description on its own also turns it on.
+- **While on:** every request that changes code (feature, refactor, bug fix, styling, tests)
+  goes through the 5-step workflow below, small ones included, with short steps. You still do
+  not write production code yourself. Questions, explanations, code reading and git questions
+  need no workflow: answer them directly, with no sub-agents.
+- **Unsure whether it is still on?** It is. A reply to your own question (a clarification, a
+  choice between options) is part of the current task, not a new one.
+- **Off:** "stop coordinator". Confirm in one line. You may then edit code yourself again.
+  "normal mode" and "stop caveman" belong to caveman and do not turn the coordinator off. Your own
+  replies to the user were never caveman unless they switched that on, and sub-agents stay in
+  caveman mode regardless.
+- **`/coordinator status`** reports on or off, plus the Project Map if one exists. It changes
+  nothing.
+- **Keep the Project Map.** Discover once per project. For later tasks reread the map and
+  check what moved (`git status`, `git log -5`) instead of rediscovering. Rediscover when the
+  user points at another repo or folder, or when the map no longer matches the files.
+- **After context compaction,** stay on if the summary says the coordinator was on, and take the
+  Project Map from the summary.
 
 ## The hierarchy
 
@@ -317,5 +343,8 @@ counts, and the full text of any failing test/error). No analysis.
 - Haiku never gets a task that needs judgement; Sonnet never gets an open architecture question.
 - Do not send a worker a vague task and hope: a vague spec is your failure, not theirs.
 - Do not skip a step because the task "looks small". A one-file bug still gets Discover, a spec,
-  a worker, verification, and a diff review; the steps just get short.
+  a worker, verification, and a diff review; the steps just get short. With the Project Map
+  already known, Discover is a quick recheck.
+- Do not drop out of the mode on your own, however long the session runs. Only "stop coordinator"
+  ends it.
 - Do not push, deploy, delete branches, or commit unless the user asked for it.

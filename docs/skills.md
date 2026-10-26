@@ -13,6 +13,19 @@ it matters. A skill added or changed by the installer shows up from the next ses
 /coordinator add a "last seen" column to the members table, sortable, backed by the API
 ```
 
+It's a mode, like caveman. Start the session with `/coordinator` (alone, or with the first task)
+and it stays on: every later request that changes code goes through the same workflow, and you
+don't type the command again. Questions and explanations are answered directly, without
+sub-agents.
+
+| Say | Effect |
+|---|---|
+| `/coordinator`, `/coordinator <task>` | Turns it on for the session |
+| `/coordinator status` | Says whether it's on, and shows the project layout it found |
+| "stop coordinator" | Turns it off; Claude edits code itself again |
+
+"normal mode" and "stop caveman" only affect caveman, so they leave the coordinator on.
+
 Give it the outcome you want, not the steps. It works out the project layout first (monorepo,
 client only, or API and client in separate repos), so open the session in the repo, or in the
 parent folder when the API and the client are separate checkouts. Before spawning anyone it may
