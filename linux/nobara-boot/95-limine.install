@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# kernel-install plugin: refresh the Limine menu after every kernel add/remove.
+# Runs after 90-loaderentry.install, which has already written/removed the BLS entry.
+case "${1:-}" in
+add | remove) ;;
+*) exit 0 ;;
+esac
+[[ -x /usr/local/libexec/limine-sync ]] || exit 0
+# Never fail the package transaction over a menu refresh; the next kernel change regenerates it.
+/usr/local/libexec/limine-sync || echo "95-limine.install: limine-sync failed (menu not refreshed)" >&2
+exit 0

@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
+source "$SCRIPT_DIR/../../lib/limine.sh"
 
 # gum (the prompts below) is not on a minimal install yet
 sudo pacman -S --needed --noconfirm gum
@@ -79,6 +80,8 @@ sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
 # pnpm via mise (ships with Omarchy), same as the other OSes
 log "Installing pnpm via mise..."
 mise use --global pnpm
+
+limine_setup
 
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 # Spicetify patches Spotify in place, and the AUR package installs it root-owned in /opt/spotify
