@@ -79,6 +79,8 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 All platforms end at `common/install.sh`. It symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing the tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`). The same prefix on every OS lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere, and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you.
 
+It also installs the latest release of my `draft` scaffolding CLI from [git.fernandovideira.com](https://git.fernandovideira.com/FernandoJVideira/draft/releases) (`lib/draft.sh`, macOS arm64 and Linux amd64, the only builds published) to `~/.local/bin/draft`. It does so when draft is missing or older than the release, so rerunning `./bootstrap.sh` is how a machine updates. The releases publish no checksums, so the download is trusted over TLS and has to report the release's version when run; if a release ever ships a `checksums.txt` or `SHA256SUMS` asset it is verified, and a mismatch installs nothing.
+
 ### Claude Code skills
 
 Skills in `common/.claude/skills/<name>/SKILL.md` are linked into `~/.claude/skills` on every OS by `common/install.sh`; OS-specific ones, like Nobara's, live under `linux/<distro>/.claude/skills`. Claude Code lists a new skill from the next session on. How to call each one, with example prompts, is in [docs/skills.md](docs/skills.md).
