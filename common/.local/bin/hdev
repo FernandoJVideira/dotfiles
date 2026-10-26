@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Open a project in Herdr: Neovim on top, Claude Code docked below it.
+#   hdev [dir]        dir defaults to the current directory
+#
+# One workspace per project (labelled with the directory name) and one agent per project
+# (named claude-<project>), so running it again goes back to what is already there instead
+# of stacking up duplicates:
+#   - the project's agent is running   -> focus it
+#   - its workspace exists, no agent   -> focus the workspace
+#   - neither                          -> create the workspace, run nvim in the root pane,
+#                                         split a pane below it and start the agent there
+# Outside Herdr it then attaches to the persistent session (starting it if need be); inside
+# Herdr the new workspace is simply focused.
+#
+# Only Herdr's own CLI is used (workspace / pane / agent). Knobs, all optional:
+#   HDEV_AGENT=claude   any kind `herdr agent start --kind` knows (codex, gemini, ...), or
+#                       "none" for just the editor
+#   HDEV_EDITOR=nvim    what runs in the top pane
+#   HDEV_RATIO=0.6      share of the height the editor keeps (the agent gets the rest)
+#   HDEV_NO_FOCUS=1     don't switch focus or attach (for scripts and tests)
+set -euo pipefail
+
+die() { echo "hdev: $*" >&2; exit 1; }
+
+command -v herdr >/dev/null 2>&1 || die "herdr isn't installed"
+command -v jq >/dev/null 2>&1 || die "jq is needed to read herdr's replies"
+
+dir=$(cd "${1:-.}" 2>/dev/null && pwd -P) || die "no such directory: ${1:-.}"
+label=$(basename "$dir")
+kind=${HDEV_AGENT:-claude}
+editor=${HDEV_EDITOR:-nvim}
+ratio=${HDEV_RATIO:-0.6}
+focus=--focus
+[[ -n ${HDEV_NO_FOCUS:-} ]] && focus=--no-focus
+
+# herdr agent names: [a-z][a-z0-9_-]{0,31}, unique among live agents
+slug=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/^-+//; s/-+$//')
+[[ -n $slug ]] || slug=project
+agent_name=$(printf '%s-%s' "$kind" "$slug" | cut -c1-32 | sed -E 's/-+$//')
+
+# Reaching a running server also tells us whether there is one
+if ! herdr workspace list >/dev/null 2>&1; then
+  if [[ -z ${HERDR_PANE_ID:-} && -z ${HDEV_NO_FOCUS:-} ]]; then
+    echo "hdev: Herdr isn't running yet - starting it; run hdev again from inside it (it keeps running after you detach, so this only happens once)" >&2
+    exec herdr
+  fi
+  die "can't reach the Herdr server"
+fi
+
+finish() {
+  # inside Herdr the focus change above is all there is to do; outside, show the session
+  [[ -n ${HDEV_NO_FOCUS:-} || -n ${HERDR_PANE_ID:-} ]] && exit 0
+  exec herdr
+}
+
+if [[ $kind != none ]] && herdr agent get "$agent_name" >/dev/null 2>&1; then
+  echo "hdev: $agent_name is already running - going back to it"
+  [[ -n ${HDEV_NO_FOCUS:-} ]] || herdr agent focus "$agent_name" >/dev/null
+  finish
+fi
+
+existing=$(herdr workspace list | jq -r --arg l "$label" '[.result.workspaces[]? | select(.label == $l)][0].workspace_id // empty')
+if [[ -n $existing ]]; then
+  echo "hdev: workspace '$label' already exists ($existing) - going back to it"
+  [[ -n ${HDEV_NO_FOCUS:-} ]] || herdr workspace focus "$existing" >/dev/null
+  finish
+fi
+
+created=$(herdr workspace create --cwd "$dir" --label "$label" $focus)
+root=$(printf '%s\n' "$created" | jq -r '.result.root_pane.pane_id // empty')
+[[ -n $root ]] || die "herdr didn't return the new workspace's pane: $created"
+herdr pane run "$root" "$editor" >/dev/null
+
+if [[ $kind != none ]]; then
+  split=$(herdr pane split "$root" --direction down --ratio "$ratio" --cwd "$dir" --no-focus)
+  bottom=$(printf '%s\n' "$split" | jq -r '.result.pane.pane_id // empty')
+  [[ -n $bottom ]] || die "herdr didn't return the new pane: $split"
+  if ! command -v "$kind" >/dev/null 2>&1; then
+    echo "hdev: '$kind' isn't installed (or not on PATH) - the bottom pane is a plain shell; install it and run: herdr agent start $agent_name --kind $kind --pane $bottom" >&2
+  elif ! herdr agent start "$agent_name" --kind "$kind" --pane "$bottom" >/dev/null; then
+    echo "hdev: couldn't start $kind in $bottom (the pane stays a plain shell): herdr agent start $agent_name --kind $kind --pane $bottom" >&2
+  fi
+fi
+finish

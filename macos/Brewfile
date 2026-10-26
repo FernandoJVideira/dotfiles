@@ -26,6 +26,8 @@ brew "fzf"
 brew "gh"
 # Glamourous shell scripts (the `theme` command falls back to it when fzf is missing)
 brew "gum"
+# Agent multiplexer that lives in your terminal (the `hdev` project layout)
+brew "herdr"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Database migrations CLI tool

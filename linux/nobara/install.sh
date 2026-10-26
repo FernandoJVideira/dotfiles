@@ -211,6 +211,12 @@ if ! "$HOME/.local/bin/mise" use --global claude-code; then
   log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' by hand to find the right name."
 fi
 
+# Herdr (terminal multiplexer for coding agents): `hdev` opens a project as Neovim + Claude Code in it
+log "Installing Herdr via mise..."
+if ! "$HOME/.local/bin/mise" use --global herdr; then
+  log "WARNING: 'mise use --global herdr' failed - run 'mise registry | grep -i herdr' by hand to find the right name."
+fi
+
 # Bootloader: BIOS+GRUB -> UEFI+Limine (see linux/nobara-boot/limine-migrate.sh). `auto` picks
 # whichever phase applies: phase 1 repartitions the boot disk (asks you to type YES first),
 # phase 2 runs after you've switched the firmware to UEFI and booted Limine. On an already
