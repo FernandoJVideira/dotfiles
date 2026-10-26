@@ -46,6 +46,25 @@ Opus (you)            decides, specifies, reviews. Never edits production code.
 - Independent slices run in parallel: put several `Agent` calls in **one** message. Slices that
   touch the same files, or depend on each other's output, run one after the other.
 
+## Caveman mode for sub-agents
+
+Every sub-agent, Sonnet worker and Haiku helper alike, works in **caveman mode** (level `full`, from
+the `caveman` skill): terse replies that carry only facts, so a fleet of agents costs few tokens
+and you read little. It applies to what they **say back to you** (reports, questions, status).
+
+- Sub-agents see neither this skill nor your conversation, so the rules travel inside the prompt:
+  both templates below carry a `COMMS:` line. Keep it in every prompt, and tell workers to put the
+  same line in every prompt they write for their own Haiku helpers.
+- Your own instructions stay in **precise, normal prose**. A compressed spec is where misreadings
+  start: caveman is for replies, never for the spec, the contract or a correction you send with
+  `SendMessage`.
+- Caveman never touches code, commit messages, file contents, commands, or error text. Haiku
+  helpers return command output verbatim; only the prose around it is terse.
+- Auto-clarity applies: for security warnings, irreversible actions, or a sequence that fragments
+  could make ambiguous, a sub-agent drops caveman for that part and says it plainly.
+- Your final report to the user stays in normal prose, unless the user switched caveman on for
+  themselves.
+
 ## The 5-step workflow (every task, in this order)
 
 ### 1. Discover / Explore
@@ -157,7 +176,8 @@ must be entirely self-contained:
   not "as discussed" or "like before"
 - constraints and conventions that apply (from the Project Map), and what is out of scope
 - the exact commands to run to check the work
-- **what to report back**, in a fixed shape (below)
+- **what to report back**, in a fixed shape (below), and the `COMMS:` line that turns caveman mode on
+  for their replies
 
 ### Worker prompt template (Sonnet)
 
@@ -186,6 +206,12 @@ They make no decisions and write no code. Do the design and the code yourself.
 
 CHECK before reporting: <exact commands for this slice>. Do not commit.
 
+COMMS: caveman mode, level full. If you have the caveman skill, invoke it. Otherwise: terse replies,
+no articles/filler/pleasantries/hedging, fragments OK, short words. Paths, commands, code and error
+text stay exact; code and commit messages are written normally. Drop caveman for security warnings,
+irreversible actions, or anything the fragments could make ambiguous.
+Put this same COMMS line in every prompt you write for a Haiku helper.
+
 REPORT BACK: (1) files changed, one line each; (2) what you did and any deviation from the spec,
 with the reason; (3) each command you ran and its result; (4) open questions or risks.
 ```
@@ -198,6 +224,12 @@ Mechanical task, no decisions. You cannot see the conversation.
 TASK: <e.g. "list every file under <abs path> that imports X", "run `go test ./...` in <abs path>">
 WHERE: <absolute paths>   COMMANDS: <exact commands, if any>
 DO NOT: edit files, fix failures, interpret results, or spawn agents.
+
+COMMS: caveman mode, level full. If you have the caveman skill, invoke it. Otherwise: terse replies,
+no articles/filler/pleasantries/hedging, fragments OK, short words. Paths, commands, code and error
+text stay exact; code and commit messages are written normally. Drop caveman for security warnings,
+irreversible actions, or anything the fragments could make ambiguous.
+Command output is returned verbatim; only your own words are terse.
 
 REPORT BACK: the exact output, trimmed to what matters (paths with line numbers; or exit code,
 counts, and the full text of any failing test/error). No analysis.
