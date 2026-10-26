@@ -9,6 +9,14 @@ map("i", "jk", "<ESC>")
 
 -- map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")
 
+-- Telescope hides node_modules, vendor, dist and friends (lua/plugins/init.lua); these two don't
+map("n", "<leader>fA", function()
+  require("telescope.builtin").find_files { follow = true, no_ignore = true, hidden = true, file_ignore_patterns = {} }
+end, { desc = "telescope find all files, including ignored folders" })
+map("n", "<leader>fW", function()
+  require("telescope.builtin").live_grep { additional_args = { "--no-ignore", "--hidden" }, file_ignore_patterns = {} }
+end, { desc = "telescope live grep, including ignored folders" })
+
 -- Learning Neovim: interactive lessons (lua/../tutor/nvchad.tutor is about this very config)
 map("n", "<leader>lt", "<cmd>Tutor nvchad<CR>", { desc = "learn: NvChad tutorial (interactive)" })
 map("n", "<leader>lT", "<cmd>Tutor<CR>", { desc = "learn: classic vimtutor (interactive)" })
