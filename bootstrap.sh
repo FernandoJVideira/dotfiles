@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/secrets.sh"
+export DOTFILES_BOOTSTRAP=1
 
 case "$(uname -s)" in
   Darwin)
@@ -22,3 +24,5 @@ case "$(uname -s)" in
     exit 1
     ;;
 esac
+
+print_secret_instructions
