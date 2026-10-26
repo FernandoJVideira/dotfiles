@@ -29,7 +29,12 @@ cd ~/Developer/some-project
 hdev
 ```
 
-Neovim on top, Claude Code below (`HDEV_AGENT`, `HDEV_EDITOR`, `HDEV_RATIO` change that). A project
+`h` is an alias for `hdev`, and `hs` for `herdr server stop` (see below before using that one).
+
+Neovim on top, Claude Code bottom left, a plain shell bottom right. `HDEV_AGENT`, `HDEV_EDITOR` and
+`HDEV_RATIO` change the first two; `HDEV_TERM=down` puts the shell under Claude instead, and
+`HDEV_TERM=none` drops it (`HDEV_TERM_RATIO` is how much of the pane Claude keeps, 0.5 by
+default). A project
 is its full path: two folders with the same name are two projects. Run it again and it goes back
 to the agent that is already there. If the project's workspace already exists (a plain shell, say),
 the layout is added to it as a `dev` tab and the rest is left alone. If Herdr isn't running, `hdev`

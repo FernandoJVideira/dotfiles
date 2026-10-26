@@ -13,7 +13,8 @@
 #   - its workspace exists, no "dev" tab  -> add a "dev" tab to it (what you already have there,
 #                                            a shell for instance, is left alone)
 #   - no workspace                        -> create it
-# The layout itself: nvim in the first pane, a pane split below it, the agent started there.
+# The layout itself: nvim in the first pane, a pane split below it with the agent started there,
+# and that pane split again for a plain shell beside the agent.
 #
 # If the Herdr server isn't running it is started in the background first, so the layout is
 # built in one go (the saved layout of the last session comes back with it, as a normal start
@@ -25,6 +26,9 @@
 #                       "none" for just the editor
 #   HDEV_EDITOR=nvim    what runs in the top pane
 #   HDEV_RATIO=0.6      share of the height the editor keeps (the agent gets the rest)
+#   HDEV_TERM=right     a shell split off the agent's pane: "right" (agent | shell), "down"
+#                       (agent above the shell) or "none"
+#   HDEV_TERM_RATIO=0.5 share of the agent pane the agent keeps (the shell gets the rest)
 #   HDEV_SESSION=name   a named Herdr session instead of the default one
 #   HDEV_NO_FOCUS=1     don't switch focus or attach (for scripts and tests)
 set -euo pipefail
@@ -45,6 +49,9 @@ label=$(basename "$dir")
 kind=${HDEV_AGENT:-claude}
 editor=${HDEV_EDITOR:-nvim}
 ratio=${HDEV_RATIO:-0.6}
+term=${HDEV_TERM:-right}
+term_ratio=${HDEV_TERM_RATIO:-0.5}
+case $term in right|down|none) ;; *) die "HDEV_TERM must be right, down or none (got: $term)" ;; esac
 focus=--focus
 [[ -n ${HDEV_NO_FOCUS:-} ]] && focus=--no-focus
 
@@ -106,10 +113,19 @@ root=$(printf '%s\n' "$created" | jq -r '.result.root_pane.pane_id // empty')
 [[ -n $root ]] || die "herdr didn't return the new pane: $created"
 h pane run "$root" "$editor" >/dev/null
 
-if [[ $kind != none ]]; then
+if [[ $kind != none || $term != none ]]; then
   split=$(h pane split "$root" --direction down --ratio "$ratio" --cwd "$dir" --no-focus)
   bottom=$(printf '%s\n' "$split" | jq -r '.result.pane.pane_id // empty')
   [[ -n $bottom ]] || die "herdr didn't return the new pane: $split"
+fi
+
+# the shell takes half of the agent's pane; with no agent, the bottom pane is the shell already
+if [[ $kind != none && $term != none ]]; then
+  h pane split "$bottom" --direction "$term" --ratio "$term_ratio" --cwd "$dir" --no-focus >/dev/null \
+    || echo "hdev: couldn't split a shell off the agent pane" >&2
+fi
+
+if [[ $kind != none ]]; then
   if ! command -v "$kind" >/dev/null 2>&1; then
     echo "hdev: '$kind' isn't installed (or not on PATH) - the bottom pane is a plain shell; install it and run: herdr agent start $agent_name --kind $kind --pane $bottom" >&2
   elif ! h agent start "$agent_name" --kind "$kind" --pane "$bottom" >/dev/null; then
