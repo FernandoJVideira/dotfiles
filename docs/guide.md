@@ -66,7 +66,7 @@ another project, and come back when a workspace shows blocked or done.
 
 | Keys | What it does |
 |---|---|
-| `Ctrl+h/j/k/l` | move between Neovim splits and Herdr panes as one set of windows |
+| `Ctrl+h/j/k/l` | move between Neovim splits and Herdr panes as one set of windows. On Linux `Super+h/j/k/l` does the same from a terminal, and moves between Hyprland windows from any other app |
 | `Ctrl+B` then `z` | zoom the current pane, again to undo |
 | `Ctrl+B` then `g` | picker of every agent, by workspace |
 | `Ctrl+B` then `w` | switch workspace |
@@ -215,7 +215,9 @@ On Linux the desktop is Hyprland and Quickshell from the Omadora fork, and Omado
 bindings, so use its own cheat sheet for those. One thing this repo changes: Caps Lock is a second Super
 key, and it is Caps Lock again while a game has focus, whether it came from Steam, Lutris or Heroic.
 `Super+Ctrl+F12` forces real Caps Lock for a game that isn't recognised, and again to undo it.
-`capslock-mode status` shows what the script sees in the focused window. This repo only adds `hyprland.lua`, `monitors.lua`
+`capslock-mode status` shows what the script sees in the focused window. `Super+h/j/k/l` moves between
+panes when a terminal has focus and between windows in every other app; from a terminal, use
+`Super+arrows` to change window. This repo only adds `hyprland.lua`, `monitors.lua`
 and a few related files under `linux/<distro>/.config/hypr`. Monitors are set in
 `~/.config/hypr/monitors.lua`.
 

@@ -15,6 +15,7 @@ require("hypr.monitors")
 require("hypr.input")
 require("hypr.capslock")
 require("hypr.bindings")
+require("hypr.panes")
 require("hypr.looknfeel")
 require("hypr.autostart")
 
