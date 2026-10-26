@@ -33,7 +33,7 @@ return {
         "vimballPlugin",
         "zip",
         "zipPlugin",
-        "tutor",
+        -- "tutor" is left enabled on purpose: it is the :Tutor command (see tutor/nvchad.tutor)
         "rplugin",
         "syntax",
         "synmenu",

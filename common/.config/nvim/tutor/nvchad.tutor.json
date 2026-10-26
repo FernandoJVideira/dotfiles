@@ -1,0 +1,32 @@
+{
+  "expect": {
+    "35": "say hello",
+    "36": "say hello",
+    "42": "hello world",
+    "43": "hello world",
+    "56": "The quick brown fox jumps",
+    "57": "The quick brown fox jumps",
+    "63": "I like coffee",
+    "64": "I like coffee",
+    "70": "I like coffee in the morning",
+    "71": "I like coffee in the morning",
+    "77": "keep this",
+    "78": "keep this",
+    "84": "a_b_c_d",
+    "85": "a_b_c_d",
+    "98": "big dog",
+    "99": "big dog",
+    "105": "answer = \"right\"",
+    "106": "answer = \"right\"",
+    "112": "call(a, b)",
+    "113": "call(a, b)",
+    "119": "MAKE ME LOUD",
+    "120": "MAKE ME LOUD",
+    "126": "go go",
+    "127": "go go",
+    "140": "the dog sat on the dog",
+    "141": "the dog sat on the dog",
+    "147": "blue car, red door",
+    "148": "blue car, red door"
+  }
+}
