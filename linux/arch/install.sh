@@ -81,6 +81,13 @@ sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
 log "Installing pnpm via mise..."
 mise use --global pnpm
 
+# Herdr (terminal multiplexer for coding agents) and Claude Code, for `hdev`; separate from pnpm so
+# a wrong registry name can't take it down
+log "Installing Herdr and Claude Code via mise..."
+if ! mise use --global herdr claude-code; then
+  log "WARNING: 'mise use --global herdr claude-code' failed - run 'mise registry | grep -i -E \"herdr|claude\"' to find the right names."
+fi
+
 limine_setup
 
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
