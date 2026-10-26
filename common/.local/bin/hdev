@@ -5,10 +5,12 @@
 # One workspace per project (labelled with the directory name) and one agent per project
 # (named claude-<project>), so running it again goes back to what is already there instead
 # of stacking up duplicates:
-#   - the project's agent is running   -> focus it
-#   - its workspace exists, no agent   -> focus the workspace
-#   - neither                          -> create the workspace, run nvim in the root pane,
-#                                         split a pane below it and start the agent there
+#   - the project's agent is running      -> focus it
+#   - its workspace has a "dev" tab       -> focus that tab
+#   - its workspace exists, no "dev" tab  -> add a "dev" tab to it (what you already have there,
+#                                            a shell for instance, is left alone)
+#   - no workspace                        -> create it
+# The layout itself: nvim in the first pane, a pane split below it, the agent started there.
 # Outside Herdr it then attaches to the persistent session (starting it if need be); inside
 # Herdr the new workspace is simply focused.
 #
@@ -61,12 +63,21 @@ fi
 
 existing=$(herdr workspace list | jq -r --arg l "$label" '[.result.workspaces[]? | select(.label == $l)][0].workspace_id // empty')
 if [[ -n $existing ]]; then
-  echo "hdev: workspace '$label' already exists ($existing) - going back to it"
+  tab=$(herdr tab list --workspace "$existing" | jq -r '[.result.tabs[]? | select(.label == "dev")][0].tab_id // empty')
+  if [[ -n $tab ]]; then
+    echo "hdev: workspace '$label' already has a dev tab ($tab) - going back to it"
+    if [[ -z ${HDEV_NO_FOCUS:-} ]]; then
+      herdr workspace focus "$existing" >/dev/null
+      herdr tab focus "$tab" >/dev/null
+    fi
+    finish
+  fi
+  # the project's workspace is there (a plain shell, say): add the layout as a tab, don't touch it
+  created=$(herdr tab create --workspace "$existing" --cwd "$dir" --label dev $focus)
   [[ -n ${HDEV_NO_FOCUS:-} ]] || herdr workspace focus "$existing" >/dev/null
-  finish
+else
+  created=$(herdr workspace create --cwd "$dir" --label "$label" $focus)
 fi
-
-created=$(herdr workspace create --cwd "$dir" --label "$label" $focus)
 root=$(printf '%s\n' "$created" | jq -r '.result.root_pane.pane_id // empty')
 [[ -n $root ]] || die "herdr didn't return the new workspace's pane: $created"
 herdr pane run "$root" "$editor" >/dev/null
