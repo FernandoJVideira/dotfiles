@@ -15,6 +15,7 @@ macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
   arch/                Arch + Omadora (arch branch) install flow, Hyprland config
   nobara/              Nobara + Omadora install flow
+  common/              what both Linux distros share (Caps Lock as Super)
 lib/                  shared bash helpers (symlinking, logging)
 ```
 
@@ -76,6 +77,10 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
 3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Discord, Spotify, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise itself.
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
+
+### Caps Lock as Super
+
+On both Linux machines the Caps Lock key is a second Super key, and it goes back to being Caps Lock while a game has focus. `linux/common/.config/hypr/capslock.lua` sets the xkb option `caps:super` (replacing Omadora's `compose:caps`) and, on every focus change, runs `~/.local/bin/capslock-mode`. That script decides whether the focused window is a game and changes the option to match. It recognizes a game by its class (Proton's `steam_app_<id>`, gamescope, `.exe` names) or by a launcher above it in the process tree (Steam's `reaper`, Lutris's `lutris-wrapper`, umu, Heroic), so anything started from Steam, Lutris or Heroic counts without a list of games, while the launchers' own windows don't. `Super+Ctrl+F12` forces real Caps Lock for a game it misses, and again to undo; `capslock-mode status` shows what it sees. The decision logic is tested against a fake process tree; the live switch needs Hyprland, so it has only been tried where that runs.
 
 ## Common
 

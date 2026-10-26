@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Caps Lock is a second Super key, except while a game has focus, where it is Caps Lock again.
+# Hyprland calls this on every focus change (linux/common/.config/hypr/capslock.lua). It decides
+# whether the focused window is a game and sets Hyprland's xkb options to match.
+#
+#   capslock-mode           update for the focused window (what the hook runs)
+#   capslock-mode toggle    force real Caps Lock everywhere, or go back to automatic
+#   capslock-mode status    what it sees, and what it would do
+#
+# A window is a game when its class says so (Proton's steam_app_<id>, gamescope, *.exe), or when a
+# launcher is somewhere above it in the process tree: Steam's `reaper`, Lutris's `lutris-wrapper`,
+# umu, or Heroic. That covers anything started from Steam, Lutris or Heroic without a list of games.
+# The launchers' own windows are never games.
+set -u
+PROC=${CAPSLOCK_PROC:-/proc}
+SUPER_OPTS="caps:super" # keep in sync with linux/common/.config/hypr/capslock.lua
+GAME_OPTS=""
+GAME_CLASS='^(steam_app_.*|gamescope.*|.*\.exe)$'
+LAUNCHER_UI='^(steam|steamwebhelper|lutris|net\.lutris\.lutris|heroic|com\.heroicgameslauncher\.hgl)$'
+SELF_GAME=(gamescope gamescope-wl)
+GAME_PARENTS=(reaper lutris-wrapper umu-run heroic gamescope gamescope-wl)
+FORCED=${XDG_RUNTIME_DIR:-/tmp}/capslock-mode.forced
+
+command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || exit 0
+shopt -s nocasematch
+
+in_list() { # word, list...
+  local w=$1 x
+  shift
+  for x in "$@"; do [[ $w == "$x" ]] && return 0; done
+  return 1
+}
+
+parent_of() { # pid -> parent pid, parsed after the ")" that ends the command name
+  local stat rest
+  [[ -r $PROC/$1/stat ]] || return 1
+  stat=$(<"$PROC/$1/stat")
+  rest=${stat##*) }
+  set -- $rest
+  echo "$2"
+}
+
+is_game() { # class pid
+  local class=$1 pid=$2 p comm i
+  [[ -n $class ]] || return 1
+  [[ $class =~ $LAUNCHER_UI ]] && return 1
+  [[ $class =~ $GAME_CLASS ]] && return 0
+  [[ $pid =~ ^[0-9]+$ && $pid -gt 1 ]] || return 1
+  if [[ -r $PROC/$pid/comm ]]; then
+    comm=$(<"$PROC/$pid/comm")
+    in_list "$comm" "${SELF_GAME[@]}" && return 0
+  fi
+  p=$pid
+  for i in $(seq 1 40); do
+    p=$(parent_of "$p") || return 1
+    [[ $p =~ ^[0-9]+$ && $p -gt 1 ]] || return 1
+    [[ -r $PROC/$p/comm ]] || return 1
+    comm=$(<"$PROC/$p/comm")
+    in_list "$comm" "${GAME_PARENTS[@]}" && return 0
+  done
+  return 1
+}
+
+focused() { hyprctl -j activewindow 2>/dev/null | jq -r '"\(.class // "")|\(.pid // 0)"' 2>/dev/null; }
+
+want_for_focus() {
+  local class pid
+  [[ -f $FORCED ]] && { echo "$GAME_OPTS"; return; }
+  IFS='|' read -r class pid < <(focused)
+  if is_game "${class:-}" "${pid:-0}"; then echo "$GAME_OPTS"; else echo "$SUPER_OPTS"; fi
+}
+
+apply() {
+  local want=$1 current
+  current=$(hyprctl -j getoption input:kb_options 2>/dev/null | jq -r '(.str // .value // "?")' 2>/dev/null)
+  [[ $current == "$want" ]] && return 0
+  hyprctl eval "hl.config({ input = { kb_options = \"$want\" } })" >/dev/null 2>&1
+}
+
+notify() { hyprctl notify -1 2500 "rgb(88c0d0)" "$1" >/dev/null 2>&1; }
+
+case ${1:-update} in
+  update) apply "$(want_for_focus)" ;;
+  toggle)
+    if [[ -f $FORCED ]]; then
+      rm -f "$FORCED"
+      notify "Caps Lock: Super key, except in games"
+    else
+      : >"$FORCED"
+      notify "Caps Lock is Caps Lock"
+    fi
+    apply "$(want_for_focus)"
+    ;;
+  status)
+    IFS='|' read -r class pid < <(focused)
+    echo "focused window: class='${class:-}' pid=${pid:-0}"
+    if [[ -f $FORCED ]]; then echo "forced: Caps Lock is Caps Lock (capslock-mode toggle to undo)"; fi
+    if is_game "${class:-}" "${pid:-0}"; then echo "game: yes"; else echo "game: no"; fi
+    echo "wants kb_options='$(want_for_focus)'"
+    echo "has   kb_options='$(hyprctl -j getoption input:kb_options 2>/dev/null | jq -r '(.str // .value // "?")')'"
+    ;;
+  *) echo "usage: capslock-mode [update|toggle|status]" >&2; exit 2 ;;
+esac

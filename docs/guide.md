@@ -212,7 +212,10 @@ Finder on 5, TablePlus on 6, Bruno on 7, Discord on 8, Obsidian and Notion on 9,
 are pinned to monitors by name in `macos/.config/hyprspace/config.toml`.
 
 On Linux the desktop is Hyprland and Quickshell from the Omadora fork, and Omadora supplies the key
-bindings, so use its own cheat sheet for those. This repo only adds `hyprland.lua`, `monitors.lua`
+bindings, so use its own cheat sheet for those. One thing this repo changes: Caps Lock is a second Super
+key, and it is Caps Lock again while a game has focus, whether it came from Steam, Lutris or Heroic.
+`Super+Ctrl+F12` forces real Caps Lock for a game that isn't recognised, and again to undo it.
+`capslock-mode status` shows what the script sees in the focused window. This repo only adds `hyprland.lua`, `monitors.lua`
 and a few related files under `linux/<distro>/.config/hypr`. Monitors are set in
 `~/.config/hypr/monitors.lua`.
 
@@ -272,6 +275,7 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | Herdr's colors lag behind a theme switch | resize the window, or `Ctrl+B` then `Shift+R` |
 | the Claude pane is stuck on a startup prompt | click into it and answer it, usually the folder trust question |
 | `/ide` doesn't list Neovim | Neovim has to be running in the same project folder |
+| Caps Lock doesn't switch in a game (Linux) | `capslock-mode status` shows the class and process it sees and the option it wants and has; `Super+Ctrl+F12` forces it meanwhile |
 | no cursor-line tint or bold line number in Neovim | `:lua require('nvchad.utils').reload()` rebuilds the highlight cache |
 | a tool is missing after `./bootstrap.sh` | `mise install` shows which one failed and why |
 | Spotify isn't themed | start it once, then `spicetify-theme-sync --force` |
@@ -292,3 +296,4 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | `common/.claude/skills` | Claude Code skills (coordinator, caveman, humanizer, vue-ui-design) |
 | `macos/` | Brewfile, Hyprspace, sketchybar, the `theme` command, macOS defaults |
 | `linux/arch`, `linux/nobara` | distro installers, Hyprland files, systemd units |
+| `linux/common` | what both distros share: the Caps Lock as Super module and its `capslock-mode` script |
