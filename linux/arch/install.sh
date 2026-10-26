@@ -6,6 +6,7 @@ source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
 source "$SCRIPT_DIR/../../lib/limine.sh"
+source "$SCRIPT_DIR/../../lib/secrets.sh"
 
 # gum (the prompts below) is not on a minimal install yet
 sudo pacman -S --needed --noconfirm gum
@@ -121,15 +122,17 @@ if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
   hyprctl reload
 fi
 
-# The unit logs in with a personal access token from ~/.config/proton-pass-cli/pat - a secret
-# this script can't create, so enable the unit always but only start it once the file exists.
+# The unit logs in with a personal access token from ~/.config/proton-pass-cli/pat. This script
+# creates the file with a placeholder (an existing one is left alone), enables the unit always and
+# only starts it once the placeholder has been replaced; the instructions are printed at the end.
 log "Enabling Proton Pass SSH agent..."
 mkdir -p -m 700 "$HOME/.ssh"
+create_secret_templates
 systemctl --user enable proton-pass-agent.service
-if [[ -f "$HOME/.config/proton-pass-cli/pat" ]]; then
+if secret_ready "$PROTON_PAT"; then
   systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
 else
-  log "Proton Pass agent enabled but NOT started: put your personal access token in ~/.config/proton-pass-cli/pat, then run: systemctl --user start proton-pass-agent.service"
+  log "Proton Pass agent enabled but NOT started: add your personal access token to ~/.config/proton-pass-cli/pat (instructions at the end)."
 fi
 
 log "Running shared dotfiles installer..."

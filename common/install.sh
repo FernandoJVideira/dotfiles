@@ -10,9 +10,14 @@ source "$SCRIPT_DIR/../lib/spicetify.sh"
 source "$SCRIPT_DIR/../lib/herdr.sh"
 source "$SCRIPT_DIR/../lib/draft.sh"
 source "$SCRIPT_DIR/../lib/mise.sh"
+source "$SCRIPT_DIR/../lib/secrets.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+# ~/.npmrc (and the Proton Pass token file on Linux) with a placeholder where the token goes;
+# existing files are left as they are. The instructions come at the end.
+create_secret_templates
 
 # Dev tools (Go, Node, Java, .NET, Neovim, Herdr, Claude Code...) from the mise list just linked
 # above. Before the Herdr steps below, which need herdr on the PATH. Non-fatal.
@@ -47,3 +52,6 @@ install_herdr_plugins || log "WARNING: the Herdr navigation plugin wasn't instal
 install_draft || log "WARNING: draft wasn't installed (see above) - rerun ./bootstrap.sh to retry."
 
 log "common/install.sh complete."
+
+# bootstrap.sh prints this itself, after the OS installer has finished
+[[ -n ${DOTFILES_BOOTSTRAP:-} ]] || print_secret_instructions

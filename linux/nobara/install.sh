@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
+source "$SCRIPT_DIR/../../lib/secrets.sh"
 
 # Install zsh and set it as the default shell (mirrors linux/arch/install.sh)
 log "Installing zsh..."
@@ -204,16 +205,18 @@ sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
 
 # Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
 # shared .zshenv). The unit logs in with a personal access token read from
-# ~/.config/proton-pass-cli/pat - a secret, so this script can't create it:
-# enable the unit always, but only start it once that file exists (a start
-# without it fails ExecStartPre, which would abort this script under set -e).
+# ~/.config/proton-pass-cli/pat. That file is created with a placeholder (an existing one is left
+# alone); the unit is enabled always, but only started once the placeholder has been replaced (a
+# start without a token fails ExecStartPre, which would abort this script under set -e). The
+# instructions are printed at the end.
 mkdir -p -m 700 "$HOME/.ssh"
+create_secret_templates
 if systemctl --user enable proton-pass-agent.service; then
-  if [[ -f "$HOME/.config/proton-pass-cli/pat" ]]; then
+  if secret_ready "$PROTON_PAT"; then
     log "Starting the Proton Pass SSH agent..."
     systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
   else
-    log "Proton Pass agent enabled but NOT started: put your personal access token in ~/.config/proton-pass-cli/pat (same as on Arch), then run: systemctl --user start proton-pass-agent.service"
+    log "Proton Pass agent enabled but NOT started: add your personal access token to ~/.config/proton-pass-cli/pat (instructions at the end)."
   fi
 else
   log "WARNING: could not enable proton-pass-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-agent.service from a desktop session."
