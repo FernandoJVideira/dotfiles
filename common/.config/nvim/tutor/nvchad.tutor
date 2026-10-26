@@ -1,0 +1,183 @@
+# NVCHAD TUTORIAL
+
+This lesson teaches Neovim the way *your* config works: the NvChad setup in these dotfiles.
+It is interactive: each exercise below is a pair of lines. The **first** line is yours to edit
+until it matches the **second** one; a ✓ appears next to it when it does, a ✗ while it doesn't.
+Do the exercises in order, and open the other tutorials any time with `:Tutor` (the classic
+vimtutor) or `:Tutor tutor` (how these lessons are made).
+
+Three things that are different in this config, and worth knowing before anything else:
+
+  * The **leader key is the space bar**. `<leader>ff` means: space, then f, then f.
+  * `;` opens the command line (it replaces `:`, so you type `;w` instead of `:w`).
+    The old `;` (repeat the last f/t search) is gone; `,` still repeats it in reverse.
+  * `jk`, typed quickly in insert mode, is the same as Escape.
+
+Table of contents:
+
+  1. Insert and escape
+  2. Delete, change, repeat
+  3. Counts and text objects
+  4. Search and replace
+  5. A tour of the NvChad keys
+  6. When you are stuck
+
+## LESSON 1: INSERT AND ESCAPE
+
+Neovim has modes. You start in **Normal** mode, where keys are commands. `i` enters **Insert**
+mode (typing inserts text); `Esc`, or `jk` here, goes back to Normal mode. `A` is "insert at
+the end of the line", `I` at the start, `o` opens a new line below.
+
+### Exercise 1.1  `A` appends at the end of the line
+
+Press `A`, type the missing word, then `jk`.
+
+say 
+say hello
+
+### Exercise 1.2  `I` inserts at the start of the line
+
+Press `I`, type the missing word, then `jk`.
+
+world
+hello world
+
+
+## LESSON 2: DELETE, CHANGE, REPEAT
+
+Commands are built from an **operator** and a **motion**: `d` (delete) or `c` (change) plus
+`w` (to the next word), `$` (to the end of the line), `iw` (this word)... Doubling an operator
+acts on the whole line: `dd` deletes it.
+
+### Exercise 2.1  `dw` deletes a word
+
+Put the cursor on the extra word, then `dw`.
+
+The quick brown brown fox jumps
+The quick brown fox jumps
+
+### Exercise 2.2  `x` deletes one character, `r` replaces one
+
+Move onto the wrong letter and use `r`, then the right letter.
+
+I lika coffee
+I like coffee
+
+### Exercise 2.3  `cw` changes a word
+
+Put the cursor on `tea`, then `cw`, type `coffee`, then `jk`.
+
+I like tea in the morning
+I like coffee in the morning
+
+### Exercise 2.4  `D` deletes to the end of the line
+
+Put the cursor on the first space after `this`, then `D`.
+
+keep this and remove the rest of it
+keep this
+
+### Exercise 2.5  `.` repeats the last change
+
+Change the first `-` into `_` with `r_`, then jump to the next one and press `.`.
+
+a-b-c-d
+a_b_c_d
+
+
+## LESSON 3: COUNTS AND TEXT OBJECTS
+
+A number before a command repeats it: `d3w` deletes three words. A **text object** names a
+piece of text: `iw` is a word, `i"` is the inside of a pair of quotes, `ip` a paragraph.
+`ci"` means "change inside the quotes", which is one of the most useful commands there is.
+
+### Exercise 3.1  A count: `d3w`
+
+From the start of the line, delete three words with `d3w`.
+
+very very very big dog
+big dog
+
+### Exercise 3.2  `ci"` changes what is inside quotes
+
+Put the cursor anywhere inside the line, then `ci"`, type `right`, then `jk`.
+
+answer = "wrong"
+answer = "right"
+
+### Exercise 3.3  `ci(` works for brackets too
+
+Same idea: `ci(`, type `a, b`, then `jk`.
+
+call(nothing)
+call(a, b)
+
+### Exercise 3.4  `gUU` makes the whole line uppercase
+
+`gUU` upper-cases the line (`guu` lower-cases it).
+
+make me loud
+MAKE ME LOUD
+
+### Exercise 3.5  `ye` copies a word, `p` pastes it
+
+Copy `go` with `ye`, press `A`, type a space, `jk`, then paste with `p`.
+
+go
+go go
+
+
+## LESSON 4: SEARCH AND REPLACE
+
+`/word` searches forward, `n` goes to the next match, `N` to the previous one, `Esc` clears the
+highlight. To replace, use the command line (remember: `;` opens it here):
+`;s/old/new/g` replaces every `old` on the line, `;%s/old/new/g` in the whole file.
+
+### Exercise 4.1  Replace on a line with `;s/cat/dog/g`
+
+Type `;s/cat/dog/g` and press Enter.
+
+the cat sat on the cat
+the dog sat on the dog
+
+### Exercise 4.2  Without the `g`, only the first match changes
+
+Type `;s/red/blue/` and press Enter.
+
+red car, red door
+blue car, red door
+
+
+## LESSON 5: A TOUR OF THE NVCHAD KEYS
+
+These are not checked; try them in a real file, they are what you will use every day.
+(`<leader>` is the space bar. Press space and wait: which-key shows what comes next.)
+
+Files and search (Telescope):
+    `<leader>ff`    find a file by name            `<leader>fw`    search text in all files
+    `<leader>fb`    switch between open buffers    `<leader>fo`    recent files
+    `<leader>fz`    search in the current file     `<leader>fh`    search the help pages
+The file tree:
+    `<C-n>`         toggle the tree                `<leader>e`     focus the tree
+Buffers (open files) and windows:
+    `<Tab>` / `<S-Tab>`   next / previous buffer   `<leader>x`     close the buffer
+    `<C-s>`         save                           `<leader>b`     new buffer
+    `<C-h/j/k/l>`   move between windows (and, in Herdr, between panes)
+Editing:
+    `<leader>/`     toggle comment (line or selection)    `<leader>fm`    format the file
+    `<leader>n`     toggle line numbers                   `<leader>rn`    toggle relative numbers
+Terminals:
+    `<A-i>`         floating terminal              `<leader>h`     terminal below
+    `<A-v>`         terminal on the right          `<C-x>`         leave terminal mode
+Look:
+    `<leader>th`    pick a color theme
+
+## LESSON 6: WHEN YOU ARE STUCK
+
+    `<leader>ch`    the NvChad cheat sheet: every default key, on one page
+    `<leader>wK`    which-key: every key that is mapped right now, searchable
+    `<leader>fh`    search the built-in help (`;help` followed by a word works too)
+    `:Tutor`        the classic vimtutor, a longer walk through the same ideas
+
+The best way to learn is to use it for real work and look things up when you are stuck.
+When a command surprises you, press `u` to undo. You will want `u` a lot, and that is fine.
