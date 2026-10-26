@@ -2,7 +2,7 @@
   "LazyVim": { "branch": "main", "commit": "999700997f72227187d49d8b92667183dc7fc809" },
   "LuaSnip": { "branch": "master", "commit": "0abc8f390b278c3b4aabc4c004ac8a088b65cf24" },
   "NvChad": { "branch": "v2.5", "commit": "add44b952d631981614bbb8cfc6f7002f296dfe6" },
-  "aether.nvim": { "branch": "v3", "commit": "022144273a97d0397fa0df72624a9a673fbfa84f" },
+  "aether": { "branch": "v3", "commit": "022144273a97d0397fa0df72624a9a673fbfa84f" },
   "bamboo.nvim": { "branch": "master", "commit": "1309bc88bffcf1bedc3e84e7fa9004de93da774a" },
   "base46": { "branch": "v3.0", "commit": "7df2bd89295db00b649cbc49bdf6fe5a1cc5df3b" },
   "catppuccin": { "branch": "main", "commit": "edefef779ab08ce1a4a404713e3012b0d202bd35" },
