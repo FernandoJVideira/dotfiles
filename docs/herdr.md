@@ -29,9 +29,16 @@ cd ~/Developer/some-project
 hdev
 ```
 
-Neovim on top, Claude Code below (`HDEV_AGENT`, `HDEV_EDITOR`, `HDEV_RATIO` change that). Run it
-again and it goes back to the agent that is already there. If the project's workspace already
-exists (a plain shell, say), the layout is added to it as a `dev` tab and the rest is left alone.
+Neovim on top, Claude Code below (`HDEV_AGENT`, `HDEV_EDITOR`, `HDEV_RATIO` change that). A project
+is its full path: two folders with the same name are two projects. Run it again and it goes back
+to the agent that is already there. If the project's workspace already exists (a plain shell, say),
+the layout is added to it as a `dev` tab and the rest is left alone. If Herdr isn't running, `hdev`
+starts it in the background first (the saved layout of the last session comes back too) and then
+builds the project next to it.
+
+After a Herdr restart the restored `dev` tab is just shells (processes don't survive a restart).
+`hdev` notices that the agent isn't running and says so; `hdev --fresh` closes that tab and
+builds it again.
 
 ## Moving around
 
@@ -110,6 +117,7 @@ those two items away gave a single empty workspace.
 
 | Symptom | Cause |
 |---|---|
+| `hdev` lands on an old workspace or dead shells | Herdr restored the last layout (a restart does that). Your project is still there as its own workspace; if its `dev` tab is just shells, `hdev --fresh` rebuilds it. For a really empty start, see "Starting from scratch" above |
 | `Ctrl+h` does nothing in a pane | the navigation plugin isn't installed: `herdr plugin list`; run `./bootstrap.sh` or `herdr plugin install aimdevlee/herdr-nvim-nav --ref ec047fd6d8d0269d54a34e9405af28d8aad4c8f0` |
 | `hdev: command not found` | `~/.local/bin` isn't linked or on PATH: `./bootstrap.sh` (or `common/install.sh`) |
 | Claude pane is a plain shell | no `claude` on PATH: `mise use --global claude-code` |
