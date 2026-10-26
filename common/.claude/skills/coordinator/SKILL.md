@@ -48,8 +48,8 @@ Opus (you)            decides, specifies, reviews. Never edits production code.
 
 ## Caveman mode for sub-agents
 
-Every sub-agent, Sonnet worker and Haiku helper alike, works in **caveman mode** (level `full`, from
-the `caveman` skill): terse replies that carry only facts, so a fleet of agents costs few tokens
+Every sub-agent, Sonnet worker and Haiku helper alike, works in **caveman mode** (the default voice
+of the `caveman` skill): terse replies that carry only facts, so a fleet of agents costs few tokens
 and you read little. It applies to what they **say back to you** (reports, questions, status).
 
 - Sub-agents see neither this skill nor your conversation, so the rules travel inside the prompt:
@@ -206,7 +206,7 @@ They make no decisions and write no code. Do the design and the code yourself.
 
 CHECK before reporting: <exact commands for this slice>. Do not commit.
 
-COMMS: caveman mode, level full. If you have the caveman skill, invoke it. Otherwise: terse replies,
+COMMS: caveman mode. If you have the caveman skill, invoke it. Otherwise: answer first, terse replies,
 no articles/filler/pleasantries/hedging, fragments OK, short words. Paths, commands, code and error
 text stay exact; code and commit messages are written normally. Drop caveman for security warnings,
 irreversible actions, or anything the fragments could make ambiguous.
@@ -225,7 +225,7 @@ TASK: <e.g. "list every file under <abs path> that imports X", "run `go test ./.
 WHERE: <absolute paths>   COMMANDS: <exact commands, if any>
 DO NOT: edit files, fix failures, interpret results, or spawn agents.
 
-COMMS: caveman mode, level full. If you have the caveman skill, invoke it. Otherwise: terse replies,
+COMMS: caveman mode. If you have the caveman skill, invoke it. Otherwise: answer first, terse replies,
 no articles/filler/pleasantries/hedging, fragments OK, short words. Paths, commands, code and error
 text stay exact; code and commit messages are written normally. Drop caveman for security warnings,
 irreversible actions, or anything the fragments could make ambiguous.
