@@ -164,6 +164,9 @@ control borders (the kit's light `--input` already is; its dark `--input` is not
 `references/style-brief.md` shows). Layouts work
 from 375px up without horizontal scroll.
 
+**Code comments.** Only when extremely necessary: a non-obvious why, a constraint, a trap. One
+short line, never restating the markup or the class names, no section banners.
+
 **Copy.** Words are part of the design. Name things the way the user thinks of them ("Members",
 not "User entities"). Sentence case. Buttons say what happens, and the same verb follows through
 the flow ("Publish" makes a toast that says "Published"). Errors explain and offer the fix,

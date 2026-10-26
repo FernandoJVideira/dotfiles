@@ -26,6 +26,27 @@ sub-agents.
 
 "normal mode" and "stop caveman" only affect caveman, so they leave the coordinator on.
 
+It's also your architecture partner. Describe an idea or a problem ("how should I model
+invites?", "I'm thinking of caching this in Pinia") and it discusses first, without starting
+anything: it reads the relevant code, gives two or three options with costs and risks, recommends
+one, and tells you plainly what holds up in your idea and what doesn't. The decision is yours; it
+logs the choice and the reason, and builds what you picked. It explains the why behind each
+decision in a few sentences. For more, say "teach me" or "explain as you go": you then get the
+rejected alternatives, small examples, and a short "what we did and why" after each step.
+
+Once work starts, it supervises the agents it spawned instead of waiting for their reports. It
+keeps a table of who is doing what, and a watcher script (`references/watch-slices.py`) reports
+edits outside a worker's files, two workers touching the same file, and workers that went quiet.
+Workers message it only when blocked, stuck, or with a suggestion, which it judges on evidence
+and answers once: its word is final for the agents, yours is final for it, and anything that
+would grow the scope is listed for you as a follow-up. When something is off it guides the
+worker, passes news between workers, stops a stuck or out-of-bounds one, or replaces it, and
+tells you in one line which. If a worker is refused a permission, you hear about it; the
+coordinator doesn't do the action for it.
+
+It's built not to burn tokens: small tasks get one worker and no watcher, reports are capped at
+15 lines, and every retry loop has a hard limit, after which it asks you.
+
 Give it the outcome you want, not the steps. It works out the project layout first (monorepo,
 client only, or API and client in separate repos), so open the session in the repo, or in the
 parent folder when the API and the client are separate checkouts. Before spawning anyone it may
@@ -106,8 +127,12 @@ words win; the skill then just makes it a good one.
 | `/caveman status` | Says which mode is on |
 | "stop caveman", "normal mode" | Back to normal |
 
-The coordinator's sub-agents always reply in caveman mode; you don't need to turn it on for that.
-Code, commit messages and error text are never compressed.
+`/coordinator` turns caveman on for the coordinator too, and its sub-agents always reply in it, so
+a whole run stays cheap. "stop caveman" switches it off for the coordinator's replies to you only.
+Code, code comments, commit messages and error text are never compressed. The coordinator keeps
+plain sentences for what it sends to agents, for questions it asks you, and for explanations when
+you ask it to teach you. It tells workers to write code comments only where extremely necessary:
+one short line, never restating the code.
 
 ## humanizer: prose that doesn't sound generated
 
