@@ -12,10 +12,12 @@ M.base46 = {
 	-- other window; nvim's colors come from the OS theme (see nvchad-sync)
 	transparency = true,
 
-	-- hl_override = {
-	-- 	Comment = { italic = true },
-	-- 	["@comment"] = { italic = true },
-	-- },
+	-- a tint on the cursor's line and a bold number, so the current line stands out even with
+	-- the transparent background; theme colors, so it follows every theme switch
+	hl_override = {
+		CursorLine = { bg = "one_bg2" },
+		CursorLineNr = { bold = true, bg = "one_bg2" },
+	},
 }
 
 -- M.nvdash = { load_on_startup = true }
