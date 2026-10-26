@@ -38,3 +38,14 @@ vim.api.nvim_create_autocmd("QuitPre", {
     end
   end,
 })
+
+-- Files Claude edits change on disk under Neovim: reload them (unless they have unsaved edits here).
+-- A timer, because CursorHold only fires after a keypress and Neovim is often idle while Claude works.
+vim.o.autoread = true
+local function reload_changed_files()
+  if vim.fn.mode() ~= "c" then
+    vim.cmd "silent! checktime"
+  end
+end
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "TermLeave" }, { callback = reload_changed_files })
+vim.uv.new_timer():start(1000, 1000, vim.schedule_wrap(reload_changed_files))
