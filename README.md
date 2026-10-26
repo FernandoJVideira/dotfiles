@@ -28,7 +28,7 @@ It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it al
 
 ## macOS
 
-`macos/install.sh` installs Xcode's command line tools, Homebrew, then everything in `Brewfile` (CLI tools, kitty (Ghostty too), sketchybar, and casks like Brave, Notion, Obsidian). Hyprspace, an AeroSpace fork used as the tiling window manager, gets initialized before the dotfile symlinks go down, so my own `hyprspace/config.toml` overwrites whatever default it generates rather than the other way around.
+`macos/install.sh` installs Xcode's command line tools, Homebrew, then everything in `Brewfile` (shell utilities, kitty (Ghostty too), sketchybar, and casks like Brave, Notion, Obsidian). Dev tools come from mise instead (see Common). Hyprspace, an AeroSpace fork used as the tiling window manager, gets initialized before the dotfile symlinks go down, so my own `hyprspace/config.toml` overwrites whatever default it generates rather than the other way around.
 
 A few things only happen conditionally:
 
@@ -60,7 +60,7 @@ The installer applies `gruvbox-classic` the first time only, so rerunning it nev
 1. Installs `gum` (for the prompts below), `zsh` (set as the default shell), `git` and `base-devel`.
 2. Asks a few questions interactively via `gum`: whether to set up gaming tools, install Discord, and install OBS.
 3. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a first install that installer ends with a reboot, so run `./bootstrap.sh` again afterwards to finish. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
-4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Go, the .NET SDK, Element, kitty, `gh`, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
+4. Symlinks the Arch-specific dotfiles after Omadora is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Element, kitty, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
 5. Enables the Proton Pass SSH agent. It only starts once your personal access token is in `~/.config/proton-pass-cli/pat`; until then the unit is skipped.
 6. Runs the shared dotfiles installer, re-applies the current theme with `omactl theme set`, and renders the starship prompt and the Zed theme.
 
@@ -72,12 +72,14 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 1. Installs `zsh` and sets it as the default shell, same as the Arch flow, plus `git`.
 2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
-3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Go, the .NET SDK, Discord, Spotify, `gh`, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise (neovim, tmux, node, pnpm, Claude Code).
+3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Discord, Spotify, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise itself.
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
 ## Common
 
 All platforms end at `common/install.sh`. It symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing the tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`). The same prefix on every OS lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere, and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you.
+
+Dev tools are installed with mise on every OS, from one tracked list, `common/.config/mise/conf.d/dotfiles.toml`: Go, Node, pnpm, Java (Temurin 27 and 17), .NET 10, Neovim, `gh`, `just`, `cloudflared`, golang-migrate, Herdr and Claude Code. `lib/mise.sh` runs `mise install` for it after the symlinks go down, so a new tool is one line in that file, and `mise upgrade` moves a machine forward. It lives in `conf.d` so it merges with a machine's own `~/.config/mise/config.toml` instead of replacing it. Package managers keep the GUI apps, the shell utilities the prompt runs on every command, hugo (mise's build lacks the extended SCSS support) and tmux (mise's build lags Homebrew's and Arch's, so only Nobara takes it from mise, through its own `conf.d` file).
 
 It also installs the latest release of my `draft` scaffolding CLI from [git.fernandovideira.com](https://git.fernandovideira.com/FernandoJVideira/draft/releases) (`lib/draft.sh`, macOS arm64 and Linux amd64, the only builds published) to `~/.local/bin/draft`. It does so when draft is missing or older than the release, so rerunning `./bootstrap.sh` is how a machine updates. The releases publish no checksums, so the download is trusted over TLS and has to report the release's version when run; if a release ever ships a `checksums.txt` or `SHA256SUMS` asset it is verified, and a mismatch installs nothing.
 
@@ -113,7 +115,7 @@ It needs Spotify started at least once, and a Spotify update undoes Spicetify's 
 
 Keys, concepts, and how to restart from scratch: [docs/herdr.md](docs/herdr.md).
 
-[Herdr](https://herdr.dev) is installed on every OS (the Brewfile on macOS, mise on Linux, next to a standalone `claude`). `hdev [dir]` (`common/.local/bin`) opens a project in it: a workspace named after the directory, Neovim in the top pane, and Claude Code started in a pane docked below it (`herdr agent start`, so Herdr tracks it as an agent), with a plain shell split off to its right. Run it again for the same project and it goes back to the agent that is already there instead of making a new one. If the project's workspace already exists (a plain shell you were using, say), the layout is added to it as a `dev` tab and what is there is left alone. Outside Herdr it attaches to the persistent session; inside it just focuses the workspace. `HDEV_AGENT` (any agent kind Herdr knows, or `none`), `HDEV_EDITOR`, `HDEV_RATIO` (how much height the editor keeps, 0.6 by default), `HDEV_TERM` (`right`, `down` or `none` for the shell) and `HDEV_TERM_RATIO` change the layout. Only Herdr's own CLI is used, plus `jq`.
+[Herdr](https://herdr.dev) is installed on every OS through mise, next to a standalone `claude`. `hdev [dir]` (`common/.local/bin`) opens a project in it: a workspace named after the directory, Neovim in the top pane, and Claude Code started in a pane docked below it (`herdr agent start`, so Herdr tracks it as an agent), with a plain shell split off to its right. Run it again for the same project and it goes back to the agent that is already there instead of making a new one. If the project's workspace already exists (a plain shell you were using, say), the layout is added to it as a `dev` tab and what is there is left alone. Outside Herdr it attaches to the persistent session; inside it just focuses the workspace. `HDEV_AGENT` (any agent kind Herdr knows, or `none`), `HDEV_EDITOR`, `HDEV_RATIO` (how much height the editor keeps, 0.6 by default), `HDEV_TERM` (`right`, `down` or `none` for the shell) and `HDEV_TERM_RATIO` change the layout. Only Herdr's own CLI is used, plus `jq`.
 
 `Ctrl+h/j/k/l` move across Neovim splits and Herdr panes as one set of windows, so you can go from the editor straight down into the Claude pane: Herdr's `herdr-nvim-nav` plugin (installed by `lib/herdr.sh`) and its Neovim half (`lua/plugins/herdr.lua`, set up from `mappings.lua` after NvChad's own `<C-hjkl>` maps). It is third-party code that Herdr runs on every one of those keys, so it is pinned to the commit that was read in full before being adopted (about 200 lines of C that only read a marker file and talk to Herdr's local socket, plus one Lua module); to move to a newer version, read the diff and change the SHA in `lib/herdr.sh` and `lua/plugins/herdr.lua`. Herdr asks for confirmation before installing it when the installer runs in a terminal.
 

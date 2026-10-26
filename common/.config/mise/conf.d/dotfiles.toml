@@ -1,0 +1,13 @@
+[tools]
+claude-code = "latest"
+go = "1.27.3"
+node = "lts"
+pnpm = "latest"
+herdr = "latest"
+neovim = "latest"
+gh = "latest"
+just = "latest"
+cloudflared = "latest"
+"aqua:golang-migrate/migrate" = "latest"
+dotnet = "10"
+java = ["temurin-27", "temurin-17"]

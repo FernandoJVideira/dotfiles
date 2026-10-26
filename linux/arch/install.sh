@@ -69,24 +69,11 @@ printf '[X11]\nDisplayCommand=/usr/local/bin/omadora-sddm-monitors\n' \
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm go element-desktop ghostty kitty github-cli zed
+sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed
 # Zed's terminal font (common/.config/zed/settings.json)
 sudo pacman -S --needed --noconfirm ttf-hack-nerd
-# .NET SDK: Zed's C# extension (the macOS Brewfile has the dotnet-sdk cask)
-sudo pacman -S --needed --noconfirm dotnet-sdk
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
-
-# pnpm via mise (ships with Omarchy), same as the other OSes
-log "Installing pnpm via mise..."
-mise use --global pnpm
-
-# Herdr (terminal multiplexer for coding agents) and Claude Code, for `hdev`; separate from pnpm so
-# a wrong registry name can't take it down
-log "Installing Herdr and Claude Code via mise..."
-if ! mise use --global herdr claude-code; then
-  log "WARNING: 'mise use --global herdr claude-code' failed - run 'mise registry | grep -i -E \"herdr|claude\"' to find the right names."
-fi
 
 limine_setup
 

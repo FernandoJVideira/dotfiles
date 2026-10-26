@@ -31,17 +31,6 @@ brew tap felixkratz/formulae
 log "Installing packages from Brewfile..."
 brew bundle --file="$SCRIPT_DIR/Brewfile"
 
-# pnpm comes from mise (installed by the Brewfile) so every OS manages it the same way.
-log "Installing pnpm via mise..."
-mise use --global pnpm
-
-# Claude Code as a standalone CLI, like the Linux installers: `hdev` (common/.local/bin) starts it
-# in the bottom Herdr pane, which needs `claude` on the PATH of a pane's shell.
-log "Installing Claude Code via mise..."
-if ! mise use --global claude-code; then
-  log "WARNING: 'mise use --global claude-code' failed - run 'mise registry | grep -i claude' to find the right name."
-fi
-
 # Initialize Hyprspace (creates a default config if one doesn't exist yet).
 # Runs before symlink_dotfiles so our own hyprspace/config.toml correctly
 # overwrites whatever this creates, same ordering reason as
