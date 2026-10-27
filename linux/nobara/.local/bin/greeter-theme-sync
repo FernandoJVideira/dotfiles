@@ -1,6 +1,6 @@
 #!/bin/bash
 # Keep the Quickshell login screen (linux/nobara-login) in step with the Omadora theme: its colors, the
-# user to log in as and the wallpaper. Run by the theme-set hook on every theme change.
+# user to log in as, the logo and which monitor gets the form. Run by the theme-set hook on every theme change.
 # The greeter directory is handed to your user by `remove-kde.sh greeter`, so this needs no sudo;
 # without it (the greeter isn't set up) there is nothing to do.
 set -euo pipefail
@@ -18,29 +18,31 @@ color() {
   printf '%s' "${value:-$2}"
 }
 
+# the block letters of Omadora's logo (its box-drawing frame left out), as a QML string
+logo_file="${OMADORA_PATH:-$HOME/.local/share/omadora}/logo.txt"
+logo=""
+if [[ -f $logo_file ]]; then
+  while IFS= read -r line; do
+    logo+="${line//\"/}\\n"
+  done < <(grep -E '█|▄|▀' "$logo_file" | grep -Ev '└|┌')
+  logo="${logo%\\n}"
+fi
+[[ -n $logo ]] || logo="OMADORA"
+
+# the monitor Hyprland has at 0,0 (see lib/monitors.sh); empty outside a Hyprland session
+primary=$(hyprctl -j monitors 2>/dev/null | jq -r '[.[] | select(.x == 0 and .y == 0)][0].name // empty' 2>/dev/null || true)
+
 cat >"$dir/Theme.qml" <<QML
 import QtQuick
 
 QtObject {
   readonly property string user: "$USER"
-  readonly property color background: "$(color background '#111111')"
-  readonly property color foreground: "$(color foreground '#eeeeee')"
+  readonly property string primary: "$primary"
+  readonly property string logo: "$logo"
+  readonly property color background: "$(color background '#1a1b26')"
+  readonly property color foreground: "$(color foreground '#c0caf5')"
   readonly property color accent: "$(color accent '#7aa2f7')"
   readonly property color red: "$(color red '#f7768e')"
 }
 QML
-
-bg=$(readlink -f "$current/background" 2>/dev/null || true)
-if [[ -f $bg ]]; then
-  tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
-  if command -v magick >/dev/null && magick "$bg[0]" -resize '3840x3840>' -quality 90 "jpg:$tmp/wallpaper.jpg" 2>/dev/null; then
-    :
-  elif command -v ffmpeg >/dev/null && ffmpeg -loglevel error -y -i "$bg" -frames:v 1 -f image2 -c:v mjpeg "$tmp/wallpaper.jpg" 2>/dev/null; then
-    :
-  else
-    cp "$bg" "$tmp/wallpaper.jpg"
-  fi
-  cp "$tmp/wallpaper.jpg" "$dir/wallpaper.jpg"
-fi
 chmod -R a+rX "$dir"

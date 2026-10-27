@@ -1,7 +1,7 @@
-// Login screen: a Quickshell greeter for greetd, run inside cage (see remove-kde.sh). Colors, the
-// user name and the wallpaper come from Theme.qml and wallpaper.jpg, which greeter-theme-sync writes.
+// Login screen: a Quickshell greeter for greetd, run inside cage (see remove-kde.sh), styled after
+// Omarchy's: a plain background, the logo and a lock next to an entry box that fills with bullets.
+// Theme.qml (colors, user, logo, primary monitor) is written by greeter-theme-sync.
 import QtQuick
-import QtQuick.Controls
 import Quickshell
 import Quickshell.Services.Greetd
 
@@ -18,14 +18,35 @@ ShellRoot {
   property string pending: ""
 
   Theme { id: theme }
-  SystemClock { id: clock; precision: SystemClock.Minutes }
+
+  // cage stretches one window over every monitor, so the screens are laid out inside it by hand: the
+  // form goes on the primary monitor and the others just get the background
+  readonly property real originX: {
+    var m = Infinity
+    for (var i = 0; i < Quickshell.screens.length; i++) m = Math.min(m, Quickshell.screens[i].x)
+    return m
+  }
+  readonly property real originY: {
+    var m = Infinity
+    for (var i = 0; i < Quickshell.screens.length; i++) m = Math.min(m, Quickshell.screens[i].y)
+    return m
+  }
+  readonly property var primaryScreen: {
+    var best = null
+    for (var i = 0; i < Quickshell.screens.length; i++) {
+      var s = Quickshell.screens[i]
+      if (s.name === theme.primary) return s
+      if (best === null || s.x < best.x) best = s
+    }
+    return best
+  }
 
   function submit() {
-    if (root.busy || field.text === "") return
+    if (root.busy || entry.text === "") return
     root.busy = true
     root.notice = ""
-    root.pending = field.text
-    field.text = ""
+    root.pending = entry.text
+    entry.text = ""
     if (root.sessionOpen) {
       Greetd.respond(root.pending)
       root.pending = ""
@@ -53,8 +74,7 @@ ShellRoot {
       root.sessionOpen = false
       root.busy = false
       root.failed = true
-      root.notice = "Wrong password"
-      field.forceActiveFocus()
+      entry.forceActiveFocus()
     }
 
     function onReadyToLaunch() {
@@ -73,76 +93,93 @@ ShellRoot {
     visible: true
     color: theme.background
 
-    Image {
-      anchors.fill: parent
-      source: "wallpaper.jpg"
-      fillMode: Image.PreserveAspectCrop
-      asynchronous: true
-    }
-
     Rectangle {
       anchors.fill: parent
       color: theme.background
-      opacity: 0.55
     }
 
-    Column {
-      anchors.centerIn: parent
-      spacing: 18
+    Item {
+      x: root.primaryScreen ? root.primaryScreen.x - root.originX : 0
+      y: root.primaryScreen ? root.primaryScreen.y - root.originY : 0
+      width: root.primaryScreen ? root.primaryScreen.width : parent.width
+      height: root.primaryScreen ? root.primaryScreen.height : parent.height
 
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: Qt.formatDateTime(clock.date, "HH:mm")
-        color: theme.foreground
-        font.pixelSize: 88
-        font.weight: Font.Light
-      }
+      Column {
+        anchors.centerIn: parent
+        spacing: 40
 
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: Qt.formatDateTime(clock.date, "dddd, d MMMM")
-        color: theme.foreground
-        opacity: 0.8
-        font.pixelSize: 20
-      }
-
-      Item { width: 1; height: 24 }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: theme.user
-        color: theme.foreground
-        font.pixelSize: 22
-      }
-
-      TextField {
-        id: field
-        width: 320
-        anchors.horizontalCenter: parent.horizontalCenter
-        echoMode: TextInput.Password
-        placeholderText: root.busy ? "…" : "Password"
-        enabled: !root.busy
-        focus: true
-        color: theme.foreground
-        placeholderTextColor: Qt.rgba(theme.foreground.r, theme.foreground.g, theme.foreground.b, 0.5)
-        font.pixelSize: 18
-        horizontalAlignment: TextInput.AlignHCenter
-        background: Rectangle {
-          radius: 8
-          color: Qt.rgba(theme.background.r, theme.background.g, theme.background.b, 0.7)
-          border.width: 2
-          border.color: root.failed ? theme.red : theme.accent
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: theme.logo
+          color: theme.accent
+          font.family: "JetBrainsMono Nerd Font"
+          font.pixelSize: 14
+          horizontalAlignment: Text.AlignHCenter
         }
-        onAccepted: root.submit()
-        Component.onCompleted: forceActiveFocus()
-      }
 
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: root.notice
-        color: root.failed ? theme.red : theme.foreground
-        font.pixelSize: 15
-        visible: root.notice !== ""
+        Row {
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: 15
+
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: ""
+            color: root.failed ? theme.red : theme.accent
+            font.family: "JetBrainsMono Nerd Font"
+            font.pixelSize: 40
+          }
+
+          Rectangle {
+            width: 360
+            height: 56
+            color: theme.foreground
+            border.width: 2
+            border.color: root.failed ? theme.red : theme.accent
+
+            Row {
+              anchors.left: parent.left
+              anchors.leftMargin: 20
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 5
+
+              Repeater {
+                model: Math.min(entry.text.length, 21)
+
+                Rectangle {
+                  width: 9
+                  height: 9
+                  radius: 4.5
+                  color: theme.background
+                }
+              }
+            }
+
+            // takes the typing; the bullets above stand in for its text
+            TextInput {
+              id: entry
+              anchors.fill: parent
+              echoMode: TextInput.Password
+              color: "transparent"
+              selectionColor: "transparent"
+              selectedTextColor: "transparent"
+              cursorDelegate: Item {}
+              enabled: !root.busy
+              focus: true
+              onTextChanged: root.failed = false
+              onEnabledChanged: if (enabled) forceActiveFocus()
+              onAccepted: root.submit()
+              Component.onCompleted: forceActiveFocus()
+            }
+          }
+        }
+
+        Text {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: root.notice
+          color: root.failed ? theme.red : theme.foreground
+          font.pixelSize: 15
+          visible: root.notice !== ""
+        }
       }
     }
   }
