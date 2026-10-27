@@ -100,6 +100,11 @@ migrate_from_omadora() {
       git -C "$SKEIN_ROOT" checkout -q -B "$SKEIN_REF" FETCH_HEAD &&
       set_sparse_checkout || warn "couldn't move $SKEIN_ROOT to $SKEIN_REF (offline?)"
   fi
+  # a branch made from FETCH_HEAD has no upstream, so `git pull` (Update themes) would fail
+  if [[ "$(git -C "$SKEIN_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)" == "$SKEIN_REF" ]]; then
+    git -C "$SKEIN_ROOT" config "branch.$SKEIN_REF.remote" origin
+    git -C "$SKEIN_ROOT" config "branch.$SKEIN_REF.merge" "refs/heads/$SKEIN_REF"
+  fi
   return 0
 }
 
