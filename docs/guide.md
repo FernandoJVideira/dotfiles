@@ -44,7 +44,7 @@ afterwards. The last lines of the output list anything that still needs you:
 - Start Spotify once, so Spicetify has something to theme.
 - Open Zed once, then run `zed-extensions-check` to compare its extensions with the tracked list.
 - Optional, Nobara only: to drop KDE and log in through a Quickshell greeter, run
-  `linux/nobara-login/remove-kde.sh greeter`, reboot, log in, then `remove-kde.sh remove`. If the login
+  `linux/nobara-login/remove-kde.sh greeter`, reboot, log in, then `remove-kde.sh remove` and `remove-kde.sh clean`. If the login
   screen doesn't appear, Ctrl+Alt+F3 and `remove-kde.sh rollback`. Details are in the README.
 
 Edit files in the repo, not in your home folder. Every file under `common/`, `macos/` and `linux/<distro>/`
