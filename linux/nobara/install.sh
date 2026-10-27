@@ -23,7 +23,7 @@ sudo dnf install -y git
 # forwarded (update it afterwards with `skeinctl update`).
 SKEIN_DIR="$HOME/.local/share/skein"
 SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}"
-SKEIN_REF="${SKEIN_REF:-nobara}"
+SKEIN_REF="${SKEIN_REF:-skein-nobara}"
 # a machine that still has Omadora's checkout: move it to Skein's name and ref first
 migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
 if [[ -d "$SKEIN_DIR/.git" ]]; then
