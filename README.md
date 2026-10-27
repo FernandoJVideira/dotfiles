@@ -15,7 +15,6 @@ macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
   arch/                Arch + Omadora (arch branch) install flow, Hyprland config
   nobara/              Nobara + Omadora install flow
-  nobara-login/        opt-in: Quickshell login screen and KDE removal
   common/              what both Linux distros share (Caps Lock as Super)
 lib/                  shared bash helpers (symlinking, logging)
 ```
@@ -79,15 +78,13 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Discord, Spotify, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise itself.
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
-### Dropping KDE (optional)
+### Login screen and dropping KDE
 
-Nobara's ISO is KDE Plasma, and Omadora runs next to it. `linux/nobara-login/remove-kde.sh` removes Plasma, its apps and the default apps this setup replaces, in steps so a broken login screen never costs the desktop:
+Both Linux installers make sure the login screen is Omadora's Quickshell greeter: greetd with a Quickshell greeter styled after Omarchy's login (`libexec/omadora-greeter` and `default/greeter` in the fork). On a first install the Omadora installer does it; on a machine that already had Omadora, the installer here runs `omadora-greeter install` when it finds no greeter. It replaces SDDM on Arch and Plasma Login Manager on Nobara, which stay installed but disabled (`omadora-greeter rollback` switches back, and `OMADORA_KEEP_LOGIN_MANAGER=1` at install time keeps them). It follows the active theme, puts the form on the monitor `monitors.lua` pins at 0x0, and unlocks the keyring at login. The new login manager starts at the next boot; if it doesn't show up, press Ctrl+Alt+F3 and run `omadora-greeter rollback`.
 
-1. `remove-kde.sh greeter` installs greetd and cage, sets up a Quickshell login screen (`linux/nobara-login/greeter/shell.qml`, using `Quickshell.Services.Greetd`) and makes greetd the login manager. Plasma Login Manager stays installed, only disabled, because it depends on KWin and the rest of Plasma and would otherwise block the removal. The greeter is styled after Omarchy's login screen (a plain background, the Omadora logo, a lock beside an entry box that fills with bullets). cage stretches one window across every monitor, so the QML lays the screens out itself: the form goes on the monitor Hyprland has at 0,0 and the others get the plain background. Colors, user name, logo and that monitor come from the current theme (`greeter-theme-sync`, run by a theme hook, so it follows `omactl theme set`). It launches the same `uwsm` Hyprland session as Omadora's session file, and PAM unlocks KWallet at login. Reboot to try it; from a text console (Ctrl+Alt+F3), `remove-kde.sh rollback` restores Plasma Login Manager.
-2. `remove-kde.sh remove`, run from a session that greetd started (it checks with `loginctl`), lists the packages, previews the `dnf remove`, refuses a preview that would take a `nobara-*` package, Hyprland, Quickshell, the gaming stack or KWallet, and asks you to type `REMOVE`. `--kde-only` keeps the default apps (LibreOffice, Inkscape, Blender, OBS, VLC, Brave and the rest). A second prompt offers an `autoremove` preview for the Qt and KF6 leftovers.
-3. `remove-kde.sh clean` lists what Plasma left in your home (its config, caches and data, the KDE apps' settings) and any unused Flatpak runtimes, and deletes them once you type `DELETE`. KWallet's files are never listed.
+On Nobara the installer then runs `omadora-remove-kde schedule`, which queues the removal of KDE Plasma, its apps and the default apps the ISO ships (LibreOffice, Inkscape, Blender, OBS, VLC, Brave and the rest; the gaming tools stay) as a one-shot unit at the next boot, before the login screen. It can't run during the install, because removing Plasma Login Manager from a running Plasma session ends that session, and the installer with it, in the middle of a dnf transaction. At boot the dnf preview is checked and the removal is refused if it would take a `nobara-*` package, Hyprland, Quickshell, the gaming stack or KWallet. The same run deletes the Plasma config and caches in your home (never KWallet's files) and unused Flatpak runtimes. Follow it with `journalctl -u omadora-remove-kde`. To do it by hand from a session greetd started, `omadora-remove-kde remove` shows the preview and waits for you to type `REMOVE`, and `omadora-remove-kde clean` does the home folder.
 
-Nothing here has run on a Nobara machine yet. The package matching and the preview guard are tested against a fake package list; the greeter, the PAM change and the dnf behavior need a real box, so read the preview before typing `REMOVE`.
+Nothing here has run from this repo on a fresh machine yet. The greeter and the removal ran on one Nobara machine; the Arch greeter, the PAM keyring change, and the boot-time removal need a real run.
 
 ### Caps Lock as Super
 

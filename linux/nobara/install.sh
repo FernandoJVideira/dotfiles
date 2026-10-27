@@ -73,6 +73,23 @@ if lspci 2>/dev/null | grep -E "VGA|3D|Display" | grep -qi nvidia || [[ -d /proc
   symlink_dotfiles "$SCRIPT_DIR/../nobara-nvidia"
 fi
 
+# The login screen and the KDE removal live in Omadora (libexec/omadora-greeter, omadora-remove-kde).
+# The Omadora installer sets the greeter up on a first install; this covers a machine that already had
+# Omadora. The KDE removal is queued for the next boot, before the login screen: doing it now would end
+# this Plasma session, and the installer with it, in the middle of a dnf transaction.
+if [[ ! -f /usr/local/share/omadora-greeter/shell.qml ]]; then
+  log "Installing the Quickshell login screen..."
+  "$OMADORA_DIR/libexec/omadora-greeter" install \
+    || log "WARNING: the greeter didn't install - run: omadora-greeter install"
+fi
+log "Scheduling the KDE removal..."
+"$OMADORA_DIR/libexec/omadora-remove-kde" schedule \
+  || log "WARNING: couldn't schedule the KDE removal - after a reboot into the greeter, run: omadora-remove-kde remove"
+# links from when these two lived in this repo
+for stale in "$HOME/.local/bin/greeter-theme-sync" "$HOME/.config/omadora/hooks/theme-set.d/greeter-sync"; do
+  [[ -L $stale ]] && rm -f "$stale"
+done
+
 # Install workstation tools (mirrors linux/arch/install.sh's "go
 # element-desktop" + zed; Ghostty is deliberately not installed here - kitty is
 # the terminal on this machine). go is in Fedora's own repos; Zed isn't - its

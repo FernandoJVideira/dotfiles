@@ -49,6 +49,15 @@ fi
 export OMADORA_PATH="$OMADORA_DIR"
 export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
+# The login screen lives in Omadora (libexec/omadora-greeter): greetd with a Quickshell greeter instead
+# of SDDM. The Omadora installer sets it up on a first install; this covers a machine that already had
+# Omadora.
+if [[ ! -f /usr/local/share/omadora-greeter/shell.qml ]]; then
+  log "Installing the Quickshell login screen..."
+  "$OMADORA_DIR/libexec/omadora-greeter" install \
+    || log "WARNING: the greeter didn't install - run: omadora-greeter install"
+fi
+
 log "Symlinking Linux-specific dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
 # what both Linux distros share (Caps Lock as Super, see linux/common/.config/hypr/capslock.lua)
