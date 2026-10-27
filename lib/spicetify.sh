@@ -3,7 +3,7 @@
 # on macOS), the same prefix the official install script uses and that .zshenv already
 # has on PATH.
 #
-# One installer for every OS, like lib/miniconda.sh: Arch has it in the AUR, Fedora and
+# One installer for every OS, like lib/miniconda.sh: Fedora and
 # Terra don't package it, Homebrew has it but would sit next to an existing ~/.spicetify.
 # The release tarball is checked against the SHA256 GitHub publishes for each asset (same
 # origin as the download, so this catches corruption/truncation, not a compromised

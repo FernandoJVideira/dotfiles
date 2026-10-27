@@ -21,7 +21,7 @@ deeper references are [herdr.md](herdr.md) (multiplexer), [claude-review.md](cla
 
 ## Setting up a machine
 
-Clone the repo and run the entry point. It picks the macOS, Arch or Nobara installer by itself, and every
+Clone the repo and run the entry point. It picks the macOS or Nobara installer by itself, and every
 script is safe to run again.
 
 ```bash
@@ -30,7 +30,7 @@ cd ~/Developer/Personal/dotfiles
 ./bootstrap.sh
 ```
 
-On a first Arch install, the Skein installer ends with a reboot, so run `./bootstrap.sh` once more
+On a first Nobara install, the Skein installer ends with a reboot, so run `./bootstrap.sh` once more
 afterwards. The last lines of the output list anything that still needs you:
 
 - `~/.npmrc` and, on Linux, `~/.config/proton-pass-cli/pat` are created with a `REPLACE_WITH_...`
