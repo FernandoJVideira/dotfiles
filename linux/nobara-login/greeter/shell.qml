@@ -1,5 +1,5 @@
 // Login screen: a Quickshell greeter for greetd, run inside cage (see remove-kde.sh), styled after
-// Omarchy's: a plain background, the logo and a lock next to an entry box that fills with bullets.
+// Omarchy's: a plain background, the logo and a lock next to an outlined entry box that fills with bullets.
 // Theme.qml (colors, user, logo, primary monitor) is written by greeter-theme-sync.
 import QtQuick
 import Quickshell
@@ -124,7 +124,7 @@ ShellRoot {
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: ""
-            color: root.failed ? theme.red : theme.accent
+            color: root.failed ? theme.red : theme.foreground
             font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 40
           }
@@ -132,9 +132,9 @@ ShellRoot {
           Rectangle {
             width: 360
             height: 56
-            color: theme.foreground
+            color: "transparent"
             border.width: 2
-            border.color: root.failed ? theme.red : theme.accent
+            border.color: root.failed ? theme.red : theme.foreground
 
             Row {
               anchors.left: parent.left
@@ -149,7 +149,7 @@ ShellRoot {
                   width: 9
                   height: 9
                   radius: 4.5
-                  color: theme.background
+                  color: root.failed ? theme.red : theme.foreground
                 }
               }
             }
