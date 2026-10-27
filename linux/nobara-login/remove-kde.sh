@@ -104,7 +104,7 @@ cmd_greeter() {
 vt = 1
 
 [default_session]
-command = "cage -s -- quickshell -p $GREETER_DIR"
+command = "cage -s -- env QT_WAYLAND_DISABLE_WINDOWDECORATION=1 quickshell -p $GREETER_DIR"
 user = "$greeter_user"
 TOML
 
