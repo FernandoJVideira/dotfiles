@@ -35,7 +35,7 @@
 set -euo pipefail
 
 REPO_URL="${SKEIN_REPO:-https://github.com/FernandoJVideira/skein.git}"
-SKEIN_REF="${SKEIN_REF:-skein-nobara}"
+SKEIN_REF="${SKEIN_REF:-nobara}"
 export SKEIN_ROOT="${SKEIN_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/skein}"
 export SKEIN_CONFIG_HOME="${SKEIN_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}/skein}"
 
