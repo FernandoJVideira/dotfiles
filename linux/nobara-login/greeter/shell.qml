@@ -41,6 +41,15 @@ ShellRoot {
     return best
   }
 
+  Component.onCompleted: {
+    // shows up in `journalctl -b -u greetd`: which monitor the form went to, and why
+    for (var i = 0; i < Quickshell.screens.length; i++) {
+      var s = Quickshell.screens[i]
+      console.log("greeter screen", s.name, s.x, s.y, s.width, s.height)
+    }
+    console.log("greeter primary wanted:", theme.primary, "using:", root.primaryScreen ? root.primaryScreen.name : "none")
+  }
+
   function submit() {
     if (root.busy || entry.text === "") return
     root.busy = true
