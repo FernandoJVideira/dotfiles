@@ -177,7 +177,8 @@ Example prompts and the full list of `style:` options are in [skills.md](skills.
 One theme drives the terminals, Neovim, Zed, the prompt, Spotify, btop, tmux, Herdr, and on macOS the
 menu bar, the window borders and the system accent color.
 
-- macOS: run `theme` for a menu (theme, wallpaper, next wallpaper, update). `theme set <name>`,
+- macOS: `Alt+Shift+T` opens a popup to pick a theme. `theme` in a terminal opens a fuller menu (theme,
+  wallpaper, next wallpaper, update) with previews. `theme set <name>`,
   `theme list` and `theme preview <name>` skip the menu.
 - Linux: `omactl theme set <name>`.
 
@@ -208,6 +209,7 @@ On macOS, Hyprspace tiles windows, with sketchybar as the bar and `borders` outl
 | `Alt+-` / `Alt+=` | shrink / grow |
 | `Alt+Shift+;` | service mode: `Esc` reloads the config, `r` flattens the workspace, `f` floats |
 | `Cmd+Shift+W`, `Cmd+Shift+E`, `Alt+M`, `Alt+Shift+P` | Safari, Zed, Spotify, btop |
+| `Alt+Shift+T` | theme picker popup with a thumbnail per theme (fuzzy search, Enter applies) |
 
 Apps open on fixed workspaces: editors on 1, terminals on 2, browsers on 3, Claude's desktop app on 4,
 Finder on 5, TablePlus on 6, Bruno on 7, Discord on 8, Obsidian and Notion on 9, music on 10. Workspaces

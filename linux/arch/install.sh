@@ -72,7 +72,7 @@ printf '[X11]\nDisplayCommand=/usr/local/bin/omadora-sddm-monitors\n' \
 
 # Install workstation tools
 log "Installing workstation tools..."
-sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed
+sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed mpv
 # Zed's terminal font (common/.config/zed/settings.json)
 sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # Tools the shared zsh config assumes
@@ -86,6 +86,12 @@ if [[ -d /opt/spotify ]]; then
   sudo chmod a+wr /opt/spotify
   sudo chmod -R a+wr /opt/spotify/Apps
 fi
+# ani-cli (plays with mpv, installed above) and OnlyOffice, each a call of its own so a wrong AUR
+# name can't take the rest down.
+yay -S --needed --noconfirm ani-cli \
+  || log "WARNING: ani-cli failed to install - check the AUR name."
+yay -S --needed --noconfirm onlyoffice-bin \
+  || log "WARNING: onlyoffice-bin failed to install - check the AUR name."
 # Cloudflare WARP (the AUR package carries Cloudflare's own build). Registering, which asks you to
 # accept Cloudflare's terms, is left to you: warp-cli registration new, then warp-cli connect.
 yay -S --needed --noconfirm cloudflare-warp-bin \

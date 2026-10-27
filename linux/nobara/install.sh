@@ -109,13 +109,13 @@ if command -v gum >/dev/null && gum confirm "Set up gaming tools too (Steam, Her
   sudo dnf install -y --skip-unavailable steam heroic-games-launcher
 fi
 
-# Flatpak apps (no rpm for these): LocalSend and GPU Screen Recorder. Nobara can have
+# Flatpak apps (no rpm for these): LocalSend, GPU Screen Recorder and OnlyOffice. Nobara can have
 # flathub configured in both the system and user scopes, which makes a bare
 # `flatpak install flathub ...` refuse to run non-interactively, so say --system.
-log "Installing Flatpak apps (LocalSend, GPU Screen Recorder)..."
+log "Installing Flatpak apps (LocalSend, GPU Screen Recorder, OnlyOffice)..."
 sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
-  && sudo flatpak install --system -y --noninteractive flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder \
-  || log "WARNING: Flatpak apps failed to install - run: sudo flatpak install --system flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder"
+  && sudo flatpak install --system -y --noninteractive flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors \
+  || log "WARNING: Flatpak apps failed to install - run: sudo flatpak install --system flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors"
 
 # OpenDeck (Stream Deck controller; the AUR package on Arch). Upstream's own
 # installer picks the .rpm from GitHub Releases on Fedora-family systems and
@@ -142,6 +142,15 @@ done
 
 if ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null || ! rpm -q discord &>/dev/null; then
   log "WARNING: zed, spotify-launcher and/or discord still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search zed' by hand."
+fi
+
+# ani-cli: not in Fedora's or Terra's repos, so the COPR its README points at (builds for Fedora 43
+# to 45). It plays with mpv, which comes from RPM Fusion free; Nobara ships that repo enabled.
+if ! rpm -q ani-cli &>/dev/null; then
+  log "Installing ani-cli and mpv..."
+  sudo dnf copr enable -y derisis13/ani-cli \
+    && sudo dnf install -y --skip-unavailable mpv ani-cli \
+    || log "WARNING: couldn't install ani-cli - check 'dnf copr list' and 'dnf search mpv' (RPM Fusion must be enabled)."
 fi
 
 # Cloudflare WARP: no Fedora or Terra package, so Cloudflare's own RPM repo, written the way
