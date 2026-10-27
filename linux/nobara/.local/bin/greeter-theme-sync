@@ -29,8 +29,12 @@ if [[ -f $logo_file ]]; then
 fi
 [[ -n $logo ]] || logo="OMADORA"
 
-# the monitor Hyprland has at 0,0 (see lib/monitors.sh); empty outside a Hyprland session
-primary=$(hyprctl -j monitors 2>/dev/null | jq -r '[.[] | select(.x == 0 and .y == 0)][0].name // empty' 2>/dev/null || true)
+# the main monitor: the one the generated block of monitors.lua (lib/monitors.sh) puts at 0x0. That
+# file is always there, unlike a running Hyprland, which this may be called without; hyprctl is the fallback.
+monitors_lua="$HOME/.config/hypr/monitors.lua"
+primary=""
+[[ -f $monitors_lua ]] && primary=$(sed -n 's/.*\["\([^"]*\)"\][[:space:]]*=[[:space:]]*"0x0".*/\1/p' "$monitors_lua" | head -n 1)
+[[ -n $primary ]] || primary=$(hyprctl -j monitors 2>/dev/null | jq -r '[.[] | select(.x == 0 and .y == 0)][0].name // empty' 2>/dev/null || true)
 
 cat >"$dir/Theme.qml" <<QML
 import QtQuick
