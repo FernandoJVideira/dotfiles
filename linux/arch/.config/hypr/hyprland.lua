@@ -1,14 +1,14 @@
 -- Learn how to configure Hyprland: https://wiki.hypr.land/Configuring/Start/
 
--- Load user modules from ~/.config and Omadora defaults from $OMADORA_PATH.
+-- Load user modules from ~/.config and Skein defaults from $SKEIN_PATH.
 package.path = os.getenv("HOME")
   .. "/.config/?.lua;"
-  .. (os.getenv("OMADORA_PATH") or (os.getenv("HOME") .. "/.local/share/omadora"))
+  .. (os.getenv("SKEIN_PATH") or (os.getenv("HOME") .. "/.local/share/skein"))
   .. "/?.lua;"
   .. package.path
 
--- All Omadora default setups
-require("default.hypr.omadora")
+-- All Skein default setups
+require("default.hypr.skein")
 
 ---- Change your own setup in these files and override defaults.
 require("hypr.monitors")

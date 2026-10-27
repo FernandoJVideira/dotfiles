@@ -3,7 +3,7 @@ tap "PeachlifeAB/tap"
 tap "pystardust/ani-cli", "https://github.com/pystardust/ani-cli.git", trusted: true
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
-# Bash 5: the macOS one is 3.2, too old for Omadora's theme scripts that the `theme` command runs
+# Bash 5: the macOS one is 3.2, too old for Skein's theme scripts that the `theme` command runs
 brew "bash"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"

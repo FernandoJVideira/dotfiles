@@ -1,6 +1,6 @@
 # Themed variant of starship.toml: same layout and glyphs, with the colors taken
 # from the current OS theme. This is a template, not a config: starship-theme-sync
-# (run by the theme-set hook on Arch/Omarchy and Nobara/Omadora) fills in the
+# (run by the theme-set hook on Arch/Omarchy and Nobara/Skein) fills in the
 # double-brace placeholders and writes ~/.local/state/starship/starship.toml, which
 # .zshenv prefers over the static file when it exists.
 #   accent / background / foreground  straight from the theme's colors.toml

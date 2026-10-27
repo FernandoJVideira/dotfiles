@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/skein.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
 source "$SCRIPT_DIR/../../lib/secrets.sh"
 
@@ -15,27 +16,31 @@ sudo chsh -s "$(which zsh)" "$USER"
 log "Installing git..."
 sudo dnf install -y git
 
-# Omadora (my fork, nobara branch) provides the Hyprland session, the Quickshell
+# Skein (my fork, nobara branch) provides the Hyprland session, the Quickshell
 # shell and their packages. It goes in before the dotfiles are symlinked so my
 # own configs win over its defaults. HTTPS, since a fresh machine has no SSH key
 # yet. A first install runs its installer; an existing checkout is only fast-
-# forwarded (update it afterwards with `omactl update`).
-OMADORA_DIR="$HOME/.local/share/omadora"
-OMADORA_REPO_URL="${OMADORA_REPO_URL:-https://github.com/FernandoJVideira/omadora.git}"
-OMADORA_REF="${OMADORA_REF:-nobara}"
-if [[ -d "$OMADORA_DIR/.git" ]]; then
-  log "Updating Omadora..."
-  git -C "$OMADORA_DIR" pull --ff-only \
-    || log "WARNING: couldn't fast-forward Omadora - resolve it in $OMADORA_DIR by hand."
+# forwarded (update it afterwards with `skeinctl update`).
+SKEIN_DIR="$HOME/.local/share/skein"
+SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}"
+SKEIN_REF="${SKEIN_REF:-skein-nobara}"
+# a machine that still has Omadora's checkout: move it to Skein's name and ref first
+migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
+if [[ -d "$SKEIN_DIR/.git" ]]; then
+  log "Updating Skein..."
+  git -C "$SKEIN_DIR" pull --ff-only \
+    || log "WARNING: couldn't fast-forward Skein - resolve it in $SKEIN_DIR by hand."
 else
-  log "Cloning Omadora ($OMADORA_REF)..."
-  mkdir -p "$(dirname "$OMADORA_DIR")"
-  git clone --branch "$OMADORA_REF" "$OMADORA_REPO_URL" "$OMADORA_DIR"
-  log "Running the Omadora installer..."
-  bash "$OMADORA_DIR/install.sh"
+  log "Cloning Skein ($SKEIN_REF)..."
+  mkdir -p "$(dirname "$SKEIN_DIR")"
+  git clone --branch "$SKEIN_REF" "$SKEIN_REPO_URL" "$SKEIN_DIR"
+  log "Running the Skein installer..."
+  bash "$SKEIN_DIR/install.sh"
 fi
-export OMADORA_PATH="$OMADORA_DIR"
-export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+# config, state and cache directories, and the old user units (before the dotfiles are linked into them)
+"$SKEIN_DIR/libexec/skein-migrate-names" || log "WARNING: skein-migrate-names failed - see above."
+export SKEIN_PATH="$SKEIN_DIR"
+export PATH="$SKEIN_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 # Hyprland + quickshell runtime deps, dnf side. UNTESTED - no Fedora/Nobara
 # box was available while writing this; treat every package name here as a
@@ -73,20 +78,20 @@ if lspci 2>/dev/null | grep -E "VGA|3D|Display" | grep -qi nvidia || [[ -d /proc
   symlink_dotfiles "$SCRIPT_DIR/../nobara-nvidia"
 fi
 
-# The login screen and the KDE removal live in Omadora (libexec/omadora-greeter, omadora-remove-kde).
-# The Omadora installer sets the greeter up on a first install; this covers a machine that already had
-# Omadora. The KDE removal is queued for the next boot, before the login screen: doing it now would end
+# The login screen and the KDE removal live in Skein (libexec/skein-greeter, skein-remove-kde).
+# The Skein installer sets the greeter up on a first install; this covers a machine that already had
+# Skein. The KDE removal is queued for the next boot, before the login screen: doing it now would end
 # this Plasma session, and the installer with it, in the middle of a dnf transaction.
-if [[ ! -f /usr/local/share/omadora-greeter/shell.qml ]]; then
+if [[ ! -f /usr/local/share/skein-greeter/shell.qml ]]; then
   log "Installing the Quickshell login screen..."
-  "$OMADORA_DIR/libexec/omadora-greeter" install \
-    || log "WARNING: the greeter didn't install - run: omadora-greeter install"
+  "$SKEIN_DIR/libexec/skein-greeter" install \
+    || log "WARNING: the greeter didn't install - run: skein-greeter install"
 fi
 log "Scheduling the KDE removal..."
-"$OMADORA_DIR/libexec/omadora-remove-kde" schedule \
-  || log "WARNING: couldn't schedule the KDE removal - after a reboot into the greeter, run: omadora-remove-kde remove"
+"$SKEIN_DIR/libexec/skein-remove-kde" schedule \
+  || log "WARNING: couldn't schedule the KDE removal - after a reboot into the greeter, run: skein-remove-kde remove"
 # links from when these two lived in this repo
-for stale in "$HOME/.local/bin/greeter-theme-sync" "$HOME/.config/omadora/hooks/theme-set.d/greeter-sync"; do
+for stale in "$HOME/.local/bin/greeter-theme-sync" "$HOME/.config/skein/hooks/theme-set.d/greeter-sync"; do
   [[ -L $stale ]] && rm -f "$stale"
 done
 
@@ -296,24 +301,24 @@ fi
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
 
-# Omadora preferences: Claude as the default agent and the idle
-# screensaver off. Both are plain state files; omadora-default-agent would also
-# launch the agent, and `omactl toggle screensaver` flips instead of setting.
-log "Applying Omadora preferences..."
-mkdir -p "$HOME/.config/omadora/defaults" "$HOME/.local/state/omadora/toggles"
-echo claude >"$HOME/.config/omadora/defaults/agent"
-touch "$HOME/.local/state/omadora/toggles/screensaver-off"
+# Skein preferences: Claude as the default agent and the idle
+# screensaver off. Both are plain state files; skein-default-agent would also
+# launch the agent, and `skeinctl toggle screensaver` flips instead of setting.
+log "Applying Skein preferences..."
+mkdir -p "$HOME/.config/skein/defaults" "$HOME/.local/state/skein/toggles"
+echo claude >"$HOME/.config/skein/defaults/agent"
+touch "$HOME/.local/state/skein/toggles/screensaver-off"
 # The matte-black theme is re-applied so kitty's and starship's themed files exist.
-theme="$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)"
-# First run only: start from matte-black instead of Omadora's own default theme; later
+theme="$(cat "$HOME/.config/skein/current/theme.name" 2>/dev/null || echo matte-black)"
+# First run only: start from matte-black instead of Skein's own default theme; later
 # runs keep whatever theme was picked since.
 theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
 if [[ ! -f "$theme_marker" ]]; then
   theme=matte-black
   mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
 fi
-omactl theme set "$theme" \
-  || log "WARNING: theme re-apply failed - run: omactl theme set matte-black from the desktop."
+skeinctl theme set "$theme" \
+  || log "WARNING: theme re-apply failed - run: skeinctl theme set matte-black from the desktop."
 
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."

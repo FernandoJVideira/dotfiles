@@ -3,7 +3,7 @@
 # from the theme's palette, with every text/background pair checked for contrast, and reloads the
 # server; what that leaves to the "terminal" theme follows the terminal's palette, which Herdr only
 # re-reads when it redraws after SIGWINCH, so nudge each attached client (never the server) once the
-# terminal has had a moment to repaint. Runs on every OS (Linux's omactl, macOS's `theme`).
+# terminal has had a moment to repaint. Runs on every OS (Linux's skeinctl, macOS's `theme`).
 "$HOME/.local/bin/herdr-theme-sync" >/dev/null 2>&1 || true
 (
   sleep 1.5

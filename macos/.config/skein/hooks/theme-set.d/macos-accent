@@ -21,7 +21,7 @@ set -euo pipefail
 
 [[ ,${THEME_SKIP:-}, == *,accent,* ]] && exit 0
 
-COLORS_TOML="$HOME/.config/omadora/current/theme/colors.toml"
+COLORS_TOML="$HOME/.config/skein/current/theme/colors.toml"
 accent=$(grep -m1 '^accent' "$COLORS_TOML" 2>/dev/null | sed -E 's/^accent *= *"([^"]*)".*/\1/' || true)
 [[ $accent =~ ^#[0-9A-Fa-f]{6}$ ]] || { echo "macos-accent: no accent color in $COLORS_TOML" >&2; exit 0; }
 

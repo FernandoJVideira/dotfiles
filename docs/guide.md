@@ -30,7 +30,7 @@ cd ~/Developer/Personal/dotfiles
 ./bootstrap.sh
 ```
 
-On a first Arch install, the Omadora installer ends with a reboot, so run `./bootstrap.sh` once more
+On a first Arch install, the Skein installer ends with a reboot, so run `./bootstrap.sh` once more
 afterwards. The last lines of the output list anything that still needs you:
 
 - `~/.npmrc` and, on Linux, `~/.config/proton-pass-cli/pat` are created with a `REPLACE_WITH_...`
@@ -44,8 +44,8 @@ afterwards. The last lines of the output list anything that still needs you:
 - Start Spotify once, so Spicetify has something to theme.
 - Open Zed once, then run `zed-extensions-check` to compare its extensions with the tracked list.
 - Reboot once after the installer. The login screen is now the Quickshell greeter (greetd), and on Nobara
-  the KDE removal runs at that boot, before it (`journalctl -u omadora-remove-kde` shows how it went). If the
-  login screen doesn't appear, Ctrl+Alt+F3, log in and run `omadora-greeter rollback`.
+  the KDE removal runs at that boot, before it (`journalctl -u skein-remove-kde` shows how it went). If the
+  login screen doesn't appear, Ctrl+Alt+F3, log in and run `skein-greeter rollback`.
 
 Edit files in the repo, not in your home folder. Every file under `common/`, `macos/` and `linux/<distro>/`
 is symlinked to the same path under `$HOME`, so a change is live as soon as you save it. A file you add
@@ -183,11 +183,11 @@ menu bar, the window borders and the system accent color.
 - macOS: `Alt+Shift+T` opens a popup to pick a theme. `theme` in a terminal opens a fuller menu (theme,
   wallpaper, next wallpaper, update) with previews. `theme set <name>`,
   `theme list` and `theme preview <name>` skip the menu.
-- Linux: `omactl theme set <name>`.
+- Linux: `skeinctl theme set <name>`.
 
 Applying a theme re-renders each app's colors from one palette and reloads what is running. The default
-on a new Mac is `gruvbox-classic`, a user theme kept in `macos/.config/omadora/themes`. Your own wallpapers
-go in `~/.config/omadora/backgrounds/<theme>/` and join that theme's set.
+on a new Mac is `gruvbox-classic`, a user theme kept in `macos/.config/skein/themes`. Your own wallpapers
+go in `~/.config/skein/backgrounds/<theme>/` and join that theme's set.
 
 A switch restarts Spotify so it shows the new colors, which stops playback, and restarts Finder and the
 Dock when macOS's folder color changes. `THEME_SKIP=spotify`, `THEME_SKIP=finder` or both
@@ -218,7 +218,7 @@ Apps open on fixed workspaces: editors on 1, terminals on 2, browsers on 3, Clau
 Finder on 5, TablePlus on 6, Bruno on 7, Discord on 8, Obsidian and Notion on 9, music on 10. Workspaces
 are pinned to monitors by name in `macos/.config/hyprspace/config.toml`.
 
-On Linux the desktop is Hyprland and Quickshell from the Omadora fork, and Omadora supplies the key
+On Linux the desktop is Hyprland and Quickshell from the Skein fork, and Skein supplies the key
 bindings, so use its own cheat sheet for those. One thing this repo changes: Caps Lock is a second Super
 key, and it is Caps Lock again while a game has focus, whether it came from Steam, Lutris or Heroic.
 `Super+Ctrl+F12` forces real Caps Lock for a game that isn't recognised, and again to undo it.
@@ -266,14 +266,14 @@ using the token in `~/.npmrc`.
 |---|---|
 | this repo's config on a machine | `git pull`, then `./bootstrap.sh` |
 | Homebrew packages (macOS) | `upd` |
-| Omadora and the Linux desktop | `omactl update` |
+| Skein and the Linux desktop | `skeinctl update` |
 | dev tools | `mise upgrade` |
 | Spotify's theming after a Spotify update | `spicetify-theme-sync --force` |
 
 To change something, edit the file under `common/`, `macos/` or `linux/<distro>/`, commit it, and
 `git pull` on the other machines. Two things are generated and shouldn't be edited by hand: Herdr's
 `~/.config/herdr/config.toml` (edit `config.base.toml` beside it in the repo) and anything under
-`~/.config/omadora/current`.
+`~/.config/skein/current`.
 
 ## When something looks wrong
 
@@ -301,7 +301,7 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | `common/.config/nvim` | Neovim (NvChad plus `lua/plugins`, `mappings.lua`, `autocmds.lua`, `tutor`) |
 | `common/.config/herdr`, `common/.local/bin/hdev` | Herdr's base config and the project launcher |
 | `common/.config/mise/conf.d` | the tracked dev tool list |
-| `common/.config/omadora` | theme templates and the hooks that run on every theme change |
+| `common/.config/skein` | theme templates and the hooks that run on every theme change |
 | `common/.claude/skills` | Claude Code skills (coordinator, caveman, humanizer, vue-ui-design) |
 | `macos/` | Brewfile, Hyprspace, sketchybar, the `theme` command, macOS defaults |
 | `linux/arch`, `linux/nobara` | distro installers, Hyprland files, systemd units |

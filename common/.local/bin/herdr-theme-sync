@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Herdr's config.toml from config.base.toml plus the current Omadora theme.
+"""Generate Herdr's config.toml from config.base.toml plus the current Skein theme.
 
     herdr-theme-sync [--colors FILE] [--base FILE] [--out FILE] [--print] [--no-reload]
 
@@ -7,7 +7,7 @@ Herdr has no include and no theme files, so its colors have to live in config.to
 tracked part is ~/.config/herdr/config.base.toml; this appends a [theme.custom] block built from the
 theme's palette (current/theme/colors.toml) and writes the result to ~/.config/herdr/config.toml,
 then tells a running server to reload it. Run by the herdr-sync theme hook on every theme change
-(Linux's omactl, macOS's `theme` command) and by common/install.sh.
+(Linux's skeinctl, macOS's `theme` command) and by common/install.sh.
 
 Everything Herdr draws as text sits on a background of the same theme, and the terminal's 16 ANSI
 colors only guarantee background against foreground, so each pair is checked here and moved
@@ -112,7 +112,7 @@ def theme_block(p):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--colors", default=f"{HOME}/.config/omadora/current/theme/colors.toml")
+    ap.add_argument("--colors", default=f"{HOME}/.config/skein/current/theme/colors.toml")
     ap.add_argument("--base", default=f"{HOME}/.config/herdr/config.base.toml")
     ap.add_argument("--out", default=f"{HOME}/.config/herdr/config.toml")
     ap.add_argument("--print", action="store_true", help="print the theme block and write nothing")

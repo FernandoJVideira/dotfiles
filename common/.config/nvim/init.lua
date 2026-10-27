@@ -7,7 +7,7 @@ vim.g.mapleader = " "
 _G.OmarchyReloadTheme = function()
   -- the generated theme file keeps its name from one switch to the next, so Lua's
   -- module cache has to forget it or the old palette would be served again
-  package.loaded["themes.omadora"] = nil
+  package.loaded["themes.skein"] = nil
   require("nvchad.utils").reload "omarchy_theme"
 end
 

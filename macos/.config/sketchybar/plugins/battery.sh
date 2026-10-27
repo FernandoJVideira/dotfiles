@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Theme colors (see sketchybarrc); the old fixed values until the first theme is set
-COLORS_FILE="$HOME/.config/omadora/current/theme/macos-colors.sh"
+COLORS_FILE="$HOME/.config/skein/current/theme/macos-colors.sh"
 # shellcheck source=/dev/null
 [[ -f $COLORS_FILE ]] && source "$COLORS_FILE"
 

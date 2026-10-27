@@ -1,8 +1,8 @@
-; Spotify colors for the Spicetify theme "omadora" (common/.config/spicetify/Themes/omadora),
-; rendered from the current theme by Omadora's template engine (the same one on Linux and
+; Spotify colors for the Spicetify theme "skein" (common/.config/spicetify/Themes/skein),
+; rendered from the current theme by Skein's template engine (the same one on Linux and
 ; macOS) into current/theme/spicetify-color.ini. spicetify-theme-sync copies it next to
 ; user.css as color.ini and applies it. Values are hex without the leading '#'.
-[omadora]
+[skein]
 text               = {{ foreground_strip }}
 subtext            = {{ mix_strip foreground background 30 }}
 button-text        = {{ background_strip }}

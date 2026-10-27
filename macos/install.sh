@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/symlink.sh"
+source "$SCRIPT_DIR/../lib/skein.sh"
 
 # Check if Xcode Command Line Tools are installed, and install them if not
 if ! xcode-select -p &>/dev/null; then
@@ -40,6 +41,10 @@ hyprspace init
 
 # Create symlinks for dotfiles
 log "Symlinking macOS-specific dotfiles..."
+# a machine that still has Omadora's config, state and cache directories: move them to Skein's names
+# before the dotfiles are linked into them
+migrate_skein_dirs
+
 symlink_dotfiles "$SCRIPT_DIR"
 
 # Activate Proton Pass agent if not already running
@@ -61,7 +66,7 @@ log "Running shared dotfiles installer..."
 
 # Default theme, the first time only: a rerun must not undo a theme picked since.
 # After common/install.sh, which provides the starship and Zed sync scripts the
-# theme hooks call. Also fetches the Omadora themes (see macos/.local/bin/theme).
+# theme hooks call. Also fetches the Skein themes (see macos/.local/bin/theme).
 if [[ -z "$("$HOME/.local/bin/theme" current 2>/dev/null)" ]]; then
   log "Applying the default theme (gruvbox-classic)..."
   "$HOME/.local/bin/theme" set gruvbox-classic || log "WARNING: couldn't apply the default theme - run: theme"

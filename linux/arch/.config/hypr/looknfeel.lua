@@ -1,4 +1,4 @@
--- Change the default Omadora look'n'feel.
+-- Change the default Skein look'n'feel.
 
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#general
 hl.config({

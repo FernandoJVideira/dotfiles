@@ -1,5 +1,5 @@
 -- Caps Lock is a second Super key, except while a game has focus (then it is Caps Lock again).
--- Replaces Omadora's default, which makes Caps the Compose key. ~/.local/bin/capslock-mode decides
+-- Replaces Skein's default, which makes Caps the Compose key. ~/.local/bin/capslock-mode decides
 -- what counts as a game on every focus change and switches the option to match.
 hl.config({ input = { kb_options = "caps:super" } })
 

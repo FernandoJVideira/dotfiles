@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/symlink.sh"
 source "$SCRIPT_DIR/../../lib/log.sh"
+source "$SCRIPT_DIR/../../lib/skein.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
 source "$SCRIPT_DIR/../../lib/limine.sh"
 source "$SCRIPT_DIR/../../lib/secrets.sh"
@@ -23,39 +24,43 @@ log "Installing zsh..."
 sudo pacman -S --needed --noconfirm zsh
 sudo chsh -s "$(command -v zsh)" "$USER"
 
-# Omadora (my fork, arch branch) provides the Hyprland session, the Quickshell
+# Skein (my fork, arch branch) provides the Hyprland session, the Quickshell
 # shell, SDDM and their packages. It goes in before the dotfiles are symlinked so
 # my own configs win over its defaults. HTTPS, since a fresh machine has no SSH
 # key yet. A first install runs its installer (which ends by rebooting, so run
 # this script again afterwards); an existing checkout is only fast-forwarded
-# (update it afterwards with `omactl update`).
-OMADORA_DIR="$HOME/.local/share/omadora"
-OMADORA_REPO_URL="${OMADORA_REPO_URL:-https://github.com/FernandoJVideira/omadora.git}"
-OMADORA_REF="${OMADORA_REF:-arch}"
-# python-filelock: pipx (used by the Omadora installer) imports it but the package does not depend on it
+# (update it afterwards with `skeinctl update`).
+SKEIN_DIR="$HOME/.local/share/skein"
+SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}"
+SKEIN_REF="${SKEIN_REF:-skein-arch}"
+# python-filelock: pipx (used by the Skein installer) imports it but the package does not depend on it
 sudo pacman -S --needed --noconfirm git base-devel python-filelock
-if [[ -d "$OMADORA_DIR/.git" ]]; then
-  log "Updating Omadora..."
-  git -C "$OMADORA_DIR" pull --ff-only \
-    || log "WARNING: couldn't fast-forward Omadora - resolve it in $OMADORA_DIR by hand."
+# a machine that still has Omadora's checkout: move it to Skein's name and ref first
+migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
+if [[ -d "$SKEIN_DIR/.git" ]]; then
+  log "Updating Skein..."
+  git -C "$SKEIN_DIR" pull --ff-only \
+    || log "WARNING: couldn't fast-forward Skein - resolve it in $SKEIN_DIR by hand."
 else
-  log "Cloning Omadora ($OMADORA_REF)..."
-  mkdir -p "$(dirname "$OMADORA_DIR")"
-  git clone --branch "$OMADORA_REF" "$OMADORA_REPO_URL" "$OMADORA_DIR"
-  log "Running the Omadora installer..."
+  log "Cloning Skein ($SKEIN_REF)..."
+  mkdir -p "$(dirname "$SKEIN_DIR")"
+  git clone --branch "$SKEIN_REF" "$SKEIN_REPO_URL" "$SKEIN_DIR"
+  log "Running the Skein installer..."
   # Its last step reboots; tolerate that failing (e.g. over SSH) so this script can finish.
-  bash "$OMADORA_DIR/install.sh" || log "WARNING: the Omadora installer ended with an error - check ~/omadora-install.log."
+  bash "$SKEIN_DIR/install.sh" || log "WARNING: the Skein installer ended with an error - check ~/skein-install.log."
 fi
-export OMADORA_PATH="$OMADORA_DIR"
-export PATH="$OMADORA_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+# config, state and cache directories, and the old user units (before the dotfiles are linked into them)
+"$SKEIN_DIR/libexec/skein-migrate-names" || log "WARNING: skein-migrate-names failed - see above."
+export SKEIN_PATH="$SKEIN_DIR"
+export PATH="$SKEIN_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
-# The login screen lives in Omadora (libexec/omadora-greeter): greetd with a Quickshell greeter instead
-# of SDDM. The Omadora installer sets it up on a first install; this covers a machine that already had
-# Omadora.
-if [[ ! -f /usr/local/share/omadora-greeter/shell.qml ]]; then
+# The login screen lives in Skein (libexec/skein-greeter): greetd with a Quickshell greeter instead
+# of SDDM. The Skein installer sets it up on a first install; this covers a machine that already had
+# Skein.
+if [[ ! -f /usr/local/share/skein-greeter/shell.qml ]]; then
   log "Installing the Quickshell login screen..."
-  "$OMADORA_DIR/libexec/omadora-greeter" install \
-    || log "WARNING: the greeter didn't install - run: omadora-greeter install"
+  "$SKEIN_DIR/libexec/skein-greeter" install \
+    || log "WARNING: the greeter didn't install - run: skein-greeter install"
 fi
 
 log "Symlinking Linux-specific dotfiles..."
@@ -74,10 +79,10 @@ sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$(detect_monitors ||
 # script that lays the screens out the same way (works at login time, no
 # detection needed here).
 log "Matching the SDDM login screen to the monitor layout..."
-sudo install -D -m 755 "$SCRIPT_DIR/../../lib/sddm-monitors.xsetup" /usr/local/bin/omadora-sddm-monitors
+sudo install -D -m 755 "$SCRIPT_DIR/../../lib/sddm-monitors.xsetup" /usr/local/bin/skein-sddm-monitors
 sudo install -d /etc/sddm.conf.d
-printf '[X11]\nDisplayCommand=/usr/local/bin/omadora-sddm-monitors\n' \
-  | sudo tee /etc/sddm.conf.d/omadora-monitors.conf >/dev/null
+printf '[X11]\nDisplayCommand=/usr/local/bin/skein-sddm-monitors\n' \
+  | sudo tee /etc/sddm.conf.d/skein-monitors.conf >/dev/null
 
 # Install workstation tools
 log "Installing workstation tools..."
@@ -163,27 +168,27 @@ fi
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
 
-# Omadora preferences (same as Nobara): Claude as the default agent and the idle
-# screensaver off. Both are plain state files; omadora-default-agent would also
-# launch the agent, and `omactl toggle screensaver` flips instead of setting.
-log "Applying Omadora preferences..."
-mkdir -p "$HOME/.config/omadora/defaults" "$HOME/.local/state/omadora/toggles"
-echo claude >"$HOME/.config/omadora/defaults/agent"
-touch "$HOME/.local/state/omadora/toggles/screensaver-off"
+# Skein preferences (same as Nobara): Claude as the default agent and the idle
+# screensaver off. Both are plain state files; skein-default-agent would also
+# launch the agent, and `skeinctl toggle screensaver` flips instead of setting.
+log "Applying Skein preferences..."
+mkdir -p "$HOME/.config/skein/defaults" "$HOME/.local/state/skein/toggles"
+echo claude >"$HOME/.config/skein/defaults/agent"
+touch "$HOME/.local/state/skein/toggles/screensaver-off"
 
-# Re-apply the current theme so kitty's themed colors file exists (Omadora defaults to
+# Re-apply the current theme so kitty's themed colors file exists (Skein defaults to
 # its own theme on a machine that's never had one set).
 log "Re-applying the current theme..."
-theme="$(cat "$HOME/.config/omadora/current/theme.name" 2>/dev/null || echo matte-black)"
-# First run only: start from matte-black instead of Omadora's own default theme; later
+theme="$(cat "$HOME/.config/skein/current/theme.name" 2>/dev/null || echo matte-black)"
+# First run only: start from matte-black instead of Skein's own default theme; later
 # runs keep whatever theme was picked since.
 theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
 if [[ ! -f "$theme_marker" ]]; then
   theme=matte-black
   mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
 fi
-omactl theme set "$theme" \
-  || log "WARNING: theme re-apply failed - run: omactl theme set <name> from the desktop."
+skeinctl theme set "$theme" \
+  || log "WARNING: theme re-apply failed - run: skeinctl theme set <name> from the desktop."
 
 # Themed starship prompt: needs the shared symlinks (script + template) from above
 log "Rendering the starship prompt for the current theme..."

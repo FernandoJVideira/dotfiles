@@ -5,8 +5,8 @@ local M = {}
 
 local home = os.getenv("HOME")
 M.theme_bin = home .. "/.local/bin/theme"
-M.theme_roots = { home .. "/.local/share/omadora/themes", home .. "/.config/omadora/themes" }
-M.current_file = home .. "/.config/omadora/current/theme.name"
+M.theme_roots = { home .. "/.local/share/skein/themes", home .. "/.config/skein/themes" }
+M.current_file = home .. "/.config/skein/current/theme.name"
 M.path = "/opt/homebrew/bin:/opt/homebrew/sbin:" .. home .. "/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 -- "key = "#rrggbb"" and `mode = "dark"` lines of a theme's colors.toml
