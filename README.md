@@ -1,8 +1,8 @@
 # dotfiles
 
-My personal machine setup: shell, editor, window manager, and the scripts that lay all of it down on a fresh install. It covers the machines I use: a MacBook running Hyprspace as a tiling window manager, and a Nobara machine running Hyprland + Quickshell via my [Skein](https://github.com/FernandoJVideira/skein) fork. Everything else assumes you're one of those.
+My personal machine setup: shell, editor, window manager, and the scripts that lay all of it down on a fresh install. It covers the machines I use: a MacBook running Hyprspace as a tiling window manager, a CachyOS desktop running Omarchy (the Hyprland-based "quattro" layer), and a Nobara machine running Hyprland + Quickshell via my [Skein](https://github.com/FernandoJVideira/skein) fork. Everything else assumes you're one of those.
 
-Skein is the name of my fork of [Omadora](https://github.com/elpritchos/omadora) by elpritchos, which is itself based on [Omarchy](https://omarchy.org) by David Heinemeier Hansson. It provides the desktop and the theme engine on Nobara, and the themes and templates the macOS `theme` command renders, so one theme covers both machines. It was renamed from Omadora when it grew past one OS; an existing machine is moved over by the installers.
+Skein is the name of my fork of [Omadora](https://github.com/elpritchos/omadora) by elpritchos, which is itself based on [Omarchy](https://omarchy.org) by David Heinemeier Hansson. It provides the desktop and the theme engine on Arch and Nobara, and the themes and templates the macOS `theme` command renders, so one theme covers all three machines. It was renamed from Omadora when it grew past one OS; an existing machine is moved over by the installers.
 
 How to use what this installs, day to day, is in [docs/guide.md](docs/guide.md).
 
@@ -15,12 +15,13 @@ bootstrap.sh         entry point, dispatches by OS (and by distro, on Linux)
 common/               dotfiles shared by all machines (zsh, nvim, tmux, ghostty, git)
 macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
+  arch/                Arch + Skein (arch branch) install flow, Hyprland config
   nobara/              Nobara + Skein install flow
   common/              what both Linux distros share (Caps Lock as Super)
 lib/                  shared bash helpers (symlinking, logging)
 ```
 
-Every `.config` folder under `common/`, `macos/`, or `linux/nobara/` mirrors `$HOME` exactly. A file at `common/.config/zsh/.zshrc` becomes a symlink at `~/.config/zsh/.zshrc`, pointing back into this repo. Edit the file here, and the change is live immediately, no reinstall step.
+Every `.config` folder under `common/`, `macos/`, `linux/arch/`, or `linux/nobara/` mirrors `$HOME` exactly. A file at `common/.config/zsh/.zshrc` becomes a symlink at `~/.config/zsh/.zshrc`, pointing back into this repo. Edit the file here, and the change is live immediately, no reinstall step.
 
 ## Running it
 
@@ -28,7 +29,7 @@ Every `.config` folder under `common/`, `macos/`, or `linux/nobara/` mirrors `$H
 ./bootstrap.sh
 ```
 
-It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release`: Nobara (or anything else `ID_LIKE=fedora`) goes to `linux/nobara/install.sh`, anything else is refused. It ends by calling `common/install.sh` (see Common below). Every script is idempotent, so rerunning one just reapplies the current state.
+It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release`: Nobara (or anything else `ID_LIKE=fedora`) goes to `linux/nobara/install.sh`, everything else to `linux/arch/install.sh`. All three end by calling `common/install.sh` (see Common below). Every script is idempotent, so rerunning one just reapplies the current state.
 
 ## macOS
 
@@ -57,22 +58,35 @@ Applying a theme renders the templates into `~/.config/skein/current/theme`, set
 
 The installer applies `gruvbox-classic` the first time only, so rerunning it never undoes a theme picked since. It is the classic Gruvbox Dark this Mac always had, kept as a user theme in `macos/.config/skein/themes`; Skein's own `gruvbox` is the softer gruvbox-material variant.
 
+## Linux (Arch + Skein)
+
+`linux/arch/install.sh` assumes a minimal Arch install (archinstall, no desktop environment or display manager, NetworkManager) with a user account already created. The desktop itself comes from my [Skein](https://github.com/FernandoJVideira/skein) fork (`arch` branch): Hyprland, the Quickshell shell, the SDDM login screen and their packages. Concretely, it:
+
+1. Installs `gum` (for the prompts below), `zsh` (set as the default shell), `git` and `base-devel`.
+2. Asks a few questions interactively via `gum`: whether to set up gaming tools, install Discord, and install OBS.
+3. Clones Skein into `~/.local/share/skein` over HTTPS and runs its installer. On a first install that installer ends with a reboot, so run `./bootstrap.sh` again afterwards to finish. On a machine that already has the checkout it only fast-forwards it (use `skeinctl update` to apply updates).
+4. Symlinks the Arch-specific dotfiles after Skein is in place, so my configs win over its defaults, then installs the remaining packages: Zed, Element, kitty, the zsh config's tools, and from the AUR Brave Origin, Proton Pass CLI, OpenDeck and Spotify.
+5. Enables the Proton Pass SSH agent. `~/.config/proton-pass-cli/pat` is created with a placeholder in place of your personal access token (an existing file is left alone); the unit is skipped, not failed, until you replace it.
+6. Runs the shared dotfiles installer, re-applies the current theme with `skeinctl theme set`, and renders the starship prompt and the Zed theme.
+
+The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the `arch-omarshell-final` tag. This flow has been tested in a VM only; Plymouth, NVIDIA driver packages and real-hardware features (Bluetooth, fingerprint, FIDO2) are not set up or verified yet. On Arch, monitors are set directly in `~/.config/hypr/monitors.lua`.
+
 ## Linux (Nobara + Skein)
 
 `linux/nobara/install.sh` assumes a Nobara (or other Fedora-family) install with a user account already created. The desktop itself comes from my [Skein](https://github.com/FernandoJVideira/skein) fork (`nobara` branch): Hyprland, the Quickshell shell, the login screen and their packages. Concretely, it:
 
-1. Installs `zsh` and sets it as the default shell, plus `git`.
+1. Installs `zsh` and sets it as the default shell, same as the Arch flow, plus `git`.
 2. Clones Skein into `~/.local/share/skein` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `skeinctl update` to apply updates).
 3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Discord, Spotify, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise itself.
 4. Symlinks the Nobara-specific dotfiles after Skein is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
 
 ### Login screen and dropping KDE
 
-The Linux installer makes sure the login screen is Skein's Quickshell greeter: greetd with a Quickshell greeter styled after Omarchy's login (`libexec/skein-greeter` and `default/greeter` in the fork). On a first install the Skein installer does it; on a machine that already had Skein, the installer here runs `skein-greeter install` when it finds no greeter. It replaces Plasma Login Manager, which stays installed but disabled (`skein-greeter rollback` switches back, and `SKEIN_KEEP_LOGIN_MANAGER=1` at install time keeps them). It follows the active theme, puts the form on the monitor `monitors.lua` pins at 0x0, and unlocks the keyring at login. The new login manager starts at the next boot; if it doesn't show up, press Ctrl+Alt+F3 and run `skein-greeter rollback`.
+Both Linux installers make sure the login screen is Skein's Quickshell greeter: greetd with a Quickshell greeter styled after Omarchy's login (`libexec/skein-greeter` and `default/greeter` in the fork). On a first install the Skein installer does it; on a machine that already had Skein, the installer here runs `skein-greeter install` when it finds no greeter. It replaces SDDM on Arch and Plasma Login Manager on Nobara, which stay installed but disabled (`skein-greeter rollback` switches back, and `SKEIN_KEEP_LOGIN_MANAGER=1` at install time keeps them). It follows the active theme, puts the form on the monitor `monitors.lua` pins at 0x0, and unlocks the keyring at login. The new login manager starts at the next boot; if it doesn't show up, press Ctrl+Alt+F3 and run `skein-greeter rollback`.
 
 On Nobara the installer then runs `skein-remove-kde schedule`, which queues the removal of KDE Plasma, its apps and the default apps the ISO ships (LibreOffice, Inkscape, Blender, OBS, VLC, Brave and the rest; the gaming tools stay) as a one-shot unit at the next boot, before the login screen. It can't run during the install, because removing Plasma Login Manager from a running Plasma session ends that session, and the installer with it, in the middle of a dnf transaction. At boot the dnf preview is checked and the removal is refused if it would take a `nobara-*` package, Hyprland, Quickshell, the gaming stack or KWallet. The same run deletes the Plasma config and caches in your home (never KWallet's files) and unused Flatpak runtimes. Follow it with `journalctl -u skein-remove-kde`. To do it by hand from a session greetd started, `skein-remove-kde remove` shows the preview and waits for you to type `REMOVE`, and `skein-remove-kde clean` does the home folder.
 
-Nothing here has run from this repo on a fresh machine yet. The greeter and the removal ran on one Nobara machine; the PAM keyring change, and the boot-time removal need a real run.
+Nothing here has run from this repo on a fresh machine yet. The greeter and the removal ran on one Nobara machine; the Arch greeter, the PAM keyring change, and the boot-time removal need a real run.
 
 ### Caps Lock as Super
 
@@ -82,17 +96,17 @@ On Linux, `Super+h/j/k/l` also moves between Herdr panes and Neovim splits, next
 
 ## ani-cli and OnlyOffice
 
-ani-cli and mpv, which it plays with, are installed on every OS: upstream's own Homebrew tap and the `mpv` formula on macOS (ani-cli would prefer IINA if it were installed, and falls back to mpv), and upstream's COPR with mpv from RPM Fusion on Nobara. OnlyOffice comes as the `onlyoffice` cask, and the Flathub app on Nobara.
+ani-cli and mpv, which it plays with, are installed on every OS: upstream's own Homebrew tap and the `mpv` formula on macOS (ani-cli would prefer IINA if it were installed, and falls back to mpv), the AUR and the repos on Arch, and upstream's COPR with mpv from RPM Fusion on Nobara. OnlyOffice comes as the `onlyoffice` cask, `onlyoffice-bin` from the AUR, and the Flathub app on Nobara.
 
 ## Cloudflare WARP
 
-WARP is installed on every OS from Cloudflare's own builds: the `cloudflare-warp` cask on macOS, and Cloudflare's RPM repo on Nobara (written to `/etc/yum.repos.d/cloudflare-warp.repo` with `gpgcheck` on; it serves Fedora 43 and 44, and `skip_if_unavailable` keeps a newer release from breaking other dnf runs). On Linux the installer also enables `warp-svc`. Registering asks you to accept Cloudflare's terms, so it is left to you: `warp-cli registration new`, then `warp-cli connect`; on macOS, open the WARP app from the menu bar. The macOS installer may ask for your password and for approval of a system extension.
+WARP is installed on every OS from Cloudflare's own builds: the `cloudflare-warp` cask on macOS, `cloudflare-warp-bin` from the AUR on Arch, and Cloudflare's RPM repo on Nobara (written to `/etc/yum.repos.d/cloudflare-warp.repo` with `gpgcheck` on; it serves Fedora 43 and 44, and `skip_if_unavailable` keeps a newer release from breaking other dnf runs). On Linux the installers also enable `warp-svc`. Registering asks you to accept Cloudflare's terms, so it is left to you: `warp-cli registration new`, then `warp-cli connect`; on macOS, open the WARP app from the menu bar. The macOS installer may ask for your password and for approval of a system extension.
 
 ## Common
 
 All platforms end at `common/install.sh`. It symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing the tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`). The same prefix on every OS lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere, and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you.
 
-Dev tools are installed with mise on every OS, from one tracked list, `common/.config/mise/conf.d/dotfiles.toml`: Go, Node, pnpm, Java (Temurin 27 and 17), .NET 10, Neovim, `gh`, `just`, `cloudflared`, golang-migrate, Herdr and Claude Code. `lib/mise.sh` runs `mise install` for it after the symlinks go down, so a new tool is one line in that file, and `mise upgrade` moves a machine forward. It lives in `conf.d` so it merges with a machine's own `~/.config/mise/config.toml` instead of replacing it. Package managers keep the GUI apps, the shell utilities the prompt runs on every command, hugo (mise's build lacks the extended SCSS support) and tmux (mise's build lags Homebrew's, so only Nobara takes it from mise, through its own `conf.d` file).
+Dev tools are installed with mise on every OS, from one tracked list, `common/.config/mise/conf.d/dotfiles.toml`: Go, Node, pnpm, Java (Temurin 27 and 17), .NET 10, Neovim, `gh`, `just`, `cloudflared`, golang-migrate, Herdr and Claude Code. `lib/mise.sh` runs `mise install` for it after the symlinks go down, so a new tool is one line in that file, and `mise upgrade` moves a machine forward. It lives in `conf.d` so it merges with a machine's own `~/.config/mise/config.toml` instead of replacing it. Package managers keep the GUI apps, the shell utilities the prompt runs on every command, hugo (mise's build lacks the extended SCSS support) and tmux (mise's build lags Homebrew's and Arch's, so only Nobara takes it from mise, through its own `conf.d` file).
 
 Two files hold secrets this repo can't ship: `~/.npmrc` (the Gitea token for the `@fernandojvideira` npm registry, on every OS) and `~/.config/proton-pass-cli/pat` (the Proton Pass token the SSH agent logs in with, Linux only; the macOS agent uses the login `pass-cli` keeps in the keychain). `lib/secrets.sh` creates each one with everything except the token, which is a `REPLACE_WITH_...` placeholder, and only when the file doesn't exist, so a file you already have is never touched. At the very end of `./bootstrap.sh` it lists the files that still hold a placeholder and says where to get each token. The Linux SSH agent unit skips itself until the placeholder in `pat` is replaced. On every OS the agent starts with `--vault-name SSH`, so it serves only that vault's keys: GitHub takes the first key that authenticates, and a repo-scoped deploy key offered ahead of your account key makes pushes fail.
 
@@ -120,11 +134,11 @@ The theme is always called "Desktop Theme". `zed-theme-sync` renders `desktop-th
 
 ### Spotify
 
-Spicetify is installed on every OS by `lib/spicetify.sh`: the release tarball goes into `~/.spicetify`, checked against the SHA256 GitHub publishes. Fedora and Terra don't package Spicetify, so one installer covers both OSes.
+Spicetify is installed on every OS by `lib/spicetify.sh`: the release tarball goes into `~/.spicetify`, checked against the SHA256 GitHub publishes. Arch's AUR has Spicetify and Fedora and Terra don't, so one installer covers all three.
 
 It themes Spotify from the current OS theme with a colors-only theme, `skein`, which keeps Spotify's own layout and swaps in the palette. Skein's template engine renders `common/.config/skein/themed/spicetify-color.ini.tpl` on every theme change, and the `spicetify-sync` hook runs `spicetify-theme-sync`, which copies the result into the theme and applies it (`backup apply` the first time, a quick `refresh` afterwards). A running Spotify is restarted afterwards so it shows the new colors (playback stops; `THEME_SKIP=spotify` leaves it running), and a closed one stays closed.
 
-It needs Spotify started at least once, and a Spotify update undoes Spicetify's patch: run `spicetify-theme-sync --force` afterwards. spotify-launcher (Nobara) installs into the home directory, so nothing is needed there.
+It needs Spotify started at least once, and a Spotify update undoes Spicetify's patch: run `spicetify-theme-sync --force` afterwards. On Arch the installer makes `/opt/spotify` writable for it; spotify-launcher (Nobara) installs into the home directory, so nothing is needed there.
 
 ### Herdr: Neovim with Claude Code below it
 

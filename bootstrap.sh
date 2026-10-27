@@ -16,8 +16,7 @@ case "$(uname -s)" in
     if [[ "$os_id" == "nobara" || "$os_id_like" == *fedora* ]]; then
       "$SCRIPT_DIR/linux/nobara/install.sh"
     else
-      echo "Unsupported Linux distro: ${os_id:-unknown} (only Nobara/Fedora)" >&2
-      exit 1
+      "$SCRIPT_DIR/linux/arch/install.sh"
     fi
     ;;
   *)
