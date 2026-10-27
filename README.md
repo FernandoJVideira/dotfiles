@@ -81,10 +81,11 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 
 ### Dropping KDE (optional)
 
-Nobara's ISO is KDE Plasma, and Omadora runs next to it. `linux/nobara-login/remove-kde.sh` removes Plasma, its apps and the default apps this setup replaces, in two steps so a broken login screen never costs the desktop:
+Nobara's ISO is KDE Plasma, and Omadora runs next to it. `linux/nobara-login/remove-kde.sh` removes Plasma, its apps and the default apps this setup replaces, in steps so a broken login screen never costs the desktop:
 
 1. `remove-kde.sh greeter` installs greetd and cage, sets up a Quickshell login screen (`linux/nobara-login/greeter/shell.qml`, using `Quickshell.Services.Greetd`) and makes greetd the login manager. Plasma Login Manager stays installed, only disabled, because it depends on KWin and the rest of Plasma and would otherwise block the removal. The greeter is styled after Omarchy's login screen (a plain background, the Omadora logo, a lock beside an entry box that fills with bullets). cage stretches one window across every monitor, so the QML lays the screens out itself: the form goes on the monitor Hyprland has at 0,0 and the others get the plain background. Colors, user name, logo and that monitor come from the current theme (`greeter-theme-sync`, run by a theme hook, so it follows `omactl theme set`). It launches the same `uwsm` Hyprland session as Omadora's session file, and PAM unlocks KWallet at login. Reboot to try it; from a text console (Ctrl+Alt+F3), `remove-kde.sh rollback` restores Plasma Login Manager.
 2. `remove-kde.sh remove`, run from a session that greetd started (it checks with `loginctl`), lists the packages, previews the `dnf remove`, refuses a preview that would take a `nobara-*` package, Hyprland, Quickshell, the gaming stack or KWallet, and asks you to type `REMOVE`. `--kde-only` keeps the default apps (LibreOffice, Inkscape, Blender, OBS, VLC, Brave and the rest). A second prompt offers an `autoremove` preview for the Qt and KF6 leftovers.
+3. `remove-kde.sh clean` lists what Plasma left in your home (its config, caches and data, the KDE apps' settings) and any unused Flatpak runtimes, and deletes them once you type `DELETE`. KWallet's files are never listed.
 
 Nothing here has run on a Nobara machine yet. The package matching and the preview guard are tested against a fake package list; the greeter, the PAM change and the dnf behavior need a real box, so read the preview before typing `REMOVE`.
 

@@ -6,6 +6,8 @@
 #                            manager (Plasma Login Manager stays installed, just disabled). Reboot after.
 #   remove-kde.sh remove     once you are logged in through greetd: preview, then remove KDE Plasma, its
 #                            apps and the default apps Nobara ships. [--kde-only] keeps the other apps.
+#   remove-kde.sh clean      after `remove`: list the Plasma/KDE config, caches and unused Flatpak
+#                            runtimes it left in your home, and delete them once you type DELETE.
 #   remove-kde.sh rollback   make Plasma Login Manager the login manager again.
 #   remove-kde.sh status
 #
@@ -197,13 +199,70 @@ cmd_remove() {
   printf 'Also remove packages nothing needs any more? Preview first [y/N]: '
   local answer; read -r answer
   [[ $answer =~ ^[Yy] ]] && { run_transaction "autoremove" autoremove || true; }
-  log "Done. Plasma is gone; the login screen is the Quickshell greeter."
+  log "Done. Plasma is gone; the login screen is the Quickshell greeter. Next: $0 clean (KDE leftovers in your home)."
+}
+
+# KDE leftovers in $HOME. KWallet (kwalletrc, kwalletd/) is deliberately not listed: it is Omadora's
+# secret service. Globs are relative to $HOME and expanded here, never passed to rm unexpanded.
+CLEAN_GLOBS=(
+  '.config/plasma*' '.config/kde*' '.config/kwin*' '.config/kscreen*' '.config/kded*' '.config/ksmserver*'
+  '.config/kactivitymanagerd*' '.config/kglobalshortcutsrc' '.config/kxkbrc' '.config/klipperrc'
+  '.config/systemsettingsrc' '.config/powermanagementprofilesrc' '.config/breezerc' '.config/baloofilerc'
+  '.config/dolphinrc' '.config/konsolerc' '.config/katerc' '.config/kate*' '.config/kwriterc'
+  '.config/okularrc' '.config/okularpartrc' '.config/gwenviewrc' '.config/arkrc' '.config/spectaclerc'
+  '.config/kcalcrc' '.config/kdeconnect' '.config/plasmarc' '.config/plasmashellrc'
+  '.local/share/plasma*' '.local/share/kate' '.local/share/konsole' '.local/share/dolphin'
+  '.local/share/baloo' '.local/share/kactivitymanagerd' '.local/share/klipper' '.local/share/kscreen'
+  '.local/share/okular' '.local/share/gwenview' '.local/share/kded*' '.local/share/kwin'
+  '.local/share/kxmlgui5' '.local/share/kservices*' '.local/share/knewstuff3' '.local/share/kpeople'
+  '.cache/plasma*' '.cache/kde*' '.cache/ksycoca*' '.cache/kio*' '.cache/baloo*' '.cache/kscreen*'
+)
+
+cmd_clean() {
+  not_in_plasma
+  rpm -q plasma-desktop &>/dev/null && die "Plasma is still installed. Run '$0 remove' first."
+  local found=() glob path
+  shopt -s nullglob
+  for glob in "${CLEAN_GLOBS[@]}"; do
+    for path in "$HOME"/$glob; do
+      [[ -e $path || -L $path ]] || continue
+      case $path in
+        "$HOME"/.config/kwalletrc | "$HOME"/.local/share/kwalletd*) continue ;;
+      esac
+      found+=("$path")
+    done
+  done
+  shopt -u nullglob
+  # two globs can match the same path
+  ((${#found[@]})) && mapfile -t found < <(printf '%s\n' "${found[@]}" | sort -u)
+
+  if ((${#found[@]})); then
+    log "${#found[@]} KDE leftovers in $HOME:"
+    du -sh -- "${found[@]}" 2>/dev/null | sed 's/^/  /'
+  else
+    log "No KDE leftovers in $HOME."
+  fi
+
+  local runtimes=""
+  if command -v flatpak >/dev/null; then
+    runtimes=$(flatpak uninstall --unused --assumeno 2>&1 | grep -E '^ *[0-9]+\.' || true)
+    [[ -n $runtimes ]] && { log "Unused Flatpak runtimes:"; printf '%s\n' "$runtimes"; }
+  fi
+
+  ((${#found[@]})) || [[ -n $runtimes ]] || return 0
+  printf '\nType DELETE to remove the above (your KWallet data stays): '
+  local answer; read -r answer
+  [[ $answer == DELETE ]] || { log "Left everything in place."; return 0; }
+  ((${#found[@]})) && rm -rf -- "${found[@]}"
+  [[ -n $runtimes ]] && flatpak uninstall --unused -y
+  log "Done."
 }
 
 case "${1:-status}" in
 greeter) cmd_greeter ;;
 remove) shift; cmd_remove "$@" ;;
+clean) cmd_clean ;;
 rollback) cmd_rollback ;;
 status) cmd_status ;;
-*) die "usage: $0 greeter | remove [--kde-only] | rollback | status" ;;
+*) die "usage: $0 greeter | remove [--kde-only] | clean | rollback | status" ;;
 esac
