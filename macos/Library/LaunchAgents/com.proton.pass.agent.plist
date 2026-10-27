@@ -9,7 +9,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>exec /opt/homebrew/bin/pass-cli ssh-agent start --create-new-identities SSH --socket-path "$HOME/.ssh/proton-pass-agent.sock"</string>
+        <string>exec /opt/homebrew/bin/pass-cli ssh-agent start --vault-name SSH --create-new-identities SSH --socket-path "$HOME/.ssh/proton-pass-agent.sock"</string>
     </array>
 
     <key>RunAtLoad</key>
