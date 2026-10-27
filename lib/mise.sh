@@ -2,14 +2,14 @@
 # Installs every dev tool listed in common/.config/mise/conf.d/dotfiles.toml with mise, the same
 # way on every OS: Go, Node, pnpm, Java, .NET, Neovim, gh, just, cloudflared, golang-migrate, Herdr
 # and Claude Code. Package managers keep the rest: GUI apps, shell utilities, hugo (mise's build
-# lacks the extended SCSS support) and tmux (mise's build lags Homebrew's and Arch's; only Nobara,
+# lacks the extended SCSS support) and tmux (mise's build lags Homebrew's; only Nobara,
 # where Fedora's is stale, adds it, in linux/nobara/.config/mise/conf.d).
 #
 # The list lives in conf.d so it merges with a machine's own ~/.config/mise/config.toml (what
 # `mise use --global` writes, or Omarchy's) instead of replacing it. Versions are "latest", so
 # `mise install` only fills in what is missing; `mise upgrade` moves a machine forward.
 #
-# mise itself comes from the Brewfile (macOS), Omarchy (Arch) and mise.run (Nobara). Run after
+# mise itself comes from the Brewfile (macOS) and mise.run (Nobara). Run after
 # symlink_dotfiles, since that is what puts the list in place.
 #
 # Nothing here needs sudo. mise prints optional macOS Java integration commands (symlinks into
