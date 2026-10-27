@@ -51,6 +51,7 @@ cmd-shift-w = 'exec-and-forget open -na Safari'
 cmd-shift-e = 'exec-and-forget open -na Zed'
 alt-m = 'new-window-or-open Spotify'
 alt-shift-p = 'open-terminal kitty btop'
+alt-shift-t = 'exec-and-forget open -g hammerspoon://theme'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace
 ctrl-1 = 'workspace 1'
