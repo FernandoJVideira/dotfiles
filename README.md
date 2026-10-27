@@ -15,6 +15,7 @@ macos/                Homebrew, Hyprspace, sketchybar, macOS defaults
 linux/
   arch/                Arch + Omadora (arch branch) install flow, Hyprland config
   nobara/              Nobara + Omadora install flow
+  nobara-login/        opt-in: Quickshell login screen and KDE removal
   common/              what both Linux distros share (Caps Lock as Super)
 lib/                  shared bash helpers (symlinking, logging)
 ```
@@ -77,6 +78,15 @@ The previous Arch flow (CachyOS + Omarchy through omarshell) is preserved at the
 2. Clones Omadora into `~/.local/share/omadora` over HTTPS and runs its installer. On a machine that already has the checkout it only fast-forwards it (use `omactl update` to apply updates).
 3. Installs the remaining packages: Hyprland/Quickshell runtime dependencies, Zed, Discord, Spotify, the zsh config's tools, Proton Pass CLI, Brave Origin, and mise itself.
 4. Symlinks the Nobara-specific dotfiles after Omadora is in place, so my configs win over its defaults, then enables the Proton Pass agent and the crash watcher.
+
+### Dropping KDE (optional)
+
+Nobara's ISO is KDE Plasma, and Omadora runs next to it. `linux/nobara-login/remove-kde.sh` removes Plasma, its apps and the default apps this setup replaces, in two steps so a broken login screen never costs the desktop:
+
+1. `remove-kde.sh greeter` installs greetd and cage, sets up a Quickshell login screen (`linux/nobara-login/greeter/shell.qml`, using `Quickshell.Services.Greetd`) and makes greetd the login manager. Plasma Login Manager stays installed, only disabled, because it depends on KWin and the rest of Plasma and would otherwise block the removal. The greeter takes its colors, wallpaper and user name from the current theme (`greeter-theme-sync`, run by a theme hook, so it follows `omactl theme set`), launches the same `uwsm` Hyprland session as Omadora's session file, and PAM unlocks KWallet at login. Reboot to try it; from a text console (Ctrl+Alt+F3), `remove-kde.sh rollback` restores Plasma Login Manager.
+2. `remove-kde.sh remove`, run from a session that greetd started (it checks with `loginctl`), lists the packages, previews the `dnf remove`, refuses a preview that would take a `nobara-*` package, Hyprland, Quickshell, the gaming stack or KWallet, and asks you to type `REMOVE`. `--kde-only` keeps the default apps (LibreOffice, Inkscape, Blender, OBS, VLC, Brave and the rest). A second prompt offers an `autoremove` preview for the Qt and KF6 leftovers.
+
+Nothing here has run on a Nobara machine yet. The package matching and the preview guard are tested against a fake package list; the greeter, the PAM change and the dnf behavior need a real box, so read the preview before typing `REMOVE`.
 
 ### Caps Lock as Super
 

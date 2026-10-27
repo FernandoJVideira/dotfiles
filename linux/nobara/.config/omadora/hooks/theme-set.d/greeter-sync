@@ -1,0 +1,4 @@
+#!/bin/bash
+# Re-theme the Quickshell login screen, when it is set up (linux/nobara-login/remove-kde.sh greeter).
+"$HOME/.local/bin/greeter-theme-sync" >/dev/null 2>&1 || true
+exit 0
