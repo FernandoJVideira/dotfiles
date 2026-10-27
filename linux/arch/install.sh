@@ -32,7 +32,7 @@ sudo chsh -s "$(command -v zsh)" "$USER"
 # (update it afterwards with `skeinctl update`).
 SKEIN_DIR="$HOME/.local/share/skein"
 SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}"
-SKEIN_REF="${SKEIN_REF:-skein-arch}"
+SKEIN_REF="${SKEIN_REF:-arch}"
 # python-filelock: pipx (used by the Skein installer) imports it but the package does not depend on it
 sudo pacman -S --needed --noconfirm git base-devel python-filelock
 # a machine that still has Omadora's checkout: move it to Skein's name and ref first
