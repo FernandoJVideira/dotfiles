@@ -144,6 +144,32 @@ if ! rpm -q zed &>/dev/null || ! rpm -q spotify-launcher &>/dev/null || ! rpm -q
   log "WARNING: zed, spotify-launcher and/or discord still not installed - check 'cat /etc/yum.repos.d/terra.repo' and 'dnf search zed' by hand."
 fi
 
+# Cloudflare WARP: no Fedora or Terra package, so Cloudflare's own RPM repo, written the way
+# https://pkg.cloudflareclient.com/cloudflare-warp-ascii.repo has it (gpgcheck on; dnf imports
+# Cloudflare's key from gpgkey on the first install). It serves Fedora 43 and 44 only, so
+# skip_if_unavailable keeps a release it doesn't serve from breaking every other dnf run.
+# Registering, which asks you to accept Cloudflare's terms, is left to you:
+# warp-cli registration new, then warp-cli connect.
+if ! rpm -q cloudflare-warp &>/dev/null; then
+  log "Installing Cloudflare WARP..."
+  sudo tee /etc/yum.repos.d/cloudflare-warp.repo >/dev/null <<'REPO'
+[cloudflare-warp-stable]
+name=cloudflare-warp-stable
+baseurl=https://pkg.cloudflareclient.com/rpm/$releasever
+enabled=1
+type=rpm
+gpgcheck=1
+gpgkey=https://pkg.cloudflareclient.com/pubkey.gpg
+skip_if_unavailable=True
+REPO
+  sudo dnf install -y --skip-unavailable cloudflare-warp \
+    || log "WARNING: couldn't install Cloudflare WARP - check 'cat /etc/yum.repos.d/cloudflare-warp.repo' and 'dnf search cloudflare-warp'."
+fi
+if rpm -q cloudflare-warp &>/dev/null; then
+  sudo systemctl enable --now warp-svc.service \
+    || log "WARNING: couldn't start warp-svc - check: journalctl -u warp-svc"
+fi
+
 # Proton Pass CLI (Arch gets it from the AUR, macOS from Homebrew). No Fedora
 # package exists; Proton's own installer is the documented route - it drops
 # pass-cli in ~/.local/bin (no sudo), verifies a SHA256, and needs curl + jq.

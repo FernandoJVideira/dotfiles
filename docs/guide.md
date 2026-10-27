@@ -39,6 +39,8 @@ afterwards. The last lines of the output list anything that still needs you:
   never touched. Once `pat` holds a real token, run `systemctl --user restart proton-pass-agent.service`.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
   prints the commands and leaves the decision to you.
+- Register Cloudflare WARP: `warp-cli registration new` (it asks you to accept Cloudflare's terms), then
+  `warp-cli connect`. On macOS, open the WARP app from the menu bar instead.
 - Start Spotify once, so Spicetify has something to theme.
 - Open Zed once, then run `zed-extensions-check` to compare its extensions with the tracked list.
 
