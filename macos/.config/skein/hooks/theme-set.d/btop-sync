@@ -4,13 +4,13 @@
 # while btop runs: it rewrites btop.conf on exit and would undo the edit.
 set -euo pipefail
 
-SRC="$HOME/.config/omadora/current/theme/btop.theme"
+SRC="$HOME/.config/skein/current/theme/btop.theme"
 [[ -f $SRC ]] || exit 0
 
 mkdir -p "$HOME/.config/btop/themes"
-ln -sf "$SRC" "$HOME/.config/btop/themes/omadora.theme"
+ln -sf "$SRC" "$HOME/.config/btop/themes/skein.theme"
 
 CONF="$HOME/.config/btop/btop.conf"
-if [[ -f $CONF ]] && ! grep -q '^color_theme = "omadora"' "$CONF" && ! pgrep -x btop >/dev/null; then
-  sed -i '' 's|^color_theme = .*|color_theme = "omadora"|' "$CONF"
+if [[ -f $CONF ]] && ! grep -q '^color_theme = "skein"' "$CONF" && ! pgrep -x btop >/dev/null; then
+  sed -i '' 's|^color_theme = .*|color_theme = "skein"|' "$CONF"
 fi

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Make Neovim (NvChad) follow the new theme. Called with the theme's slug as $1 on every
-# OS (Linux's omactl, macOS's `theme` command). Omadora's template engine renders the
-# palette as an NvChad theme (common/.config/omadora/themed/nvchad-theme.lua.tpl); this
-#   1. installs it as ~/.config/nvim/lua/themes/omadora.lua (a user theme for base46),
+# OS (Linux's skeinctl, macOS's `theme` command). Skein's template engine renders the
+# palette as an NvChad theme (common/.config/skein/themed/nvchad-theme.lua.tpl); this
+#   1. installs it as ~/.config/nvim/lua/themes/skein.lua (a user theme for base46),
 #   2. points the state file NvChad's chadrc.lua reads (lua/omarchy_theme.lua) at it,
 #   3. recompiles NvChad's highlight cache, so a Neovim started later is already themed
 #      (a running one only repaints when told to, below; without this the cache would
@@ -10,7 +10,7 @@
 #   4. tells running Neovim instances to reload (OmarchyReloadTheme in init.lua).
 set -euo pipefail
 
-SRC="$HOME/.config/omadora/current/theme/nvchad-theme.lua"
+SRC="$HOME/.config/skein/current/theme/nvchad-theme.lua"
 STATE_FILE="$HOME/.local/state/nvim/omarchy_theme"
 DEST_DIR="$HOME/.config/nvim/lua/themes"
 
@@ -20,8 +20,8 @@ if [[ ! -f $SRC ]]; then
 fi
 
 mkdir -p "$DEST_DIR" "$(dirname "$STATE_FILE")"
-cmp -s "$SRC" "$DEST_DIR/omadora.lua" 2>/dev/null || cp "$SRC" "$DEST_DIR/omadora.lua"
-echo omadora >"$STATE_FILE"
+cmp -s "$SRC" "$DEST_DIR/skein.lua" 2>/dev/null || cp "$SRC" "$DEST_DIR/skein.lua"
+echo skein >"$STATE_FILE"
 
 command -v nvim >/dev/null 2>&1 || exit 0
 

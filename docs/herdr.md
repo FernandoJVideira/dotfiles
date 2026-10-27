@@ -121,7 +121,7 @@ those two items away gave a single empty workspace.
 
 ## Theme
 
-Herdr follows every Omadora theme. Its base is the `terminal` theme (colors from your terminal's palette), and on each theme change the `herdr-sync` hook runs `herdr-theme-sync`, which builds the active row, button, tab and label colors from the theme's own palette so every text/background pair keeps at least 4.5:1 contrast. The new colors show within a couple of seconds. If something stays stale, resize the window or `prefix Shift+R`.
+Herdr follows every Skein theme. Its base is the `terminal` theme (colors from your terminal's palette), and on each theme change the `herdr-sync` hook runs `herdr-theme-sync`, which builds the active row, button, tab and label colors from the theme's own palette so every text/background pair keeps at least 4.5:1 contrast. The new colors show within a couple of seconds. If something stays stale, resize the window or `prefix Shift+R`.
 
 Edit `common/.config/herdr/config.base.toml` (the keys, the settings), not `~/.config/herdr/config.toml`: that one is generated, and Herdr's own settings screen writes to it, so the next theme change overwrites those edits.
 

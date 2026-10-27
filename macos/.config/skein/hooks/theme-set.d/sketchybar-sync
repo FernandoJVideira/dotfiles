@@ -5,7 +5,7 @@
 # from a second invocation while it runs (it's started by Hyprspace on login).
 set -euo pipefail
 
-COLORS="$HOME/.config/omadora/current/theme/macos-colors.sh"
+COLORS="$HOME/.config/skein/current/theme/macos-colors.sh"
 [[ -f $COLORS ]] || exit 0
 # shellcheck source=/dev/null
 source "$COLORS"

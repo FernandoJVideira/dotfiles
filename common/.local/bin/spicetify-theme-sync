@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Theme Spotify from the current OS theme, through Spicetify.
 #   spicetify-theme-sync [--force]
-# The colors come from current/theme/spicetify-color.ini, which Omadora's template engine
-# renders from common/.config/omadora/themed/spicetify-color.ini.tpl (Linux's omactl and
-# macOS's `theme` command alike). This copies them into the Spicetify theme "omadora" (a
+# The colors come from current/theme/spicetify-color.ini, which Skein's template engine
+# renders from common/.config/skein/themed/spicetify-color.ini.tpl (Linux's skeinctl and
+# macOS's `theme` command alike). This copies them into the Spicetify theme "skein" (a
 # colors-only theme: Spotify's own layout), points Spicetify at it, and applies:
 #   first run / --force   `spicetify backup apply`, falling back to `restore backup apply`
 #                         when Spotify has updated itself since the backup
@@ -26,7 +26,7 @@ spotify_running() { pgrep -x Spotify >/dev/null 2>&1 || pgrep -x spotify >/dev/n
 was_running=0
 spotify_running && was_running=1
 
-SRC="$HOME/.config/omadora/current/theme/spicetify-color.ini"
+SRC="$HOME/.config/skein/current/theme/spicetify-color.ini"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/spicetify-theme-sync"
 
 spice=$(command -v spicetify 2>/dev/null || true)
@@ -61,7 +61,7 @@ cfg() { "$spice" config "$1" 2>/dev/null || true; }
 
 # Spicetify writes its config on first use; ask for the path so it exists
 config_file=$("$spice" -c 2>/dev/null || true)
-theme_dir="$(dirname "${config_file:-$HOME/.config/spicetify/config-xpui.ini}")/Themes/omadora"
+theme_dir="$(dirname "${config_file:-$HOME/.config/spicetify/config-xpui.ini}")/Themes/skein"
 
 spotify_path=$(cfg spotify_path)
 if [[ -z $spotify_path || ! -d $spotify_path ]]; then
@@ -94,8 +94,8 @@ changed=0
 cmp -s "$SRC" "$theme_dir/color.ini" 2>/dev/null || { cp "$SRC" "$theme_dir/color.ini"; changed=1; }
 
 # select it (only writes the config when something differs)
-[[ $(cfg current_theme) == omadora ]] || { "$spice" config current_theme omadora >/dev/null; changed=1; }
-[[ $(cfg color_scheme) == omadora ]] || { "$spice" config color_scheme omadora >/dev/null; changed=1; }
+[[ $(cfg current_theme) == skein ]] || { "$spice" config current_theme skein >/dev/null; changed=1; }
+[[ $(cfg color_scheme) == skein ]] || { "$spice" config color_scheme skein >/dev/null; changed=1; }
 [[ $(cfg inject_css) == 1 ]] || "$spice" config inject_css 1 >/dev/null
 [[ $(cfg replace_colors) == 1 ]] || "$spice" config replace_colors 1 >/dev/null
 

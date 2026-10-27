@@ -5,9 +5,9 @@ CONFIG_DIR="$HOME/.config/sketchybar"
 PLUGIN_DIR="$CONFIG_DIR/plugins"
 
 # === COLORS ===
-# Rendered from the current theme by the `theme` command (macos/.config/omadora/
+# Rendered from the current theme by the `theme` command (macos/.config/skein/
 # themed/macos-colors.sh.tpl); Gruvbox Dark values until the first theme is set.
-COLORS_FILE="$HOME/.config/omadora/current/theme/macos-colors.sh"
+COLORS_FILE="$HOME/.config/skein/current/theme/macos-colors.sh"
 if [[ -f $COLORS_FILE ]]; then
   # shellcheck source=/dev/null
   source "$COLORS_FILE"

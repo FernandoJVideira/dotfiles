@@ -1,8 +1,8 @@
 # Classic Gruvbox Dark (morhetz), the palette this Mac used before it switched to
-# Omadora's themes. Omadora's own "gruvbox" is the softer gruvbox-material variant.
+# Skein's themes. Skein's own "gruvbox" is the softer gruvbox-material variant.
 # A user theme: `theme` lists it next to the stock ones; it has no wallpapers, so
 # picking it leaves the desktop picture alone. Unlisted keys (dark_background,
-# darker_background, brown, ...) are derived by Omadora's palette rules.
+# darker_background, brown, ...) are derived by Skein's palette rules.
 mode = "dark"
 
 accent = "#83a598"

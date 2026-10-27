@@ -14,9 +14,9 @@ config-version = 2
 start-at-login = true
 
 after-startup-command = [
-    # Border colors follow the theme (see macos/.config/omadora/themed/macos-colors.sh.tpl);
+    # Border colors follow the theme (see macos/.config/skein/themed/macos-colors.sh.tpl);
     # the fallbacks are the old Gruvbox ones, used until the first theme is set.
-    'exec-and-forget . ~/.config/omadora/current/theme/macos-colors.sh 2>/dev/null; exec /opt/homebrew/opt/borders/bin/borders active_color=${BORDER_ACTIVE:-0xfffe8019} inactive_color=${BORDER_INACTIVE:-0x77ebdbb2} width=3.0',
+    'exec-and-forget . ~/.config/skein/current/theme/macos-colors.sh 2>/dev/null; exec /opt/homebrew/opt/borders/bin/borders active_color=${BORDER_ACTIVE:-0xfffe8019} inactive_color=${BORDER_INACTIVE:-0x77ebdbb2} width=3.0',
 ]
 
 exec-on-workspace-change = [

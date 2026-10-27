@@ -1,8 +1,8 @@
-# Dynamic theme colors, rendered from the current Omadora theme (`omactl theme set` on
+# Dynamic theme colors, rendered from the current Skein theme (`skeinctl theme set` on
 # Linux, the `theme` command on macOS); Omarchy's path kept for machines still on it.
 # Both are silently skipped when absent.
 config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
-config-file = ?"~/.config/omadora/current/theme/ghostty.conf"
+config-file = ?"~/.config/skein/current/theme/ghostty.conf"
 
 # Font
 font-family = "JetBrainsMono Nerd Font"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Switch the macOS theme the way `omactl theme set` does on Linux.
+# Switch the macOS theme the way `skeinctl theme set` does on Linux.
 #   theme                 main menu: Theme, Wallpaper, Next wallpaper, Update themes
 #   theme pick            pick a theme (fzf with a live preview; gum or select without it)
 #   theme set <name>      apply a theme
@@ -7,26 +7,26 @@
 #   theme current         name of the current theme
 #   theme bg              pick a wallpaper of the current theme (fzf, with previews)
 #   theme bg next         cycle to the theme's next wallpaper
-#   theme update          pull the latest themes from the Omadora fork
+#   theme update          pull the latest themes from the Skein fork
 #   theme preview <name>  show a theme's palette (and its screenshot, in kitty/ghostty)
 #
-# The themes, the palette rules and the templates are Omadora's own, so a theme looks
+# The themes, the palette rules and the templates are Skein's own, so a theme looks
 # the same here as on the Linux machines: this keeps a sparse clone of the fork in
-# ~/.local/share/omadora (themes + templates + the two scripts below, a few hundred KB;
+# ~/.local/share/skein (themes + templates + the two scripts below, a few hundred KB;
 # a theme's wallpapers are fetched the first time it is picked) and runs
-# omadora-theme-color / omadora-theme-set-templates from it. Those need bash 4+, hence
+# skein-theme-color / skein-theme-set-templates from it. Those need bash 4+, hence
 # Homebrew's bash; this driver itself runs on the system bash 3.2.
 #
-# What happens on `theme set`, same order as omadora-theme-set:
-#   1. stage the theme in ~/.config/omadora/current/next-theme and render every
-#      template into it (default/themed/*.tpl plus ~/.config/omadora/themed/*.tpl,
-#      which is where macos/.config/omadora/themed/ lands)
-#   2. swap it in as ~/.config/omadora/current/theme, record the name
+# What happens on `theme set`, same order as skein-theme-set:
+#   1. stage the theme in ~/.config/skein/current/next-theme and render every
+#      template into it (default/themed/*.tpl plus ~/.config/skein/themed/*.tpl,
+#      which is where macos/.config/skein/themed/ lands)
+#   2. swap it in as ~/.config/skein/current/theme, record the name
 #   3. wallpaper and the macOS light/dark appearance
 #   4. reload the running terminals (kitty, ghostty) and btop
-#   5. run ~/.config/omadora/hooks/theme-set.d/* with the theme name
+#   5. run ~/.config/skein/hooks/theme-set.d/* with the theme name
 #      (starship, zed, neovim, sketchybar, borders, btop, and the macOS accent / folder
-#      color: macos/.config/omadora/hooks)
+#      color: macos/.config/skein/hooks)
 #
 # THEME_SKIP="wallpaper,appearance,reload,hooks,accent,finder,spotify" skips those steps
 # (used for testing; "finder" only skips restarting Finder and the Dock after a folder color
@@ -34,32 +34,33 @@
 # ways the terminals are recolored).
 set -euo pipefail
 
-REPO_URL="${OMADORA_REPO:-https://github.com/FernandoJVideira/omadora.git}"
-export OMADORA_ROOT="${OMADORA_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/omadora}"
-export OMADORA_CONFIG_HOME="${OMADORA_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}/omadora}"
+REPO_URL="${SKEIN_REPO:-https://github.com/FernandoJVideira/skein.git}"
+SKEIN_REF="${SKEIN_REF:-skein-nobara}"
+export SKEIN_ROOT="${SKEIN_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/skein}"
+export SKEIN_CONFIG_HOME="${SKEIN_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}/skein}"
 
-THEMES_DIR="$OMADORA_ROOT/themes"
-USER_THEMES_DIR="$OMADORA_CONFIG_HOME/themes"
-USER_BACKGROUNDS_DIR="$OMADORA_CONFIG_HOME/backgrounds"
-CURRENT_DIR="$OMADORA_CONFIG_HOME/current"
+THEMES_DIR="$SKEIN_ROOT/themes"
+USER_THEMES_DIR="$SKEIN_CONFIG_HOME/themes"
+USER_BACKGROUNDS_DIR="$SKEIN_CONFIG_HOME/backgrounds"
+CURRENT_DIR="$SKEIN_CONFIG_HOME/current"
 CURRENT_THEME_DIR="$CURRENT_DIR/theme"
 NEXT_THEME_DIR="$CURRENT_DIR/next-theme"
 THEME_NAME_FILE="$CURRENT_DIR/theme.name"
 BACKGROUND_LINK="$CURRENT_DIR/background"
-HOOKS_DIR="$OMADORA_CONFIG_HOME/hooks"
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/omadora"
+HOOKS_DIR="$SKEIN_CONFIG_HOME/hooks"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/skein"
 
 die() { echo "theme: $*" >&2; exit 1; }
 warn() { echo "theme: warning: $*" >&2; }
 skipped() { [[ ,${THEME_SKIP:-}, == *",$1,"* ]]; }
 
-# Omadora's scripts start with `#!/usr/bin/env bash` and call each other, so
+# Skein's scripts start with `#!/usr/bin/env bash` and call each other, so
 # Homebrew's bash has to win on PATH for all of them, not just the first.
 BASH5=
 for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash; do
   [[ -x $candidate ]] && { BASH5=$candidate; break; }
 done
-[[ -n $BASH5 ]] || die "needs Homebrew's bash (brew install bash) to run Omadora's scripts"
+[[ -n $BASH5 ]] || die "needs Homebrew's bash (brew install bash) to run Skein's scripts"
 export PATH="$(dirname "$BASH5"):$PATH"
 
 # A git run that gets killed (Ctrl-C, or fzf dropping a preview) leaves its lock files
@@ -69,36 +70,60 @@ clear_stale_git_locks() {
   local lock
   pgrep -x git >/dev/null 2>&1 && return 0
   for lock in index.lock config.lock shallow.lock info/sparse-checkout.lock; do
-    [[ -f $OMADORA_ROOT/.git/$lock ]] && rm -f "$OMADORA_ROOT/.git/$lock"
+    [[ -f $SKEIN_ROOT/.git/$lock ]] && rm -f "$SKEIN_ROOT/.git/$lock"
   done
   return 0
 }
 
+# Only what rendering needs. Wallpapers and previews are the big files; a theme's wallpapers are added
+# by fetch_backgrounds the first time it is applied.
+set_sparse_checkout() {
+  git -C "$SKEIN_ROOT" sparse-checkout set --no-cone \
+    '/lib/common/' '/libexec/skein-theme-color' '/libexec/skein-theme-set-templates' \
+    '/themes/' '/default/themed/' '!/themes/*/backgrounds/' '!/themes/*/preview.png'
+}
+
+# A machine that still has Omadora's directories: move them to Skein's names (the old path stays as a
+# symlink), and move the sparse clone to the ref with the renamed files and redo its sparse patterns.
+migrate_from_omadora() {
+  local base old new
+  for base in "${XDG_CONFIG_HOME:-$HOME/.config}" "${XDG_CACHE_HOME:-$HOME/.cache}" "${XDG_DATA_HOME:-$HOME/.local/share}"; do
+    old="$base/omadora"
+    new="$base/skein"
+    if [[ -d $old && ! -L $old && ! -e $new ]]; then mv "$old" "$new" && ln -s "$new" "$old"; fi
+  done
+  [[ -d $SKEIN_ROOT/.git ]] || return 0
+  git -C "$SKEIN_ROOT" remote set-url origin "$REPO_URL" 2>/dev/null || true
+  if [[ ! -x $SKEIN_ROOT/libexec/skein-theme-color ]]; then
+    echo "Moving the Skein themes to $SKEIN_REF..."
+    git -C "$SKEIN_ROOT" fetch -q --depth 1 origin "$SKEIN_REF" &&
+      git -C "$SKEIN_ROOT" checkout -q -B "$SKEIN_REF" FETCH_HEAD &&
+      set_sparse_checkout || warn "couldn't move $SKEIN_ROOT to $SKEIN_REF (offline?)"
+  fi
+  return 0
+}
+
 ensure_repo() {
-  if [[ -d $OMADORA_ROOT/.git ]]; then
+  migrate_from_omadora
+  if [[ -d $SKEIN_ROOT/.git ]]; then
     clear_stale_git_locks
     return 0
   fi
-  [[ ! -e $OMADORA_ROOT ]] || die "$OMADORA_ROOT exists but is not a git checkout"
+  [[ ! -e $SKEIN_ROOT ]] || die "$SKEIN_ROOT exists but is not a git checkout"
   command -v git >/dev/null || die "git is required"
-  echo "Fetching the Omadora themes (sparse clone, no wallpapers yet)..."
-  git clone -q --depth 1 --filter=blob:none --sparse "$REPO_URL" "$OMADORA_ROOT" ||
-    die "couldn't clone $REPO_URL"
-  # Only what rendering needs. Wallpapers and previews are the big files; a theme's
-  # wallpapers are added by fetch_backgrounds the first time it is applied.
-  git -C "$OMADORA_ROOT" sparse-checkout set --no-cone \
-    '/lib/common/' '/libexec/omadora-theme-color' '/libexec/omadora-theme-set-templates' \
-    '/themes/' '/default/themed/' '!/themes/*/backgrounds/' '!/themes/*/preview.png' ||
-    die "couldn't set up the sparse checkout"
+  echo "Fetching the Skein themes (sparse clone, no wallpapers yet)..."
+  git clone -q --depth 1 --filter=blob:none --sparse --branch "$SKEIN_REF" "$REPO_URL" "$SKEIN_ROOT" ||
+    die "couldn't clone $REPO_URL ($SKEIN_REF)"
+  set_sparse_checkout || die "couldn't set up the sparse checkout"
 }
 
 # The menu shows every theme's screenshot, and fzf may kill a preview at any moment, so
 # the ~14 MB of them are fetched once, here, instead of one by one inside the preview
 # (a kill in the middle of a git run is what leaves lock files behind).
 fetch_all_previews() {
-  git -C "$OMADORA_ROOT" sparse-checkout list 2>/dev/null | grep -qxF '/themes/*/preview.png' && return 0
+  git -C "$SKEIN_ROOT" sparse-checkout list 2>/dev/null | grep -qxF '/themes/*/preview.png' && return 0
   echo "Fetching the theme previews (once, ~14 MB)..."
-  git -C "$OMADORA_ROOT" sparse-checkout add '/themes/*/preview.png' >/dev/null 2>&1 ||
+  git -C "$SKEIN_ROOT" sparse-checkout add '/themes/*/preview.png' >/dev/null 2>&1 ||
     warn "couldn't fetch the theme previews (offline?) - the menu will show palettes only"
   return 0
 }
@@ -124,7 +149,7 @@ fetch_backgrounds() {
   local name=$1
   [[ -d $THEMES_DIR/$name ]] || return 0
   [[ -d $THEMES_DIR/$name/backgrounds ]] && return 0
-  git -C "$OMADORA_ROOT" sparse-checkout add "/themes/$name/backgrounds/" >/dev/null 2>&1 ||
+  git -C "$SKEIN_ROOT" sparse-checkout add "/themes/$name/backgrounds/" >/dev/null 2>&1 ||
     warn "couldn't fetch the wallpapers for $name (offline?)"
 }
 
@@ -181,7 +206,7 @@ apply_background() {
 
 apply_appearance() {
   local mode dark=true
-  mode=$("$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-color" --file "$CURRENT_THEME_DIR/colors.toml" mode 2>/dev/null || echo dark)
+  mode=$("$BASH5" "$SKEIN_ROOT/libexec/skein-theme-color" --file "$CURRENT_THEME_DIR/colors.toml" mode 2>/dev/null || echo dark)
   [[ $mode == light ]] && dark=false
   osascript -e "tell application \"System Events\" to tell appearance preferences to set dark mode to $dark" >/dev/null 2>&1 ||
     warn "couldn't switch the macOS appearance to $mode (System Events needs Automation permission for this terminal)"
@@ -266,7 +291,7 @@ set_theme() {
   [[ -d $USER_THEMES_DIR/$name ]] && cp -R "$USER_THEMES_DIR/$name/." "$NEXT_THEME_DIR/"
   [[ -f $NEXT_THEME_DIR/colors.toml ]] || die "theme $name has no colors.toml"
 
-  "$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-set-templates" || {
+  "$BASH5" "$SKEIN_ROOT/libexec/skein-theme-set-templates" || {
     rm -rf "$NEXT_THEME_DIR"
     die "failed to render the themed templates for $name"
   }
@@ -331,7 +356,7 @@ preview() {
   file="$USER_THEMES_DIR/$name/colors.toml"
   [[ -f $file ]] || file="$THEMES_DIR/$name/colors.toml"
   [[ -f $file ]] || die "unknown theme: $name"
-  pal=$("$BASH5" "$OMADORA_ROOT/libexec/omadora-theme-color" --file "$file" --all) || die "couldn't read the palette of $name"
+  pal=$("$BASH5" "$SKEIN_ROOT/libexec/skein-theme-color" --file "$file" --all) || die "couldn't read the palette of $name"
   c() { printf '%s\n' "$pal" | awk -F'\t' -v k="$1" '$1==k{print $2}'; }
   mode=$(c mode)
 
@@ -356,7 +381,7 @@ preview() {
   if [[ ! -f $img ]]; then
     img="$THEMES_DIR/$name/preview.png"
     [[ -f $img || ! -d $THEMES_DIR/$name || -n ${THEME_NO_FETCH:-} ]] ||
-      git -C "$OMADORA_ROOT" sparse-checkout add "/themes/$name/preview.png" >/dev/null 2>&1 || true
+      git -C "$SKEIN_ROOT" sparse-checkout add "/themes/$name/preview.png" >/dev/null 2>&1 || true
   fi
   [[ -f $img ]] || return 0
   draw_image "$img" "$PREVIEW_TEXT_LINES"
@@ -364,7 +389,7 @@ preview() {
 }
 
 # All wallpapers of a theme: the checkout's (copied into the current theme dir) plus the
-# user's own in ~/.config/omadora/backgrounds/<theme>.
+# user's own in ~/.config/skein/backgrounds/<theme>.
 list_backgrounds() {
   local name=$1
   # find exits non-zero when the user's directory doesn't exist, which pipefail would
@@ -500,7 +525,7 @@ main_preview() {
       printf ' \033[1mNext wallpaper\033[0m\n Cycle to the next wallpaper of %s\n' "${current:-the current theme}"
       ;;
     "Update themes")
-      printf ' \033[1mUpdate themes\033[0m\n Pull the latest themes, palettes and templates\n from the Omadora fork.\n'
+      printf ' \033[1mUpdate themes\033[0m\n Pull the latest themes, palettes and templates\n from the Skein fork.\n'
       ;;
   esac
   return 0
@@ -529,7 +554,7 @@ main_menu() {
       prepare_backgrounds "$current"
       apply_background "$current"
       ;;
-    "Update themes") git -C "$OMADORA_ROOT" pull -q --ff-only && echo "Themes updated." ;;
+    "Update themes") git -C "$SKEIN_ROOT" pull -q --ff-only && echo "Themes updated." ;;
   esac
 }
 
@@ -578,7 +603,7 @@ case "${1:-}" in
     ;;
   update)
     ensure_repo
-    git -C "$OMADORA_ROOT" pull -q --ff-only && echo "Themes updated."
+    git -C "$SKEIN_ROOT" pull -q --ff-only && echo "Themes updated."
     ;;
   -h | --help | help)
     sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'

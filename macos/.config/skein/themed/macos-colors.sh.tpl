@@ -1,5 +1,5 @@
 # Colors for the macOS bar and window borders, rendered from the current theme
-# (macos/.config/omadora/themed/macos-colors.sh.tpl). Sourced by sketchybarrc, its
+# (macos/.config/skein/themed/macos-colors.sh.tpl). Sourced by sketchybarrc, its
 # plugins, Hyprspace's startup command and the sketchybar-sync hook. 0xAARRGGBB.
 export CLR_BG=0x00000000                       # transparent bar background
 export CLR_COMP_BG=0xff{{ lighter_background_strip }}

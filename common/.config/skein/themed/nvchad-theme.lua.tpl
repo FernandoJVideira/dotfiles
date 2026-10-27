@@ -1,7 +1,7 @@
--- NvChad (base46) theme "omadora", rendered from the current OS theme by Omadora's
--- template engine (common/.config/omadora/themed/nvchad-theme.lua.tpl) into
+-- NvChad (base46) theme "skein", rendered from the current OS theme by Skein's
+-- template engine (common/.config/skein/themed/nvchad-theme.lua.tpl) into
 -- current/theme/nvchad-theme.lua; the nvchad-sync hook installs it as
--- ~/.config/nvim/lua/themes/omadora.lua. Same palette as the terminal, so Neovim matches
+-- ~/.config/nvim/lua/themes/skein.lua. Same palette as the terminal, so Neovim matches
 -- every theme, not just the ones that have an NvChad namesake.
 local M = {}
 
@@ -59,6 +59,6 @@ M.base_16 = {
 
 M.type = "{{ mode }}"
 
-M = require("base46").override_theme(M, "omadora")
+M = require("base46").override_theme(M, "skein")
 
 return M

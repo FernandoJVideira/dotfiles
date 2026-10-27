@@ -2,15 +2,15 @@
 # Render Zed's theme from the current OS theme.
 #   zed-theme-sync [colors.toml]
 # Fills in ~/.config/zed/desktop-theme.json.tpl from the current theme's
-# colors.toml (Omadora's, then Omarchy's - same lookup as starship-theme-sync)
+# colors.toml (Skein's, then Omarchy's - same lookup as starship-theme-sync)
 # and writes ~/.config/zed/themes/desktop-theme.json. settings.json names the
 # theme "Desktop Theme" on every OS; this is where Linux gets its colors. Zed
 # watches the themes directory and re-applies the active theme when a file in
 # it changes, so a theme switch shows up in open editors without a restart.
-# Called by the theme-set hook (Linux: omactl theme set; macOS: the `theme` command) and
+# Called by the theme-set hook (Linux: skeinctl theme set; macOS: the `theme` command) and
 # once at install time. On any problem the previous output is left in place.
 #
-# Template syntax (same as Omadora's own templates):
+# Template syntax (same as Skein's own templates):
 #   {{ key }}           a color from colors.toml, or mode ("dark"/"light")
 #   {{ mix a b N }}     a blended with b, N percent of b
 # Colors come out as #rrggbb; the template appends the alpha digits itself.
@@ -23,7 +23,7 @@ OUT="$ZED_DIR/themes/desktop-theme.json"
 colors="${1:-}"
 if [[ -z $colors ]]; then
   for candidate in \
-    "$HOME/.config/omadora/current/theme/colors.toml" \
+    "$HOME/.config/skein/current/theme/colors.toml" \
     "$HOME/.local/state/omarchy/current/theme/colors.toml"; do
     [[ -f $candidate ]] && { colors=$candidate; break; }
   done
@@ -55,7 +55,7 @@ set_p() { printf -v "p_$1" '%s' "$2"; }
 # get <prefix> <key>: empty when unset
 get() { local v="$1_$2"; printf '%s' "${!v:-}"; }
 
-# Always present in an Omadora theme; without them there is nothing sensible to render.
+# Always present in an Skein theme; without them there is nothing sensible to render.
 for key in background foreground accent red green yellow blue magenta cyan; do
   val=$(hex "$(get c "$key")") || { echo "zed-theme-sync: no valid $key in $colors" >&2; exit 1; }
   set_p "$key" "$val"
