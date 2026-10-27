@@ -84,6 +84,10 @@ On both Linux machines the Caps Lock key is a second Super key, and it goes back
 
 On Linux, `Super+h/j/k/l` also moves between Herdr panes and Neovim splits, next to `Ctrl+h/j/k/l`, which keep working. `linux/common/.config/hypr/panes.lua` binds those four keys so that a focused terminal (kitty, ghostty, Alacritty or foot) receives Ctrl+h/j/k/l, which `herdr-nvim-nav` already handles, while any other window still gets Hyprland's window focus. Omadora's own `bindings.lua` gives the same keys to window focus, so the module runs after it and rebinds them; from a terminal, `Super+arrows` still move between windows. The logic is tested against a stand-in for Hyprland's Lua API; the key forwarding itself needs Hyprland.
 
+## Cloudflare WARP
+
+WARP is installed on every OS from Cloudflare's own builds: the `cloudflare-warp` cask on macOS, `cloudflare-warp-bin` from the AUR on Arch, and Cloudflare's RPM repo on Nobara (written to `/etc/yum.repos.d/cloudflare-warp.repo` with `gpgcheck` on; it serves Fedora 43 and 44, and `skip_if_unavailable` keeps a newer release from breaking other dnf runs). On Linux the installers also enable `warp-svc`. Registering asks you to accept Cloudflare's terms, so it is left to you: `warp-cli registration new`, then `warp-cli connect`; on macOS, open the WARP app from the menu bar. The macOS installer may ask for your password and for approval of a system extension.
+
 ## Common
 
 All platforms end at `common/install.sh`. It symlinks the shared configs and, on first run, clones tmux's plugin manager into `~/.config/tmux/plugins/tpm` before installing the tmux plugins. It also installs Miniconda to `~/miniconda3` with Anaconda's own installer (`lib/miniconda.sh`, SHA256-checked, never runs `conda init`). The same prefix on every OS lets its shell setup live once in `common/.config/zsh/.zshenv`: `conda` is on `PATH` everywhere, and the activation hook loads on first use, with `base` not auto-activated. A fresh install still needs Anaconda's Terms of Service accepted before conda can use its default channels; the installer prints the commands rather than accepting for you.

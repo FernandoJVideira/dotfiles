@@ -52,6 +52,8 @@ cask "brave-browser"
 cask "claude"
 # Screen capturing tool
 cask "cleanshot"
+# Free app that makes your Internet safer
+cask "cloudflare-warp"
 # Drivers for DisplayLink docks, adapters and monitors
 cask "displaylink"
 # Matrix collaboration client

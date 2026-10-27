@@ -86,6 +86,14 @@ if [[ -d /opt/spotify ]]; then
   sudo chmod a+wr /opt/spotify
   sudo chmod -R a+wr /opt/spotify/Apps
 fi
+# Cloudflare WARP (the AUR package carries Cloudflare's own build). Registering, which asks you to
+# accept Cloudflare's terms, is left to you: warp-cli registration new, then warp-cli connect.
+yay -S --needed --noconfirm cloudflare-warp-bin \
+  || log "WARNING: cloudflare-warp-bin failed to install - check the AUR name."
+if pacman -Qq cloudflare-warp-bin &>/dev/null; then
+  sudo systemctl enable --now warp-svc.service \
+    || log "WARNING: couldn't start warp-svc - check: journalctl -u warp-svc"
+fi
 # LocalSend and GPU Screen Recorder (Flatpaks on Nobara); a separate call so a
 # wrong package name can't take the list above down with it.
 yay -S --needed --noconfirm localsend-bin gpu-screen-recorder \
