@@ -1,0 +1,46 @@
+#!/bin/bash
+# Keep the Quickshell login screen (linux/nobara-login) in step with the Omadora theme: its colors, the
+# user to log in as and the wallpaper. Run by the theme-set hook on every theme change.
+# The greeter directory is handed to your user by `remove-kde.sh greeter`, so this needs no sudo;
+# without it (the greeter isn't set up) there is nothing to do.
+set -euo pipefail
+
+dir=/usr/local/share/dotfiles-greeter
+current="${OMADORA_CONFIG_HOME:-$HOME/.config/omadora}/current"
+[[ -d $dir && -O $dir && -w $dir ]] || exit 0
+
+colors="$current/theme/colors.toml"
+[[ -f $colors ]] || { echo "greeter-theme-sync: no $colors" >&2; exit 1; }
+
+color() {
+  local value
+  value=$(sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(#[0-9a-fA-F]\{6\}\)\".*/\1/p" "$colors" | head -n 1)
+  printf '%s' "${value:-$2}"
+}
+
+cat >"$dir/Theme.qml" <<QML
+import QtQuick
+
+QtObject {
+  readonly property string user: "$USER"
+  readonly property color background: "$(color background '#111111')"
+  readonly property color foreground: "$(color foreground '#eeeeee')"
+  readonly property color accent: "$(color accent '#7aa2f7')"
+  readonly property color red: "$(color red '#f7768e')"
+}
+QML
+
+bg=$(readlink -f "$current/background" 2>/dev/null || true)
+if [[ -f $bg ]]; then
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  if command -v magick >/dev/null && magick "$bg[0]" -resize '3840x3840>' -quality 90 "jpg:$tmp/wallpaper.jpg" 2>/dev/null; then
+    :
+  elif command -v ffmpeg >/dev/null && ffmpeg -loglevel error -y -i "$bg" -frames:v 1 -f image2 -c:v mjpeg "$tmp/wallpaper.jpg" 2>/dev/null; then
+    :
+  else
+    cp "$bg" "$tmp/wallpaper.jpg"
+  fi
+  cp "$tmp/wallpaper.jpg" "$dir/wallpaper.jpg"
+fi
+chmod -R a+rX "$dir"
