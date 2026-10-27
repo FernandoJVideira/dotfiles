@@ -33,4 +33,9 @@ migrate_skein_checkout() {
     git -C "$dir" fetch origin "$ref" && git -C "$dir" checkout -q -B "$ref" FETCH_HEAD \
       || log "WARNING: couldn't switch $dir to $ref - resolve it by hand (local changes in the way?)."
   fi
+  # a branch made from FETCH_HEAD has no upstream, so a plain `git pull` (or `skeinctl update`) fails
+  if [[ "$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null)" == "$ref" ]]; then
+    git -C "$dir" config "branch.$ref.remote" origin
+    git -C "$dir" config "branch.$ref.merge" "refs/heads/$ref"
+  fi
 }
