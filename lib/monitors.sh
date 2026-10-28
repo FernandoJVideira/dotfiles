@@ -2,7 +2,6 @@
 # Monitor layout shared by the Linux installers: detect the connected monitors,
 # rank them by refresh rate (fastest = primary, at 0x0, the rest chained to its
 # right in the same order) and write that layout into Hyprland's monitors.lua.
-# The Nobara login screen (plasmalogin/KWin) is fed from the same list.
 #
 # Detection asks the running Hyprland (it knows each monitor's real mode list),
 # so on a clean machine this only works from inside a Hyprland session. Outside
@@ -81,65 +80,4 @@ sync_hypr_monitors() {
   _replace_generated_block "$lua" workspaces "$ws_body"
   rm -rf "$tmp"
   log "Monitor layout written to $lua (primary: $(head -n1 <<<"$monitors" | cut -f1))."
-}
-
-# EDID -> KWin's "edidIdentifier" ("<vendor> <product> <serial> <week> <year> 0")
-_edid_identifier() {
-  local b
-  read -ra b < <(od -An -tu1 -j8 -N10 "$1")
-  local v=$(( (b[0] << 8) | b[1] ))
-  printf '%s%s%s %d %d %d %d 0' \
-    "$(printf "\\$(printf '%03o' $((64 + ((v >> 10) & 31))))")" \
-    "$(printf "\\$(printf '%03o' $((64 + ((v >> 5) & 31))))")" \
-    "$(printf "\\$(printf '%03o' $((64 + (v & 31))))")" \
-    $(( (b[3] << 8) | b[2] )) \
-    $(( b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] << 24) )) \
-    "$(od -An -tu1 -j16 -N1 "$1" | tr -d ' ')" \
-    $(( 1990 + $(od -An -tu1 -j17 -N1 "$1" | tr -d ' ') ))
-}
-
-# Prints a KWin kwinoutputconfig.json for the detected monitors: fastest on the
-# left and primary, best mode, scale 1.
-kwin_output_config() {
-  local monitors="$1" name w h r dir edid x=0 prio=0 entries=() setup=()
-  while IFS=$'\t' read -r name w h r dir; do
-    edid="$dir/edid"
-    [[ -n "$dir" && -r "$edid" ]] || { log "WARNING: no EDID for $name - leaving it out of the login screen layout." >&2; continue; }
-    entries+=("$(jq -n --arg n "$name" --argjson w "$w" --argjson h "$h" --argjson r "$r" \
-      --arg hash "$(md5sum <"$edid" | cut -d' ' -f1)" --arg id "$(_edid_identifier "$edid")" \
-      --arg uuid "$(uuidgen)" '{
-        abmLevel: 0, autoBrightnessCurve: [range(11) | 0], allowDdcCi: true, allowSdrSoftwareBrightness: false,
-        autoRotation: "InTabletMode", automaticBrightness: false, brightness: 1,
-        colorPowerTradeoff: "PreferEfficiency", colorProfileSource: "sRGB",
-        connectorName: $n, customModes: [], detectedDdcCi: true,
-        edidHash: $hash, edidIdentifier: $id, edrPolicy: "always",
-        hdrColorProfileSource: "EDID", hdrIccProfilePath: "", highDynamicRange: false,
-        iccProfilePath: "", maxBitsPerColor: 0,
-        mode: {flags: 0, height: $h, refreshRate: ($r * 1000 | round), width: $w},
-        overscan: 0, rgbRange: "Automatic", scale: 1, sdrBrightness: 200,
-        sdrGamutWideness: 0, sharpness: 0, transform: "Normal", uuid: $uuid,
-        vrrPolicy: "Never", wideColorGamut: false}')")
-    setup+=("$(jq -n --argjson i "${#setup[@]}" --argjson x "$x" --argjson p "$prio" \
-      '{enabled: true, outputIndex: $i, position: {x: $x, y: 0}, priority: $p, replicationSource: ""}')")
-    x=$((x + w)); prio=$((prio + 1))
-  done <<<"$monitors"
-  ((${#entries[@]})) || return 1
-  jq -n --slurpfile o <(printf '%s\n' "${entries[@]}") --slurpfile s <(printf '%s\n' "${setup[@]}") \
-    '[{name: "outputs", data: $o}, {name: "setups", data: [{lidClosed: false, outputs: $s}]}]'
-}
-
-# Nobara: plasmalogin's greeter runs on KWin and reads its own output config, so
-# without this it lays the monitors out in connector order at default rates.
-sync_plasmalogin_monitors() {
-  local monitors="$1" cfg
-  [[ -n "$monitors" ]] || { log "WARNING: no monitors detected - login screen layout left alone."; return 1; }
-  [[ -d /var/lib/plasmalogin ]] || { log "plasmalogin not installed - skipping the login screen layout."; return 0; }
-  cfg="$(mktemp)"
-  if kwin_output_config "$monitors" >"$cfg"; then
-    log "Writing the login screen monitor layout..."
-    sudo install -D -o plasmalogin -g plasmalogin -m 644 "$cfg" /var/lib/plasmalogin/.config/kwinoutputconfig.json
-  else
-    log "WARNING: couldn't build the login screen monitor layout."
-  fi
-  rm -f "$cfg"
 }

@@ -63,13 +63,11 @@ symlink_dotfiles "$SCRIPT_DIR"
 symlink_dotfiles "$SCRIPT_DIR/../common"
 
 # Monitor layout: the fastest monitor becomes the primary at 0x0, the rest chain
-# to its right. Written into the (symlinked) monitors.lua and into the plasmalogin
-# login screen. Needs a running Hyprland to read the mode lists, so on a first
+# to its right. Written into the (symlinked) monitors.lua. Needs a running Hyprland to read the mode lists, so on a first
 # install from a TTY it is skipped - re-run this script from the desktop.
 log "Detecting monitors..."
 MONITORS="$(detect_monitors || true)"
 sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$MONITORS" || true
-sync_plasmalogin_monitors "$MONITORS" || true
 
 # NVIDIA-only extras live in a sibling tree so an AMD/Intel machine never gets
 # them. nvidia-settings-load needs an X server and fails on every Wayland login.
