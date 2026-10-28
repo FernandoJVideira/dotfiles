@@ -191,6 +191,7 @@ sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:15.0" label.
 
 sketchybar --add item battery right \
   --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
+    label.drawing=on icon.padding_right=4 \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/panel.sh battery toggle" \
   --subscribe battery system_woke power_source_change mouse.exited.global

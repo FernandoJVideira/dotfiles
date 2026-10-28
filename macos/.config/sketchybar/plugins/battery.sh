@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Battery: Skein's glyph for the level, the alert color when it is low and not charging.
+# Battery: Skein's glyph for the level, the alert color when it is low and not charging, and the
+# percentage next to it, always (the one value the bar shows without opening a panel).
 # shellcheck source=/dev/null
 source "$(dirname "$0")/lib.sh"
 hover && exit 0
