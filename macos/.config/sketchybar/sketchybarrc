@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
 # A flat bar after Skein's (config/quickshell/skein in the fork): the theme's background, icon-only
-# modules whose value shows while the pointer is over them (Skein's tooltips), workspaces as numbers
-# with a dot for the one in use, and Skein's panels as popups (menu, calendar, battery, Wi-Fi, CPU,
-# volume). The middle is left empty, since that is where the notch is; the clock is at the right edge,
-# in the short form macOS uses.
+# modules, workspaces as numbers with a dot for the one in use, and Skein's panels as popups (menu,
+# calendar, battery, Wi-Fi, CPU, volume) where the values are. The middle is left empty, since that is
+# where the notch is; the clock is at the right edge, in the short form macOS uses.
 # The classic bar (compartments, always-on labels) is tagged backup/sketchybar-2026-10-28.
 
 CONFIG_DIR="$HOME/.config/sketchybar"
@@ -52,7 +51,9 @@ NOTCH_HEIGHT="${NOTCH_HEIGHT:-0}"
 NOTCH_WIDTH="${NOTCH_WIDTH:-0}"
 
 # === BAR ===
-BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off
+# topmost=on keeps the bar above macOS's own menu bar: with that set to hide automatically it slides down over
+# the bar whenever the pointer reaches the top, and the click lands on it instead of on the bar.
+BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off topmost=on
   padding_left="$SECTION_PADDING" padding_right="$SECTION_PADDING" y_offset=0)
 if ((NOTCH_HEIGHT > 0)); then
   # the notch display's bar is at least as tall as the notch (its menu bar), and as the bar itself
@@ -62,7 +63,7 @@ fi
 sketchybar --bar "${BAR_ARGS[@]}"
 
 # === DEFAULTS (must precede item creation below; --default only applies to items created after it) ===
-# Icon-only: a label is drawn only while the pointer is over its item (plugins/lib.sh).
+# Icon-only: the values are in the panels, so a label is never drawn (a hover label would push its neighbours around).
 sketchybar --default \
   padding_left=0 \
   padding_right=0 \
@@ -185,7 +186,7 @@ sketchybar --add item battery right \
   --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/panel.sh battery toggle" \
-  --subscribe battery system_woke power_source_change mouse.entered mouse.exited mouse.exited.global
+  --subscribe battery system_woke power_source_change mouse.exited.global
 panel_rows battery
 popup_entry battery battery.settings "󰒓" "Battery settings…" "open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'"
 
@@ -193,7 +194,7 @@ sketchybar --add item cpu_load right \
   --set cpu_load icon="󰍛" update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/panel.sh cpu_load toggle" \
-  --subscribe cpu_load mouse.entered mouse.exited mouse.exited.global
+  --subscribe cpu_load mouse.exited.global
 panel_rows cpu_load
 popup_entry cpu_load cpu_load.monitor "󰍛" "Activity Monitor…" "open -a 'Activity Monitor'"
 
@@ -201,7 +202,7 @@ sketchybar --add item volume right \
   --set volume update_freq=30 script="$PLUGIN_DIR/volume.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="sketchybar --set volume popup.drawing=toggle" \
-  --subscribe volume volume_change mouse.entered mouse.exited mouse.exited.global
+  --subscribe volume volume_change mouse.exited.global
 # The audio panel: a slider for the output volume and a way into the sound settings.
 sketchybar --add slider volume.slider popup.volume 160 \
   --set volume.slider \
@@ -219,7 +220,7 @@ sketchybar --add item net right \
   --set net update_freq=20 script="$PLUGIN_DIR/wifi.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/panel.sh net toggle" \
-  --subscribe net wifi_change mouse.entered mouse.exited mouse.exited.global
+  --subscribe net wifi_change mouse.exited.global
 panel_rows net
 popup_entry net net.power "󰐥" "Turn Wi-Fi off" "$PLUGIN_DIR/wifi_power.sh"
 popup_entry net net.settings "󰒓" "Wi-Fi settings…" "open 'x-apple.systempreferences:com.apple.wifi-settings-extension'"
