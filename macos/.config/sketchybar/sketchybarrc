@@ -146,24 +146,20 @@ sketchybar --add item menubar left \
   --set menubar icon="󰍜" icon.padding_left="$MODULE_PADDING" icon.padding_right="$MODULE_PADDING" \
     click_script="$PLUGIN_DIR/menubar.sh"
 
-# All ten workspaces, the one in use shown as a dot and the empty ones dimmed. Which is which is decided
-# for all of them at once by plugins/spaces.sh.
+# All ten workspaces, each with its own icon (the ones from the classic bar: code, terminals, ...); the one
+# in use is in the accent color and the empty ones are dimmed. Which is which is decided for all of them
+# at once by plugins/spaces.sh.
 sketchybar --add event hyprspace_workspace_change
+WORKSPACE_ICONS=("" "" "" "󱙺" "󰉖" "" "" "󰙯" "" "󰝚")
 for sid in $(seq 1 10); do
-  number="$sid"
-  ((sid == 10)) && number=0
   sketchybar --add item "space.$sid" left \
     --set "space.$sid" \
-      icon="󱓻" \
-      icon.drawing=off \
-      icon.color="$CLR_ACCENT" \
+      icon="${WORKSPACE_ICONS[$((sid - 1))]}" \
+      icon.drawing=on \
+      icon.color="$CLR_FG_DIM" \
       icon.padding_left="$MODULE_PADDING" \
       icon.padding_right="$MODULE_PADDING" \
-      label="$number" \
-      label.drawing=on \
-      label.color="$CLR_FG_DIM" \
-      label.padding_left="$MODULE_PADDING" \
-      label.padding_right="$MODULE_PADDING" \
+      label.drawing=off \
       click_script="hyprspace workspace $sid"
 done
 sketchybar --add item spaces_ctl left \
