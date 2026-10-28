@@ -131,6 +131,12 @@ popup_entry skein skein.sleep "󰒲" "Sleep" "pmset sleepnow"
 popup_entry skein skein.restart "󰜉" "Restart…" "osascript -e 'display dialog \"Restart now?\" buttons {\"Cancel\", \"Restart\"} default button \"Cancel\" with icon caution' -e 'tell application \"System Events\" to restart'"
 popup_entry skein skein.shutdown "󰐥" "Shut down…" "osascript -e 'display dialog \"Shut down now?\" buttons {\"Cancel\", \"Shut Down\"} default button \"Cancel\" with icon caution' -e 'tell application \"System Events\" to shut down'"
 
+# The menu button: macOS's own menu bar (application menus, Control Center) is under this bar, so this
+# gets the bar out of its way until that menu bar hides again (plugins/menubar.sh).
+sketchybar --add item menubar left \
+  --set menubar icon="󰍜" icon.padding_left="$MODULE_PADDING" icon.padding_right="$MODULE_PADDING" \
+    click_script="$PLUGIN_DIR/menubar.sh"
+
 # Workspaces 1-5 always, 6-10 only while they have windows; the one in use shows a dot. Which is which
 # is decided for all of them at once by plugins/spaces.sh.
 sketchybar --add event hyprspace_workspace_change
@@ -162,6 +168,7 @@ sketchybar --add item front_app left \
     label.drawing=on \
     label.color="$CLR_FG_DIM" \
     label.padding_left=4 \
+    click_script="$PLUGIN_DIR/menubar.sh" \
   --subscribe front_app front_app_switched
 
 # === RIGHT, from the edge inwards: clock, battery, CPU, volume, Wi-Fi, stay awake ===
