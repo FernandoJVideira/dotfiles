@@ -40,5 +40,5 @@ fill() {
 
 if [[ ${1:-} == toggle ]]; then
   fill
-  sketchybar --set clock_time popup.drawing=toggle
+  sketchybar --set clock popup.drawing=toggle
 fi

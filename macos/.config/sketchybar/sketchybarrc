@@ -2,8 +2,9 @@
 
 # A flat bar after Skein's (config/quickshell/skein in the fork): the theme's background, icon-only
 # modules whose value shows while the pointer is over them (Skein's tooltips), workspaces as numbers
-# with a dot for the one in use, and the clock in the middle. The middle is where the notch is, so
-# the clock splits around it: the day on the left of the notch, the time on the right.
+# with a dot for the one in use, and Skein's panels as popups (menu, calendar, battery, Wi-Fi, CPU,
+# volume). The middle is left empty, since that is where the notch is; the clock is at the right edge,
+# in the short form macOS uses.
 # The classic bar (compartments, always-on labels) is tagged backup/sketchybar-2026-10-28.
 
 CONFIG_DIR="$HOME/.config/sketchybar"
@@ -23,12 +24,13 @@ CLR_FG_DIM="${CLR_FG_DIM:-0x77ebdbb2}"
 CLR_ACCENT="${CLR_ACCENT:-0xfffe8019}"
 CLR_ALERT="${CLR_ALERT:-0xffa55555}"
 
-# === SIZES (Skein: 26px bar, 8px module padding, 10.5pt text) ===
-BAR_HEIGHT=34
-MODULE_PADDING=8
-SECTION_PADDING=5
-ICON_FONT="JetBrainsMono Nerd Font:Regular:15.0"
-LABEL_FONT="SF Pro:Medium:12.5"
+# === SIZES (a little bigger than Skein's, which is 26px with 8px module padding and 10.5pt text) ===
+BAR_HEIGHT=40
+MODULE_PADDING=10
+SECTION_PADDING=8
+ICON_FONT="JetBrainsMono Nerd Font:Regular:17.0"
+LABEL_FONT="SF Pro:Medium:14.0"
+PANEL_FONT="JetBrainsMono Nerd Font:Regular:14.0"
 
 # === THE NOTCH ===
 # A notch display reports a safe area at the top (the height of the notch, which is also the height of
@@ -53,6 +55,8 @@ NOTCH_WIDTH="${NOTCH_WIDTH:-0}"
 BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off
   padding_left="$SECTION_PADDING" padding_right="$SECTION_PADDING" y_offset=0)
 if ((NOTCH_HEIGHT > 0)); then
+  # the notch display's bar is at least as tall as the notch (its menu bar), and as the bar itself
+  ((NOTCH_HEIGHT < BAR_HEIGHT)) && NOTCH_HEIGHT="$BAR_HEIGHT"
   BAR_ARGS+=(notch_display_height="$NOTCH_HEIGHT" notch_width="$NOTCH_WIDTH")
 fi
 sketchybar --bar "${BAR_ARGS[@]}"
@@ -77,7 +81,7 @@ sketchybar --default \
 # leaves them (plugins/lib.sh).
 POPUP_STYLE=(
   popup.horizontal=off
-  popup.height=34
+  popup.height=38
   popup.y_offset=6
   popup.background.color="$CLR_BAR_BG"
   popup.background.corner_radius=18
@@ -89,9 +93,20 @@ POPUP_STYLE=(
 popup_entry() {
   sketchybar --add item "$2" "popup.$1" \
     --set "$2" icon="$3" label="$4" label.drawing=on \
-    icon.padding_left=16 icon.padding_right=10 label.padding_right=22 \
-    icon.width=44 icon.align=center \
+    icon.padding_left=18 icon.padding_right=12 label.padding_right=26 \
+    icon.width=50 icon.align=center \
     click_script="sketchybar --set $1 popup.drawing=off; $5"
+}
+
+# the lines of a panel (battery, Wi-Fi, CPU), filled in by plugins/panel.sh when it opens
+panel_rows() {
+  local row
+  for row in 1 2 3 4 5 6; do
+    sketchybar --add item "$1.i$row" "popup.$1" \
+      --set "$1.i$row" label.drawing=on label.font="$PANEL_FONT" label.width=300 label.align=left \
+      label.padding_left=22 label.padding_right=22 drawing=off \
+      click_script="sketchybar --set $1 popup.drawing=off"
+  done
 }
 
 # === LEFT: the Skein glyph, workspaces, front app ===
@@ -148,39 +163,39 @@ sketchybar --add item front_app left \
     label.padding_left=4 \
   --subscribe front_app front_app_switched
 
-# === MIDDLE: around the notch ===
-# q is the left of the notch and e the right of it (on a display without one they meet in the middle).
-sketchybar --add item clock_date q \
-  --set clock_date update_freq=30 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
-    label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
-    click_script="$PLUGIN_DIR/calendar.sh toggle"
-sketchybar --add item clock_time e \
-  --set clock_time update_freq=10 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
-    label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
-    "${POPUP_STYLE[@]}" popup.align=center \
+# === RIGHT, from the edge inwards: clock, battery, CPU, volume, Wi-Fi, stay awake ===
+# The clock is short, like macOS's ("Wed 28 Oct  18:45"); click opens the calendar panel.
+sketchybar --add item clock right \
+  --set clock update_freq=10 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
+    label.padding_left="$MODULE_PADDING" label.padding_right=14 \
+    "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/calendar.sh toggle" \
-  --subscribe clock_time mouse.exited.global
+  --subscribe clock mouse.exited.global
 
 # The calendar panel: a month in a monospaced grid, filled in by plugins/calendar.sh when it opens.
-CAL_FONT="JetBrainsMono Nerd Font:Regular:13.0"
 for row in title head w1 w2 w3 w4 w5 w6; do
-  sketchybar --add item "cal.$row" popup.clock_time \
-    --set "cal.$row" label.drawing=on label.font="$CAL_FONT" label.width=270 label.align=center \
-      label.padding_left=14 label.padding_right=14 click_script="sketchybar --set clock_time popup.drawing=off"
+  sketchybar --add item "cal.$row" popup.clock \
+    --set "cal.$row" label.drawing=on label.font="$PANEL_FONT" label.width=310 label.align=center \
+      label.padding_left=16 label.padding_right=16 click_script="sketchybar --set clock popup.drawing=off"
 done
-sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:14.0" label.color="$CLR_ACCENT" \
+sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:15.0" label.color="$CLR_ACCENT" \
   --set cal.head label.color="$CLR_FG_DIM"
 
-# === RIGHT, from the edge inwards: battery, CPU, volume, Wi-Fi, stay awake ===
 sketchybar --add item battery right \
   --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
-    click_script="open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'" \
-  --subscribe battery system_woke power_source_change mouse.entered mouse.exited
+    "${POPUP_STYLE[@]}" popup.align=right \
+    click_script="$PLUGIN_DIR/panel.sh battery toggle" \
+  --subscribe battery system_woke power_source_change mouse.entered mouse.exited mouse.exited.global
+panel_rows battery
+popup_entry battery battery.settings "󰒓" "Battery settings…" "open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'"
 
 sketchybar --add item cpu_load right \
   --set cpu_load icon="󰍛" update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" \
-    click_script="open -a 'Activity Monitor'" \
-  --subscribe cpu_load mouse.entered mouse.exited
+    "${POPUP_STYLE[@]}" popup.align=right \
+    click_script="$PLUGIN_DIR/panel.sh cpu_load toggle" \
+  --subscribe cpu_load mouse.entered mouse.exited mouse.exited.global
+panel_rows cpu_load
+popup_entry cpu_load cpu_load.monitor "󰍛" "Activity Monitor…" "open -a 'Activity Monitor'"
 
 sketchybar --add item volume right \
   --set volume update_freq=30 script="$PLUGIN_DIR/volume.sh" \
@@ -188,22 +203,26 @@ sketchybar --add item volume right \
     click_script="sketchybar --set volume popup.drawing=toggle" \
   --subscribe volume volume_change mouse.entered mouse.exited mouse.exited.global
 # The audio panel: a slider for the output volume and a way into the sound settings.
-sketchybar --add slider volume.slider popup.volume 140 \
+sketchybar --add slider volume.slider popup.volume 160 \
   --set volume.slider \
     icon.drawing=off label.drawing=off \
-    padding_left=18 padding_right=18 \
+    padding_left=20 padding_right=20 \
     slider.highlight_color="$CLR_ACCENT" \
     slider.background.height=6 slider.background.corner_radius=3 \
     slider.background.color="$CLR_FG_DIM" \
     slider.knob="●" slider.knob.drawing=on \
     script="$PLUGIN_DIR/volume_slider.sh" \
   --subscribe volume.slider mouse.clicked
-popup_entry volume volume.settings "󰒓" "Sound settings" "open 'x-apple.systempreferences:com.apple.Sound-Settings.extension'"
+popup_entry volume volume.settings "󰒓" "Sound settings…" "open 'x-apple.systempreferences:com.apple.Sound-Settings.extension'"
 
 sketchybar --add item net right \
   --set net update_freq=20 script="$PLUGIN_DIR/wifi.sh" \
-    click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
-  --subscribe net wifi_change mouse.entered mouse.exited
+    "${POPUP_STYLE[@]}" popup.align=right \
+    click_script="$PLUGIN_DIR/panel.sh net toggle" \
+  --subscribe net wifi_change mouse.entered mouse.exited mouse.exited.global
+panel_rows net
+popup_entry net net.power "󰐥" "Turn Wi-Fi off" "$PLUGIN_DIR/wifi_power.sh"
+popup_entry net net.settings "󰒓" "Wi-Fi settings…" "open 'x-apple.systempreferences:com.apple.wifi-settings-extension'"
 
 # Stay awake (caffeinate), like Skein's indicator: dim while off, the accent color while on.
 sketchybar --add item awake right \
