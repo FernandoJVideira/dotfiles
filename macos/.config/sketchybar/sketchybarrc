@@ -1,128 +1,214 @@
 #!/usr/bin/env bash
 
-# === CONFIG ROOT ===
+# A flat bar after Skein's (config/quickshell/skein in the fork): the theme's background, icon-only
+# modules whose value shows while the pointer is over them (Skein's tooltips), workspaces as numbers
+# with a dot for the one in use, and the clock in the middle. The middle is where the notch is, so
+# the clock splits around it: the day on the left of the notch, the time on the right.
+# The classic bar (compartments, always-on labels) is tagged backup/sketchybar-2026-10-28.
+
 CONFIG_DIR="$HOME/.config/sketchybar"
 PLUGIN_DIR="$CONFIG_DIR/plugins"
 
 # === COLORS ===
-# Rendered from the current theme by the `theme` command (macos/.config/skein/
-# themed/macos-colors.sh.tpl); Gruvbox Dark values until the first theme is set.
+# Rendered from the current theme by the `theme` command (macos/.config/skein/themed/
+# macos-colors.sh.tpl); Gruvbox Dark values until the first theme is set.
 COLORS_FILE="$HOME/.config/skein/current/theme/macos-colors.sh"
 if [[ -f $COLORS_FILE ]]; then
   # shellcheck source=/dev/null
   source "$COLORS_FILE"
-else
-  CLR_BG=0x00000000
-  CLR_COMP_BG=0xff3c3836
-  CLR_COMP_BORDER=0xff665c54
-  CLR_FG=0xffebdbb2
-  CLR_ACCENT=0xfffe8019
-  CLR_FG_DIM=0x77ebdbb2
 fi
+CLR_BAR_BG="${CLR_BAR_BG:-0xff282828}"
+CLR_FG="${CLR_FG:-0xffebdbb2}"
+CLR_FG_DIM="${CLR_FG_DIM:-0x77ebdbb2}"
+CLR_ACCENT="${CLR_ACCENT:-0xfffe8019}"
+CLR_ALERT="${CLR_ALERT:-0xffa55555}"
 
-# === PADDING CONSTANTS
-BAR_PADDING=8             # Outer bar padding (use compartments for outer spacing)
-ITEM_PADDING=3             # Default horizontal padding between items
-ICON_PADDING=2             # Consistent icon inner padding (reduced from mixed 2/4 for tighter look)
-LABEL_PADDING=1            # Consistent label inner padding (unified from 4/2)
-COMP_PADDING=6             # Compartment outer padding (increased from bar-level 0 for breathing room)
+# === SIZES (Skein: 26px bar, 8px module padding, 10.5pt text) ===
+BAR_HEIGHT=34
+MODULE_PADDING=8
+SECTION_PADDING=5
+ICON_FONT="JetBrainsMono Nerd Font:Regular:15.0"
+LABEL_FONT="SF Pro:Medium:12.5"
 
-# === SYSTEM METRICS PROVIDER ===
-# Removed hardcoded stats_provider call
+# === THE NOTCH ===
+# A notch display reports a safe area at the top (the height of the notch, which is also the height of
+# its menu bar) and the two usable areas beside the notch; the notch is what is left between them.
+# Without a notch both come back 0, and the bar keeps its own height everywhere.
+read -r NOTCH_HEIGHT NOTCH_WIDTH < <(osascript -l JavaScript -e '
+  ObjC.import("AppKit");
+  let out = "0 0";
+  const screens = $.NSScreen.screens;
+  for (let i = 0; i < screens.count; i++) {
+    const s = screens.objectAtIndex(i);
+    if (s.safeAreaInsets.top > 0) {
+      out = Math.round(s.safeAreaInsets.top) + " " + Math.round(s.frame.size.width - s.auxiliaryTopLeftArea.size.width - s.auxiliaryTopRightArea.size.width);
+      break;
+    }
+  }
+  out' 2>/dev/null || echo "0 0")
+NOTCH_HEIGHT="${NOTCH_HEIGHT:-0}"
+NOTCH_WIDTH="${NOTCH_WIDTH:-0}"
 
-# === BAR (No outer padding; defer to compartments) ===
-sketchybar --bar position=top height=34 blur_radius=0 color="$CLR_BG" padding_left="$BAR_PADDING" padding_right="$BAR_PADDING"
+# === BAR ===
+BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off
+  padding_left="$SECTION_PADDING" padding_right="$SECTION_PADDING" y_offset=0)
+if ((NOTCH_HEIGHT > 0)); then
+  BAR_ARGS+=(notch_display_height="$NOTCH_HEIGHT" notch_width="$NOTCH_WIDTH")
+fi
+sketchybar --bar "${BAR_ARGS[@]}"
 
 # === DEFAULTS (must precede item creation below; --default only applies to items created after it) ===
+# Icon-only: a label is drawn only while the pointer is over its item (plugins/lib.sh).
 sketchybar --default \
-  padding_left="$ITEM_PADDING" \
-  padding_right="$ITEM_PADDING" \
-  icon.font="JetBrainsMono Nerd Font:Regular:12.0" \
-  label.font="JetBrainsMono Nerd Font:Regular:14.0" \
+  padding_left=0 \
+  padding_right=0 \
+  icon.font="$ICON_FONT" \
+  label.font="$LABEL_FONT" \
   icon.color="$CLR_FG" \
   label.color="$CLR_FG" \
-  icon.padding_left="$ICON_PADDING" \
-  icon.padding_right="$ICON_PADDING" \
-  label.padding_left="$LABEL_PADDING" \
-  label.padding_right="$LABEL_PADDING"
+  icon.padding_left="$MODULE_PADDING" \
+  icon.padding_right="$MODULE_PADDING" \
+  label.padding_left=0 \
+  label.padding_right="$MODULE_PADDING" \
+  label.drawing=off
 
-# === WORKSPACES ===
+# === POPUPS (Skein's panels and menu) ===
+# Shared look: the bar's color with a hairline border and rounded corners. They close when the pointer
+# leaves them (plugins/lib.sh).
+POPUP_STYLE=(
+  popup.horizontal=off
+  popup.height=34
+  popup.y_offset=6
+  popup.background.color="$CLR_BAR_BG"
+  popup.background.corner_radius=18
+  popup.background.border_width=1
+  popup.background.border_color="${CLR_COMP_BORDER:-$CLR_FG_DIM}"
+  popup.background.shadow.drawing=on
+)
+# one entry of a menu popup: popup_entry <parent> <name> <glyph> <label> <command>
+popup_entry() {
+  sketchybar --add item "$2" "popup.$1" \
+    --set "$2" icon="$3" label="$4" label.drawing=on \
+    icon.padding_left=16 icon.padding_right=10 label.padding_right=22 \
+    icon.width=44 icon.align=center \
+    click_script="sketchybar --set $1 popup.drawing=off; $5"
+}
+
+# === LEFT: the Skein glyph, workspaces, front app ===
+# The glyph is Skein's menu: the theme, the wallpaper and the power entries (Skein's skein-menu).
+sketchybar --add item skein left \
+  --set skein \
+    icon="" \
+    icon.color="$CLR_ACCENT" \
+    icon.padding_left="$MODULE_PADDING" \
+    icon.padding_right="$MODULE_PADDING" \
+    "${POPUP_STYLE[@]}" \
+    popup.align=left \
+    script="$PLUGIN_DIR/popup.sh" \
+    click_script="sketchybar --set skein popup.drawing=toggle" \
+  --subscribe skein mouse.exited.global
+popup_entry skein skein.theme "󰏘" "Theme" "open -g hammerspoon://theme"
+popup_entry skein skein.wallpaper "󰋩" "Next wallpaper" "theme bg next"
+popup_entry skein skein.update "󰚰" "Update themes" "theme update && osascript -e 'display notification \"Themes updated\" with title \"Skein\"'"
+popup_entry skein skein.lock "󰌾" "Lock screen" "pmset displaysleepnow"
+popup_entry skein skein.sleep "󰒲" "Sleep" "pmset sleepnow"
+popup_entry skein skein.restart "󰜉" "Restart…" "osascript -e 'display dialog \"Restart now?\" buttons {\"Cancel\", \"Restart\"} default button \"Cancel\" with icon caution' -e 'tell application \"System Events\" to restart'"
+popup_entry skein skein.shutdown "󰐥" "Shut down…" "osascript -e 'display dialog \"Shut down now?\" buttons {\"Cancel\", \"Shut Down\"} default button \"Cancel\" with icon caution' -e 'tell application \"System Events\" to shut down'"
+
+# Workspaces 1-5 always, 6-10 only while they have windows; the one in use shows a dot. Which is which
+# is decided for all of them at once by plugins/spaces.sh.
 sketchybar --add event hyprspace_workspace_change
-LABELS=("" "" "" "󱙺" "󰉖" "" "" "󰙯" "" "󰝚")
-LEFT_SPACE_ITEMS=()
-
 for sid in $(seq 1 10); do
-  label="${LABELS[$((sid - 1))]:-}"
-  item="space.$sid"
-  LEFT_SPACE_ITEMS+=("$item")
-
-  sketchybar --add item "$item" left \
-    --subscribe "$item" hyprspace_workspace_change \
-    --set "$item" \
-      background.color=0xff000000 \
-      background.corner_radius=5 \
-      background.height=20 \
-      background.drawing=off \
-      label="$label" \
+  number="$sid"
+  ((sid == 10)) && number=0
+  sketchybar --add item "space.$sid" left \
+    --set "space.$sid" \
+      icon="󱓻" \
+      icon.drawing=off \
+      icon.color="$CLR_ACCENT" \
+      icon.padding_left="$MODULE_PADDING" \
+      icon.padding_right="$MODULE_PADDING" \
+      label="$number" \
+      label.drawing=on \
       label.color="$CLR_FG_DIM" \
-      icon.padding_left="$ICON_PADDING" \
-      icon.padding_right="$ICON_PADDING" \
-      label.padding_left="$LABEL_PADDING" \
-      label.padding_right="$LABEL_PADDING" \
-      click_script="hyprspace workspace $sid" \
-      script="$PLUGIN_DIR/aerospace.sh $sid"
-
+      label.padding_left="$MODULE_PADDING" \
+      label.padding_right="$MODULE_PADDING" \
+      click_script="hyprspace workspace $sid"
 done
+sketchybar --add item spaces_ctl left \
+  --set spaces_ctl drawing=off updates=on update_freq=2 script="$PLUGIN_DIR/spaces.sh" \
+  --subscribe spaces_ctl hyprspace_workspace_change
 
-# === FRONT APP
 sketchybar --add item front_app left \
   --set front_app \
     script="$PLUGIN_DIR/front_app.sh" \
-    label.y_offset=1 \
-    label.padding_right="$COMP_PADDING" \
+    icon.drawing=off \
+    label.drawing=on \
+    label.color="$CLR_FG_DIM" \
+    label.padding_left=4 \
   --subscribe front_app front_app_switched
 
-# === RIGHT SIDE ITEMS ===
-sketchybar --add item clock right \
-  --set clock update_freq=10 icon= script="$PLUGIN_DIR/clock.sh" label.padding_right="$COMP_PADDING"
+# === MIDDLE: around the notch ===
+# q is the left of the notch and e the right of it (on a display without one they meet in the middle).
+sketchybar --add item clock_date q \
+  --set clock_date update_freq=30 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
+    label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
+    click_script="$PLUGIN_DIR/calendar.sh toggle"
+sketchybar --add item clock_time e \
+  --set clock_time update_freq=10 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
+    label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
+    "${POPUP_STYLE[@]}" popup.align=center \
+    click_script="$PLUGIN_DIR/calendar.sh toggle" \
+  --subscribe clock_time mouse.exited.global
 
-sketchybar --add item volume right \
-  --set volume script="$PLUGIN_DIR/volume.sh" \
-  --subscribe volume volume_change
+# The calendar panel: a month in a monospaced grid, filled in by plugins/calendar.sh when it opens.
+CAL_FONT="JetBrainsMono Nerd Font:Regular:13.0"
+for row in title head w1 w2 w3 w4 w5 w6; do
+  sketchybar --add item "cal.$row" popup.clock_time \
+    --set "cal.$row" label.drawing=on label.font="$CAL_FONT" label.width=270 label.align=center \
+      label.padding_left=14 label.padding_right=14 click_script="sketchybar --set clock_time popup.drawing=off"
+done
+sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:14.0" label.color="$CLR_ACCENT" \
+  --set cal.head label.color="$CLR_FG_DIM"
 
+# === RIGHT, from the edge inwards: battery, CPU, volume, Wi-Fi, stay awake ===
 sketchybar --add item battery right \
   --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
-  --subscribe battery system_woke power_source_change
-
-sketchybar --add item net right \
-  --set net update_freq=120 icon= script="$PLUGIN_DIR/wifi.sh"
+    click_script="open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'" \
+  --subscribe battery system_woke power_source_change mouse.entered mouse.exited
 
 sketchybar --add item cpu_load right \
-  --set cpu_load icon= update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" icon.padding_left="$COMP_PADDING"
+  --set cpu_load icon="󰍛" update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" \
+    click_script="open -a 'Activity Monitor'" \
+  --subscribe cpu_load mouse.entered mouse.exited
 
-# === ITEM GROUPS ===
-LEFT_ITEMS=("${LEFT_SPACE_ITEMS[@]}" front_app)
-RIGHT_ITEMS=(clock volume battery net cpu_load)
+sketchybar --add item volume right \
+  --set volume update_freq=30 script="$PLUGIN_DIR/volume.sh" \
+    "${POPUP_STYLE[@]}" popup.align=right \
+    click_script="sketchybar --set volume popup.drawing=toggle" \
+  --subscribe volume volume_change mouse.entered mouse.exited mouse.exited.global
+# The audio panel: a slider for the output volume and a way into the sound settings.
+sketchybar --add slider volume.slider popup.volume 140 \
+  --set volume.slider \
+    icon.drawing=off label.drawing=off \
+    padding_left=18 padding_right=18 \
+    slider.highlight_color="$CLR_ACCENT" \
+    slider.background.height=6 slider.background.corner_radius=3 \
+    slider.background.color="$CLR_FG_DIM" \
+    slider.knob="●" slider.knob.drawing=on \
+    script="$PLUGIN_DIR/volume_slider.sh" \
+  --subscribe volume.slider mouse.clicked
+popup_entry volume volume.settings "󰒓" "Sound settings" "open 'x-apple.systempreferences:com.apple.Sound-Settings.extension'"
 
-# === COMPARTMENTS (Outer padding for clean edges; height=26 leaves vertical margin in 34pt bar) ===
-sketchybar --add bracket left_compartment "${LEFT_ITEMS[@]}" \
-  --set left_compartment \
-    background.color="$CLR_COMP_BG" \
-    background.corner_radius=8 \
-    background.height=26 \
-    background.border_color="$CLR_COMP_BORDER" \
-    background.border_width=1 \
-    background.drawing=on
+sketchybar --add item net right \
+  --set net update_freq=20 script="$PLUGIN_DIR/wifi.sh" \
+    click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
+  --subscribe net wifi_change mouse.entered mouse.exited
 
-sketchybar --add bracket right_compartment "${RIGHT_ITEMS[@]}" \
-  --set right_compartment \
-    background.color="$CLR_COMP_BG" \
-    background.corner_radius=8 \
-    background.height=26 \
-    background.border_color="$CLR_COMP_BORDER" \
-    background.border_width=1 \
-    background.padding_left=0 \
-    background.drawing=on
+# Stay awake (caffeinate), like Skein's indicator: dim while off, the accent color while on.
+sketchybar --add item awake right \
+  --set awake icon="󰅶" icon.color="$CLR_FG_DIM" update_freq=5 \
+    script="$PLUGIN_DIR/awake.sh" click_script="$PLUGIN_DIR/awake.sh toggle"
 
 # === FINALIZE ===
 # Small delay so item event subscriptions are registered before the initial sync fires

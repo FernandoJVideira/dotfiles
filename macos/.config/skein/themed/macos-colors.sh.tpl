@@ -2,6 +2,8 @@
 # (macos/.config/skein/themed/macos-colors.sh.tpl). Sourced by sketchybarrc, its
 # plugins, Hyprspace's startup command and the sketchybar-sync hook. 0xAARRGGBB.
 export CLR_BG=0x00000000                       # transparent bar background
+export CLR_BAR_BG=0xff{{ background_strip }}   # the bar itself: the theme's background, like Skein's
+export CLR_ALERT=0xffa55555                    # Skein's alert red (low battery)
 export CLR_COMP_BG=0xff{{ lighter_background_strip }}
 export CLR_COMP_BORDER=0xff{{ muted_strip }}
 export CLR_FG=0xff{{ foreground_strip }}

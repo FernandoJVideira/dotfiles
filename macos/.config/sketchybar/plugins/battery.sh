@@ -1,52 +1,28 @@
 #!/usr/bin/env bash
 
-# Theme colors (see sketchybarrc); the old fixed values until the first theme is set
-COLORS_FILE="$HOME/.config/skein/current/theme/macos-colors.sh"
+# Battery: Skein's glyph for the level, the alert color when it is low and not charging.
 # shellcheck source=/dev/null
-[[ -f $COLORS_FILE ]] && source "$COLORS_FILE"
+source "$(dirname "$0")/lib.sh"
+hover && exit 0
 
-BATT_INFO=$(pmset -g batt)
-PERCENTAGE=$(echo "$BATT_INFO" | grep -o '[0-9]\+%' | cut -d% -f1)
-CHARGING=$(echo "$BATT_INFO" | grep 'AC Power')
-
-if [[ -z "$PERCENTAGE" ]]; then
-    exit 0
+info="$(pmset -g batt)"
+percentage="$(grep -o '[0-9]\+%' <<<"$info" | head -n 1 | tr -d %)"
+if [[ -z $percentage ]]; then
+  sketchybar --set "$NAME" drawing=off # a desktop Mac has no battery
+  exit 0
 fi
 
-case ${PERCENTAGE} in
-9[0-9] | 100)
-    ICON=""
-    ICON_COLOR="${CLR_GREEN:-0xff40a02b}"
-    ;;
-[6-8][0-9])
-    ICON=""
-    ICON_COLOR="${CLR_CYAN:-0xff179299}"
-    ;;
-[3-5][0-9])
-    ICON=""
-    ICON_COLOR="${CLR_ORANGE:-0xfffe640b}"
-    ;;
-[1-2][0-9])
-    ICON=""
-    ICON_COLOR="${CLR_YELLOW:-0xffdf8e1d}"
-    ;;
-*)
-    ICON=""
-    ICON_COLOR="${CLR_RED:-0xffd20f39}"
-    ;;
-esac
+discharging=("󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹")
+charging=("󰢜" "󰂆" "󰂇" "󰂈" "󰢝" "󰂉" "󰢞" "󰂊" "󰂋" "󰂅")
+index=$((percentage / 10))
+((index > 9)) && index=9
 
-if [[ -n "$CHARGING" ]]; then
-  case ${PERCENTAGE} in
-  9[0-9] | 100) ICON="󰂅" ;;
-  [6-8][0-9])   ICON="󰂊" ;;
-  [3-5][0-9])   ICON="󰢝" ;;
-  [1-2][0-9])   ICON="󰂆" ;;
-  *)            ICON="󰢟" ;;
-  esac
+color="$CLR_FG"
+if grep -q 'AC Power' <<<"$info"; then
+  icon="${charging[$index]}"
+else
+  icon="${discharging[$index]}"
+  ((percentage <= 15)) && color="$CLR_ALERT"
 fi
 
-sketchybar --set "$NAME" \
-    icon="$ICON" \
-    icon.color="$ICON_COLOR" \
-    label="${PERCENTAGE}%"
+sketchybar --set "$NAME" drawing=on icon="$icon" icon.color="$color" label="${percentage}%"

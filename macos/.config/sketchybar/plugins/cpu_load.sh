@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Calculate CPU load percentage natively (no external dependencies required)
-CORE_COUNT=$(sysctl -n hw.logicalcpu)
-CPU_LOAD=$(ps -A -o %cpu | awk -v cores="$CORE_COUNT" '{s+=$1} END {printf "%.1f%%\n", s/cores}')
+# CPU load as a share of all the cores, with no helper needed; shown while hovering.
+# shellcheck source=/dev/null
+source "$(dirname "$0")/lib.sh"
+hover && exit 0
 
-# Override the thermometer icon with a CPU chip icon and set the load percentage
-sketchybar --set "$NAME" \
-  icon="" \
-  label="$CPU_LOAD"
+cores="$(sysctl -n hw.logicalcpu)"
+load="$(ps -A -o %cpu | awk -v cores="$cores" '{ s += $1 } END { printf "%.0f", s / cores }')"
+sketchybar --set "$NAME" label="CPU ${load}%"

@@ -196,6 +196,7 @@ Dock when macOS's folder color changes. `THEME_SKIP=spotify`, `THEME_SKIP=finder
 ## The desktop
 
 On macOS, Hyprspace tiles windows, with sketchybar as the bar and `borders` outlining the focused window.
+The bar follows Skein's: flat, in the theme's colors, icon-only, with a module's value showing while the pointer is over it. Workspaces are numbers with a dot for the one in use (1-5 always, 6-10 while they have windows), and the clock splits around the notch: the day on its left, the time on its right. Three popups mimic Skein's menus: the Skein glyph opens a menu (theme, next wallpaper, update themes, lock, sleep, restart, shut down), the clock opens a calendar and the volume icon opens a slider. The old bar is tagged `backup/sketchybar-2026-10-28`; `git checkout backup/sketchybar-2026-10-28 -- macos/.config/sketchybar` brings it back, then `sketchybar --reload`.
 `alt` is the window modifier:
 
 | Keys | What it does |
