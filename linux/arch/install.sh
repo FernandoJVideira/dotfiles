@@ -145,6 +145,10 @@ if [[ "$GAMING" == true ]]; then
   # and fails to import the lutris module. Pin the shebang to system Python.
   sudo sed -i '/env python3/ c\#!/bin/python3' /usr/bin/lutris
   yay -S --needed --noconfirm hydra-launcher-bin
+  # Heroic (Epic, GOG, Amazon), which the Nobara installer sets up too. Its own call, so a wrong AUR
+  # name or a build failure doesn't stop the other launchers.
+  yay -S --needed --noconfirm heroic-games-launcher-bin \
+    || log "WARNING: heroic-games-launcher-bin failed to install - check the AUR name."
 fi
 
 if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
