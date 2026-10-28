@@ -17,7 +17,7 @@ hl.config({
 hl.config({
   decoration = {
     -- Round window corners, the same radius as the shell panels.
-    rounding = 12,
+    rounding = 9,
 
     -- Dim unfocused windows (0.0 = no dim, 1.0 = fully dimmed).
     -- dim_inactive = true,
