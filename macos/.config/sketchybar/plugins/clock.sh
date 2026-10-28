@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# The clock around the notch: the day on the left of it, the time on the right.
-case "$NAME" in
-clock_date) sketchybar --set "$NAME" label="$(date '+%A %-d %B')" ;;
-clock_time) sketchybar --set "$NAME" label="$(date '+%H:%M')" ;;
-esac
+# The clock, short like macOS's: "Wed 28 Oct  18:45". Opens the calendar panel on click.
+# shellcheck source=/dev/null
+source "$(dirname "$0")/lib.sh"
+hover && exit 0
+
+sketchybar --set "$NAME" label="$(date '+%a %-d %b  %H:%M')"
