@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# The battery, Wi-Fi and CPU panels (Skein's panels as popups): fill in the lines, then, with `toggle`,
-# open or close the popup. Usage: panel.sh <battery|net|cpu_load> [toggle]
+# The battery, Wi-Fi and CPU panels (Skein's panels as popups): fill in the lines (popup_toggle.sh opens
+# the popup). Usage: panel.sh <battery|net|cpu_load>
 # shellcheck source=/dev/null
 source "$(dirname "$0")/lib.sh"
 
-panel="${1:?usage: panel.sh <battery|net|cpu_load> [toggle]}"
+panel="${1:?usage: panel.sh <battery|net|cpu_load>}"
 rows=()
 extra=()
 
@@ -52,5 +52,4 @@ for i in 1 2 3 4 5 6; do
 done
 sketchybar "${args[@]}" "${extra[@]}"
 
-[[ ${2:-} == toggle ]] && sketchybar --set "$panel" popup.drawing=toggle
 exit 0

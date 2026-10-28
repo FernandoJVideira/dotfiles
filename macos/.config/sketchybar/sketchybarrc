@@ -87,8 +87,8 @@ sketchybar --default \
   label.drawing=off
 
 # === POPUPS (Skein's panels and menu) ===
-# Shared look: the bar's color with a hairline border and rounded corners. They close when the pointer
-# leaves them (plugins/lib.sh).
+# Shared look: the bar's color with a hairline border and rounded corners. They close at a click outside
+# them (plugins/popup_watch.sh), or when their icon is clicked again.
 POPUP_STYLE=(
   popup.horizontal=off
   popup.height=38
@@ -105,7 +105,7 @@ popup_entry() {
     --set "$2" icon="$3" label="$4" label.drawing=on \
     icon.padding_left=18 icon.padding_right=12 label.padding_right=26 \
     icon.width=50 icon.align=center \
-    click_script="sketchybar --set $1 popup.drawing=off; $5"
+    click_script="$PLUGIN_DIR/popup_close.sh; $5"
 }
 
 # the lines of a panel (battery, Wi-Fi, CPU), filled in by plugins/panel.sh when it opens
@@ -115,7 +115,7 @@ panel_rows() {
     sketchybar --add item "$1.i$row" "popup.$1" \
       --set "$1.i$row" label.drawing=on label.font="$PANEL_FONT" label.width=300 label.align=left \
       label.padding_left=22 label.padding_right=22 drawing=off \
-      click_script="sketchybar --set $1 popup.drawing=off"
+      click_script="$PLUGIN_DIR/popup_close.sh"
   done
 }
 
@@ -129,9 +129,7 @@ sketchybar --add item skein left \
     icon.padding_right="$MODULE_PADDING" \
     "${POPUP_STYLE[@]}" \
     popup.align=left \
-    script="$PLUGIN_DIR/popup.sh" \
-    click_script="sketchybar --set skein popup.drawing=toggle" \
-  --subscribe skein mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh skein"
 popup_entry skein skein.theme "󰏘" "Theme" "open -g hammerspoon://theme"
 popup_entry skein skein.wallpaper "󰋩" "Next wallpaper" "theme bg next"
 popup_entry skein skein.update "󰚰" "Update themes" "theme update && osascript -e 'display notification \"Themes updated\" with title \"Skein\"'"
@@ -182,14 +180,13 @@ sketchybar --add item clock right \
   --set clock update_freq=10 script="$PLUGIN_DIR/clock.sh" icon.drawing=off label.drawing=on \
     label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
     "${POPUP_STYLE[@]}" popup.align=right \
-    click_script="$PLUGIN_DIR/calendar.sh toggle" \
-  --subscribe clock mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh clock $PLUGIN_DIR/calendar.sh fill"
 
 # The calendar panel: a month in a monospaced grid, filled in by plugins/calendar.sh when it opens.
 for row in title head w1 w2 w3 w4 w5 w6; do
   sketchybar --add item "cal.$row" popup.clock \
     --set "cal.$row" label.drawing=on label.font="$PANEL_FONT" label.width=310 label.align=center \
-      label.padding_left=16 label.padding_right=16 click_script="sketchybar --set clock popup.drawing=off"
+      label.padding_left=16 label.padding_right=16 click_script="$PLUGIN_DIR/popup_close.sh"
 done
 sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:15.0" label.color="$CLR_ACCENT" \
   --set cal.head label.color="$CLR_FG_DIM"
@@ -198,24 +195,23 @@ sketchybar --add item battery right \
   --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
     label.drawing=on icon.padding_right=4 \
     "${POPUP_STYLE[@]}" popup.align=right \
-    click_script="$PLUGIN_DIR/panel.sh battery toggle" \
-  --subscribe battery system_woke power_source_change mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh battery $PLUGIN_DIR/panel.sh battery" \
+  --subscribe battery system_woke power_source_change
 panel_rows battery
 popup_entry battery battery.settings "󰒓" "Battery settings…" "open 'x-apple.systempreferences:com.apple.Battery-Settings.extension'"
 
 sketchybar --add item cpu_load right \
   --set cpu_load icon="󰍛" update_freq=5 script="$PLUGIN_DIR/cpu_load.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
-    click_script="$PLUGIN_DIR/panel.sh cpu_load toggle" \
-  --subscribe cpu_load mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh cpu_load $PLUGIN_DIR/panel.sh cpu_load"
 panel_rows cpu_load
 popup_entry cpu_load cpu_load.monitor "󰍛" "Activity Monitor…" "open -a 'Activity Monitor'"
 
 sketchybar --add item volume right \
   --set volume update_freq=30 script="$PLUGIN_DIR/volume.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
-    click_script="sketchybar --set volume popup.drawing=toggle" \
-  --subscribe volume volume_change mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh volume" \
+  --subscribe volume volume_change
 # The audio panel: a slider for the output volume and a way into the sound settings.
 sketchybar --add slider volume.slider popup.volume 160 \
   --set volume.slider \
@@ -232,8 +228,8 @@ popup_entry volume volume.settings "󰒓" "Sound settings…" "open 'x-apple.sys
 sketchybar --add item net right \
   --set net update_freq=20 script="$PLUGIN_DIR/wifi.sh" \
     "${POPUP_STYLE[@]}" popup.align=right \
-    click_script="$PLUGIN_DIR/panel.sh net toggle" \
-  --subscribe net wifi_change mouse.exited.global
+    click_script="$PLUGIN_DIR/popup_toggle.sh net $PLUGIN_DIR/panel.sh net" \
+  --subscribe net wifi_change
 panel_rows net
 popup_entry net net.power "󰐥" "Turn Wi-Fi off" "$PLUGIN_DIR/wifi_power.sh"
 popup_entry net net.settings "󰒓" "Wi-Fi settings…" "open 'x-apple.systempreferences:com.apple.wifi-settings-extension'"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The calendar panel, opened from the clock: this month in a grid, today in brackets.
-# `calendar.sh toggle` fills it in and opens or closes it.
+# `calendar.sh fill` fills it in (popup_toggle.sh opens it).
 # shellcheck source=/dev/null
 source "$(dirname "$0")/lib.sh"
 
@@ -38,7 +38,5 @@ fill() {
   sketchybar "${args[@]}"
 }
 
-if [[ ${1:-} == toggle ]]; then
-  fill
-  sketchybar --set clock popup.drawing=toggle
-fi
+[[ ${1:-} == fill ]] && fill
+exit 0
