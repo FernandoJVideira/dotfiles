@@ -5,6 +5,7 @@ node = "lts"
 pnpm = "latest"
 herdr = "latest"
 neovim = "latest"
+tree-sitter = "latest"   # nvim-treesitter builds its parsers with this
 gh = "latest"
 just = "latest"
 cloudflared = "latest"
