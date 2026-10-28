@@ -7,7 +7,7 @@
 item="${1:?usage: popup_watch.sh <item>}"
 dir="$(dirname "$0")"
 pidfile=/tmp/skein-popup-watch.pid
-bar_height=40
+bar_height="$(sketchybar --query bar | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["height"])')"
 
 # the panel's rectangle: its visible rows (hidden ones are parked at y = -9999), with some margin
 rect="$(sketchybar --query "$item" | python3 -I -c '
