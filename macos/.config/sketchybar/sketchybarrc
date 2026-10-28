@@ -27,9 +27,16 @@ CLR_ALERT="${CLR_ALERT:-0xffa55555}"
 BAR_HEIGHT=40
 MODULE_PADDING=10
 SECTION_PADDING=8
+# One family for icons and text, so they share metrics and line up ("SF Pro" is not installed here, and
+# macOS quietly swaps in another font for a name it can't find).
 ICON_FONT="JetBrainsMono Nerd Font:Regular:17.0"
-LABEL_FONT="SF Pro:Medium:14.0"
+LABEL_FONT="JetBrainsMono Nerd Font:Medium:14.0"
 PANEL_FONT="JetBrainsMono Nerd Font:Regular:14.0"
+# nudges, in points (positive moves up), to line the text up with the icons if they ever drift
+ICON_Y_OFFSET=0
+LABEL_Y_OFFSET=0
+# the right edge is left clear for macOS's own indicators (recording, sharing), which sit in that corner
+RIGHT_PADDING=26
 
 # === THE NOTCH ===
 # A notch display reports a safe area at the top (the height of the notch, which is also the height of
@@ -54,7 +61,7 @@ NOTCH_WIDTH="${NOTCH_WIDTH:-0}"
 # topmost=on keeps the bar above macOS's own menu bar: with that set to hide automatically it slides down over
 # the bar whenever the pointer reaches the top, and the click lands on it instead of on the bar.
 BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off topmost=on
-  padding_left="$SECTION_PADDING" padding_right="$SECTION_PADDING" y_offset=0)
+  padding_left="$SECTION_PADDING" padding_right="$RIGHT_PADDING" y_offset=0)
 if ((NOTCH_HEIGHT > 0)); then
   # the notch display's bar is at least as tall as the notch (its menu bar), and as the bar itself
   ((NOTCH_HEIGHT < BAR_HEIGHT)) && NOTCH_HEIGHT="$BAR_HEIGHT"
@@ -75,6 +82,8 @@ sketchybar --default \
   icon.padding_right="$MODULE_PADDING" \
   label.padding_left=0 \
   label.padding_right="$MODULE_PADDING" \
+  icon.y_offset="$ICON_Y_OFFSET" \
+  label.y_offset="$LABEL_Y_OFFSET" \
   label.drawing=off
 
 # === POPUPS (Skein's panels and menu) ===
@@ -174,8 +183,8 @@ sketchybar --add item front_app left \
 # === RIGHT, from the edge inwards: clock, battery, CPU, volume, Wi-Fi, stay awake ===
 # The clock is short, like macOS's ("Wed 28 Oct  18:45"); click opens the calendar panel.
 sketchybar --add item clock right \
-  --set clock update_freq=10 script="$PLUGIN_DIR/clock.sh" label.drawing=on \
-    label.padding_left="$MODULE_PADDING" label.padding_right=14 \
+  --set clock update_freq=10 script="$PLUGIN_DIR/clock.sh" icon.drawing=off label.drawing=on \
+    label.padding_left="$MODULE_PADDING" label.padding_right="$MODULE_PADDING" \
     "${POPUP_STYLE[@]}" popup.align=right \
     click_script="$PLUGIN_DIR/calendar.sh toggle" \
   --subscribe clock mouse.exited.global
