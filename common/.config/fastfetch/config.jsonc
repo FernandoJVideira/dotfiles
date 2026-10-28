@@ -20,9 +20,11 @@
     "break",
     "break",
     {
-      "type": "os",
+      // SkeinOS where it is installed, the distro's own name everywhere else (macOS included)
+      "type": "command",
       "key": " OS  ",
       "keyColor": "red",
+      "text": "if [ -x \"$HOME/.local/share/skein/libexec/skein-os-name\" ]; then \"$HOME/.local/share/skein/libexec/skein-os-name\"; elif [ -r /etc/os-release ]; then . /etc/os-release; echo \"$PRETTY_NAME $(uname -m)\"; else echo \"$(sw_vers -productName) $(sw_vers -productVersion) $(uname -m)\"; fi",
     },
     {
       "type": "kernel",
