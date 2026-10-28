@@ -42,7 +42,8 @@ inner.vertical = 18
 outer.left = 18
 outer.right = 18
 outer.bottom = 18
-outer.top = [{ monitor."built-in" = 16 }, { monitor."main" = 50 }, 50]
+# the gap under the bar: the built-in display reserves a 38pt menu bar before these count, the others do not
+outer.top = [{ monitor."built-in" = 10 }, { monitor."main" = 46 }, 46]
 
 # ---------- MAIN KEY BINDINGS -----------
 
