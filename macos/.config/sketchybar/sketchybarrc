@@ -23,15 +23,16 @@ CLR_FG_DIM="${CLR_FG_DIM:-0x77ebdbb2}"
 CLR_ACCENT="${CLR_ACCENT:-0xfffe8019}"
 CLR_ALERT="${CLR_ALERT:-0xffa55555}"
 
-# === SIZES (a little bigger than Skein's, which is 26px with 8px module padding and 10.5pt text) ===
-BAR_HEIGHT=40
+# === SIZES (a little bigger than Skein's, which is 26px with 8px module padding and 10.5pt text; the
+# gaps in Hyprspace's config (outer.top) follow BAR_HEIGHT) ===
+BAR_HEIGHT=36
 MODULE_PADDING=10
 SECTION_PADDING=8
 # One family for icons and text, so they share metrics and line up ("SF Pro" is not installed here, and
 # macOS quietly swaps in another font for a name it can't find).
-ICON_FONT="JetBrainsMono Nerd Font:Regular:17.0"
-LABEL_FONT="JetBrainsMono Nerd Font:Medium:14.0"
-PANEL_FONT="JetBrainsMono Nerd Font:Regular:14.0"
+ICON_FONT="JetBrainsMono Nerd Font:Regular:16.0"
+LABEL_FONT="JetBrainsMono Nerd Font:Medium:13.5"
+PANEL_FONT="JetBrainsMono Nerd Font:Regular:13.5"
 # nudges, in points (positive moves up), to line the text up with the icons if they ever drift
 ICON_Y_OFFSET=0
 LABEL_Y_OFFSET=0
@@ -63,9 +64,8 @@ NOTCH_WIDTH="${NOTCH_WIDTH:-0}"
 BAR_ARGS=(position=top height="$BAR_HEIGHT" color="$CLR_BAR_BG" blur_radius=0 corner_radius=0 border_width=0 shadow=off topmost=on
   padding_left="$SECTION_PADDING" padding_right="$RIGHT_PADDING" y_offset=0)
 if ((NOTCH_HEIGHT > 0)); then
-  # the notch display's bar is at least as tall as the notch (its menu bar), and as the bar itself
-  ((NOTCH_HEIGHT < BAR_HEIGHT)) && NOTCH_HEIGHT="$BAR_HEIGHT"
-  BAR_ARGS+=(notch_display_height="$NOTCH_HEIGHT" notch_width="$NOTCH_WIDTH")
+  # the notch display's bar is as tall as any other (it need not fill the notch's 38pt band)
+  BAR_ARGS+=(notch_display_height="$BAR_HEIGHT" notch_width="$NOTCH_WIDTH")
 fi
 sketchybar --bar "${BAR_ARGS[@]}"
 
@@ -91,7 +91,7 @@ sketchybar --default \
 # them (plugins/popup_watch.sh), or when their icon is clicked again.
 POPUP_STYLE=(
   popup.horizontal=off
-  popup.height=38
+  popup.height=36
   popup.y_offset=6
   popup.background.color="$CLR_BAR_BG"
   popup.background.corner_radius=18

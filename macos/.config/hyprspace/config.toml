@@ -42,7 +42,7 @@ inner.vertical = 18
 outer.left = 18
 outer.right = 18
 outer.bottom = 18
-outer.top = [{ monitor."built-in" = 20 }, { monitor."main" = 54 }, 54]
+outer.top = [{ monitor."built-in" = 16 }, { monitor."main" = 50 }, 50]
 
 # ---------- MAIN KEY BINDINGS -----------
 
