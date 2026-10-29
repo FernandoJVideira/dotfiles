@@ -49,3 +49,9 @@ local function reload_changed_files()
 end
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "TermLeave" }, { callback = reload_changed_files })
 vim.uv.new_timer():start(1000, 1000, vim.schedule_wrap(reload_changed_files))
+
+-- Format on save is set up in configs/conform.lua; this turns it off and on for the session
+vim.api.nvim_create_user_command("FormatToggle", function()
+  vim.g.disable_autoformat = not vim.g.disable_autoformat
+  vim.notify("Format on save: " .. (vim.g.disable_autoformat and "off" or "on"))
+end, { desc = "Toggle format on save" })

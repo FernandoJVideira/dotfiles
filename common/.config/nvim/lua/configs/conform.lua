@@ -18,11 +18,14 @@ local options = {
     yaml = prettier,
   },
 
-  -- format_on_save = {
-  --   -- These options will be passed to conform.format()
-  --   timeout_ms = 500,
-  --   lsp_fallback = true,
-  -- },
+  -- Format when the file is saved: the formatters above, or the language server's formatting for filetypes
+  -- without one. :FormatToggle turns it off and on (for the session), or use :noautocmd w to skip it once.
+  format_on_save = function()
+    if vim.g.disable_autoformat then
+      return nil
+    end
+    return { timeout_ms = 3000, lsp_format = "fallback" }
+  end,
 }
 
 return options
