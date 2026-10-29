@@ -141,6 +141,9 @@ first run with the `tree-sitter` CLI (mise installs it); run `:checkhealth nvim-
 language has no colors. In a Vue project the `vue_ls` server handles the template and styles and `vtsls`
 the TypeScript, so both are attached to a `.vue` file.
 
+In the completion menu `Tab` accepts the highlighted item (so does `Enter`); move with `Ctrl+n` and `Ctrl+p`, or the arrows, and
+close it with `Ctrl+e`. With no menu open, `Tab` still jumps through a snippet and otherwise types a tab.
+
 | Keys | What it does |
 |---|---|
 | `;` | command line (same as `:`) |

@@ -33,6 +33,26 @@ return {
   -- test new blink
   -- { import = "nvchad.blink.lazyspec" },
 
+  -- Completion menu: Tab accepts the highlighted item (NvChad's Tab only moves down the list). Move with
+  -- Ctrl+n / Ctrl+p or the arrows (Shift+Tab goes up too), Enter accepts as well, Ctrl+e closes it. With no
+  -- menu open, Tab still jumps through a snippet and otherwise types a Tab.
+  {
+    "hrsh7th/nvim-cmp",
+    opts = function(_, opts)
+      local cmp = require "cmp"
+      opts.mapping["<Tab>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.confirm { behavior = cmp.ConfirmBehavior.Insert, select = true }
+        elseif require("luasnip").expand_or_jumpable() then
+          require("luasnip").expand_or_jump()
+        else
+          fallback()
+        end
+      end, { "i", "s" })
+      return opts
+    end,
+  },
+
   -- Syntax trees. The installed nvim-treesitter is its rewritten "main" branch: it installs parsers
   -- with require("nvim-treesitter").install() (building them with the tree-sitter CLI, from mise) and
   -- no longer turns highlighting on or reads ensure_installed, which NvChad's spec still assumes.
