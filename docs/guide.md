@@ -133,8 +133,10 @@ second when something else writes them, which is how Claude's edits appear.
 Go, TypeScript/JavaScript, Vue, HTML and CSS have language servers: completion, hover (`K`), `gd`
 (definition), `<leader>ra` (rename) and diagnostics. The first time you open a file, Mason installs
 what is missing in the background (`gopls`, `vtsls`, `vue-language-server`, the HTML and CSS servers,
-`goimports`, `prettier`); it needs Go and Node, which mise provides. `<leader>fm` formats the buffer
-(goimports and gofmt for Go, prettier for the web languages). Typing `<div>` closes the tag, and
+`goimports`, `prettier`); it needs Go and Node, which mise provides. Saving formats the buffer
+(goimports and gofmt for Go, prettier for TypeScript, JavaScript, Vue, HTML, CSS, JSON and YAML, stylua for Lua; the language
+server's own formatting for anything else), and `<leader>fm` does it on demand. `:FormatToggle` turns format on save off and on,
+and `:noautocmd w` saves once without it. Typing `<div>` closes the tag, and
 renaming the opening tag renames the closing one (nvim-ts-autotag, in HTML, JSX/TSX and Vue). The
 highlighting and tag handling come from treesitter parsers, which Neovim builds in the background on
 first run with the `tree-sitter` CLI (mise installs it); run `:checkhealth nvim-treesitter` if a
