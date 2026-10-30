@@ -76,6 +76,13 @@ if ! launchctl print gui/$(id -u)/com.proton.pass.deploy-agent &>/dev/null; then
     || log "WARNING: couldn't start the Deploy-vault agent - run: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.proton.pass.deploy-agent.plist"
 fi
 
+# GUI apps inherit launchd's environment, not zsh's, so SSH_AUTH_SOCK is set there too
+if ! launchctl print gui/$(id -u)/com.proton.pass.agent-env &>/dev/null; then
+  log "Exporting SSH_AUTH_SOCK to the login session..."
+  launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.agent-env.plist" \
+    || log "WARNING: couldn't export SSH_AUTH_SOCK to the session - run: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.proton.pass.agent-env.plist"
+fi
+
 if [[ "$(sysctl -n hw.model)" == MacBook* ]]; then
   log "Laptop detected — installing AlDente..."
   brew install --cask aldente
