@@ -85,18 +85,72 @@ brain_commit() {
   git -C "$BRAIN_DIR" ${id[@]+"${id[@]}"} -c commit.gpgsign=false commit -q -m "brain: $(hostname -s) $(date '+%Y-%m-%d %H:%M')" >/dev/null 2>&1 || true
 }
 
-# bring in what the other machines pushed. Offline: silent. Diverged notes: leave the vault as it was
-# and set BRAIN_SYNC_NOTE so the session can tell the user.
+# one line per path in the notice file, shown once to the next prompt by brain-prompt.sh. It lives
+# inside .git so it is never committed.
+brain_notice_add() {
+  local f="$BRAIN_DIR/.git/brain-notice"
+  [[ -d $BRAIN_DIR/.git ]] || return 0
+  grep -qxF -- "$1" "$f" 2>/dev/null || printf '%s\n' "$1" >>"$f"
+}
+
+# While a rebase is stopped, stage 2 is the upstream side and stage 3 the local commit being replayed.
+# Keep the note with the newer `updated:` date (local on a tie or no date) and park the other next to
+# it as <name>.conflict-<host>.<ext>. A file deleted on one side keeps the side that still has it.
+brain_resolve_conflicts() {
+  local f ours theirs od td keep lose dest host tmp
+  host="$(hostname -s 2>/dev/null || uname -n)"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/brain.XXXXXX")" || return 1
+  while IFS= read -r f; do
+    [[ -n $f ]] || continue
+    ours="$tmp/ours"
+    theirs="$tmp/theirs"
+    rm -f "$ours" "$theirs"
+    git -C "$BRAIN_DIR" show ":2:$f" >"$ours" 2>/dev/null || rm -f "$ours"
+    git -C "$BRAIN_DIR" show ":3:$f" >"$theirs" 2>/dev/null || rm -f "$theirs"
+    if [[ ! -e $ours && ! -e $theirs ]]; then
+      git -C "$BRAIN_DIR" rm -q --cached -- "$f" >/dev/null 2>&1 || { rm -rf "$tmp"; return 1; }
+      rm -f "$BRAIN_DIR/$f"
+      continue
+    fi
+    if [[ -e $ours && -e $theirs ]]; then
+      od="$(brain_front "$ours" updated)"
+      td="$(brain_front "$theirs" updated)"
+      if [[ -n $od && -n $td && $od > $td ]]; then keep="$ours"; lose="$theirs"; else keep="$theirs"; lose="$ours"; fi
+    elif [[ -e $theirs ]]; then
+      keep="$theirs"; lose=""
+    else
+      keep="$ours"; lose=""
+    fi
+    cp "$keep" "$BRAIN_DIR/$f" || { rm -rf "$tmp"; return 1; }
+    git -C "$BRAIN_DIR" add -- "$f" >/dev/null 2>&1 || { rm -rf "$tmp"; return 1; }
+    if [[ -n $lose ]]; then
+      if [[ ${f##*/} == *.* ]]; then dest="${f%.*}.conflict-$host.${f##*.}"; else dest="$f.conflict-$host"; fi
+      cp "$lose" "$BRAIN_DIR/$dest" || { rm -rf "$tmp"; return 1; }
+      git -C "$BRAIN_DIR" add -- "$dest" >/dev/null 2>&1 || { rm -rf "$tmp"; return 1; }
+      brain_notice_add "conflict: $dest"
+    fi
+  done < <(git -C "$BRAIN_DIR" diff --name-only --diff-filter=U 2>/dev/null)
+  rm -rf "$tmp"
+}
+
+# bring in what the other machines pushed. Offline: silent. Conflicting notes are resolved by
+# brain_resolve_conflicts; if that goes wrong the rebase is aborted and BRAIN_SYNC_NOTE tells the session.
 brain_pull() {
   brain_repo || return 0
-  local br
+  local br id=() step
   br="$(git -C "$BRAIN_DIR" symbolic-ref -q --short HEAD)" || return 0
   brain_git fetch -q origin "$br" >/dev/null 2>&1 || return 0
   git -C "$BRAIN_DIR" rev-parse -q --verify "origin/$br" >/dev/null 2>&1 || return 0
-  if ! brain_git rebase -q "origin/$br" >/dev/null 2>&1; then
-    git -C "$BRAIN_DIR" rebase --abort >/dev/null 2>&1 || true
-    BRAIN_SYNC_NOTE="Brain sync: the notes on this machine and the server changed in the same place, so they were not merged. Tell the user to run: git -C $BRAIN_DIR pull --rebase (and fix the conflict)."
-  fi
+  git -C "$BRAIN_DIR" config user.email >/dev/null || id=(-c user.name=brain -c user.email=brain@localhost)
+  brain_git ${id[@]+"${id[@]}"} -c commit.gpgsign=false rebase -q "origin/$br" >/dev/null 2>&1 && return 0
+  for step in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    [[ -n $(git -C "$BRAIN_DIR" diff --name-only --diff-filter=U 2>/dev/null) ]] || break
+    brain_resolve_conflicts || break
+    GIT_EDITOR=true git -C "$BRAIN_DIR" ${id[@]+"${id[@]}"} -c commit.gpgsign=false rebase --continue >/dev/null 2>&1 </dev/null && return 0
+    [[ -d $BRAIN_DIR/.git/rebase-merge || -d $BRAIN_DIR/.git/rebase-apply ]] || break
+  done
+  git -C "$BRAIN_DIR" rebase --abort >/dev/null 2>&1 || true
+  BRAIN_SYNC_NOTE="Brain sync: the notes on this machine and the server changed in the same place, so they were not merged. Tell the user to run: git -C $BRAIN_DIR pull --rebase (and fix the conflict)."
 }
 
 # push in the background: SessionEnd gets 1.5 s, a network push can take longer. Skipped when nothing
@@ -118,7 +172,7 @@ brain_dirty() {
 }
 
 # commit, rebase onto the server's notes, push, all in the foreground. Callers run it detached (brain-sync.sh).
-# A rebase conflict leaves the vault untouched and returns 1; offline or a failed push is silent.
+# A rebase conflict that cannot be resolved leaves the vault untouched and returns 1; offline or a failed push is silent.
 brain_sync_now() {
   brain_repo || return 0
   local t=()

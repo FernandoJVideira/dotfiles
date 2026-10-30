@@ -21,6 +21,7 @@ Per project files live in `projects/<slug>/`; `INDEX.md` and `knowledge/` are at
 | `decisions.md` | you, appended | one line per settled decision |
 | `log.md` | the end-of-session hook only | commits and files changed per session. Never edit it |
 | `topics/<name>.md` | you | one durable how or why: a mechanism, a design, a lesson tied to this project. Loaded only when needed, never injected whole |
+| `memory/` | Claude Code itself | Claude Code's own auto-memory for the project (user, feedback, project, reference notes plus a `MEMORY.md` index), symlinked from `~/.claude/projects/<dir>/memory` at session start so every machine shares it. Do not restructure or rewrite it |
 | `knowledge/<name>.md` | you | a lesson that holds across projects, same page format. Only when it shows up in a second project or the user asks |
 
 ### Topic and knowledge pages
@@ -73,14 +74,16 @@ the reason always included, in under 30 words. A decision that replaces an older
    the topic pages it touches (one conversation may touch several), move detail out of `state.md` into
    topics so it stays short, append decisions, add or fix the page's line in `INDEX.md`, and note a
    supersession in both the old and the new place. Prefer updating a page over creating one. Never
-   copy transcript; write conclusions and the why.
+   copy transcript; write conclusions and the why. A `*.conflict-<host>.*` file beside a page is folded in
+   at the next checkpoint.
 2. **Query.** To answer a question about the project's past or design, read `INDEX.md` first, then only
    the pages it points to, not the whole vault. When an answer took real work to put together and would
    be asked again, file it back as a topic page and index it.
 3. **Lint.** Only when the user asks ("lint the brain") or when `state.md` exceeds its limit. Check:
    contradictions between pages and decisions, claims a newer decision superseded, orphan pages not in
    `INDEX.md`, topic pages with no links in or out, things mentioned repeatedly with no page,
-   `state.md` over 60 lines, secrets. Fix what is clear; list what needs the user's call.
+   `state.md` over 60 lines, secrets. Files named `*.conflict-<host>.*` or `*.from-<host>.*` are the losing
+   side of a sync conflict: fold what is still true into the real page and delete them. Fix what is clear; list what needs the user's call.
 
 ## When to write (checkpoints)
 

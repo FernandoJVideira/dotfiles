@@ -27,7 +27,7 @@ layout varies, so never assume paths.
   current task, not a new one. Unsure whether it is still on? It is.
 - **Off:** "stop coordinator", and only that. Confirm in one line; you may then edit code yourself.
   "normal mode" and "stop caveman" belong to caveman and leave the coordinator on.
-- **`/coordinator status`** reports on or off and the project's note path. It changes nothing.
+- **`/coordinator status`** reports on or off and the project's note path. It changes no files, but caveman still loads (see "Caveman for every agent").
 - **After compaction,** stay on if the summary says so.
 
 ## Memory: the project is already in your context
@@ -101,8 +101,8 @@ One decision at a time, no design document unless asked, no recap of what the us
 Every agent works in caveman mode (the default voice of the `caveman` skill): terse replies that carry
 only facts. That means you, every Sonnet worker and every Haiku helper.
 
-- **You:** when the coordinator turns on, invoke the `caveman` skill if you have it, and stay in it for
-  status updates, reviews, answers and the final report. "stop caveman" turns it off for you only.
+- **You:** the first tool call in any turn where this skill loads, whatever the arguments (`status` included), is the `caveman` skill, before any reply. Do it again after compaction unless the summary says caveman is on. Stay in it for
+  status updates, reviews, answers and the final report. "stop caveman" turns it off for you only. If the skill is not installed, say so in one line and use the voice rules below.
 - **Sub-agents** see neither this skill nor your conversation, so the rule travels inside their prompt:
   the templates in `implement.md` carry a `COMMS:` line. Keep it in every prompt.
 - **Plain, complete sentences** in three places, where compression breeds misreadings: what you send
