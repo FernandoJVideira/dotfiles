@@ -29,6 +29,7 @@ install_mise_tools || log "WARNING: the mise dev tools weren't all installed (se
 create_brain_vault
 install_claude_hooks || log "WARNING: the Claude hooks weren't added (see above) - rerun ./bootstrap.sh to retry."
 install_skill_overrides || log "WARNING: the skill overrides weren't applied (see above)."
+install_lsp_plugins || log "WARNING: the Claude LSP plugins weren't installed (see above) - rerun ./bootstrap.sh to retry."
 
 # Herdr's config.toml is generated from config.base.toml plus the current theme (and replaces the
 # old symlink to the repo). The plugin step below reloads it.

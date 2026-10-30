@@ -129,13 +129,13 @@ if command -v gum >/dev/null && gum confirm "Set up gaming tools too (Steam, Her
   sudo dnf install -y --skip-unavailable steam heroic-games-launcher
 fi
 
-# Flatpak apps (no rpm for these): LocalSend, GPU Screen Recorder and OnlyOffice. Nobara can have
+# Flatpak apps (no rpm for these): LocalSend, GPU Screen Recorder, OnlyOffice and Obsidian (the Brain vault, docs/brain.md). Nobara can have
 # flathub configured in both the system and user scopes, which makes a bare
 # `flatpak install flathub ...` refuse to run non-interactively, so say --system.
-log "Installing Flatpak apps (LocalSend, GPU Screen Recorder, OnlyOffice)..."
+log "Installing Flatpak apps (LocalSend, GPU Screen Recorder, OnlyOffice, Obsidian)..."
 sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
-  && sudo flatpak install --system -y --noninteractive flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors \
-  || log "WARNING: Flatpak apps failed to install - run: sudo flatpak install --system flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors"
+  && sudo flatpak install --system -y --noninteractive flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors md.obsidian.Obsidian \
+  || log "WARNING: Flatpak apps failed to install - run: sudo flatpak install --system flathub org.localsend.localsend_app com.dec05eba.gpu_screen_recorder org.onlyoffice.desktopeditors md.obsidian.Obsidian"
 
 # OpenDeck (Stream Deck controller; the AUR package on Arch). Upstream's own
 # installer picks the .rpm from GitHub Releases on Fedora-family systems and
