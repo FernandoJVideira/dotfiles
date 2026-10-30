@@ -45,7 +45,8 @@ The hook keeps `commit:` and `updated:` current. When you rewrite the file, keep
 
 ### decisions.md
 
-One line per decision, appended: `YYYY-MM-DD | chose X over Y because Z`. The user's decisions and yours,
+One bullet per decision, appended: `- YYYY-MM-DD | chose X over Y because Z`. Keep each on a single line with
+no blank lines between (the session hook loads the last 5 lines, and two machines' lines merge by line). The user's decisions and yours,
 the reason always included, in under 30 words. A decision that replaces an older one says
 `(replaces YYYY-MM-DD)`. Not decisions: tasks done (git has them), ideas still being discussed.
 
