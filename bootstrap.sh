@@ -6,6 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/secrets.sh"
 export DOTFILES_BOOTSTRAP=1
 
+# Ask for the tokens first, so the rest runs unattended and the SSH agent has its login by the time
+# the Brain vault is cloned through it. Enter skips one; no terminal skips all.
+prompt_for_secrets
+
 case "$(uname -s)" in
   Darwin)
     "$SCRIPT_DIR/macos/install.sh"
