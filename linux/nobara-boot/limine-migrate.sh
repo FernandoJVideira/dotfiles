@@ -13,8 +13,8 @@
 #   (reboot; confirm Nobara still boots in BIOS; then in the firmware switch to UEFI, disable Secure Boot,
 #    boot the disk: Limine should show a menu)
 #   sudo ./limine-migrate.sh finish    # phase 2, run after booting via UEFI+Limine:
-#                                      #   register the UEFI boot entry, stop kernel-install using GRUB
-#   sudo ./limine-migrate.sh purge-grub  # optional: remove the (unused, dnf-protected) GRUB and shim packages
+#                                      #   register the UEFI boot entry, mask only 99-grub-mkconfig (20-grub.install stays: Nobara updater needs it)
+#   sudo ./limine-migrate.sh purge-grub  # optional: remove the dnf-protected GRUB and shim packages (breaks the Nobara updater)
 #   sudo ./limine-migrate.sh auto      # what the Nobara bootstrap runs: picks prepare or finish for this machine
 #   sudo ./limine-migrate.sh rollback  # undo phase 1's fstab change (before switching to UEFI)
 set -euo pipefail
@@ -25,6 +25,7 @@ SYNC_BIN=/usr/local/libexec/limine-sync
 THEME_SRC="$HERE/../../lib/limine-theme.conf"
 THEME_DEST=/usr/local/share/limine-sync/theme.conf
 PLUGIN=/etc/kernel/install.d/95-limine.install
+KI_CONF=/etc/kernel/install.conf
 NEW_BOOT_SECTORS=4194304 # 2 GiB of 512-byte sectors
 STAGE=/mnt/limine-newboot
 
@@ -162,13 +163,23 @@ cmd_finish() {
   fi
   install_assets
   install -Dm755 "$HERE/95-limine.install" "$PLUGIN"
-  say "Making kernel-install ignore GRUB (Limine's hook keeps the menu current)"
+  say "Pinning BOOT_ROOT=/boot in $KI_CONF (kernel-install would reject the ESP-typed /boot as XBOOTLDR)"
+  # systemd 259 treats a /boot partition as XBOOTLDR and checks its type GUID
+  if [[ ! -f $KI_CONF ]]; then
+    install -Dm644 /dev/null "$KI_CONF"
+    echo "BOOT_ROOT=/boot" >"$KI_CONF"
+  elif grep -q '^BOOT_ROOT=' "$KI_CONF"; then
+    sed -i 's|^BOOT_ROOT=.*|BOOT_ROOT=/boot|' "$KI_CONF"
+  else
+    echo "BOOT_ROOT=/boot" >>"$KI_CONF"
+  fi
+  say "Keeping 20-grub.install active (the Nobara updater requires it; it writes the BLS entries Limine reads) and masking only 99-grub-mkconfig.install"
   install -d /etc/kernel/install.d
-  for p in 20-grub.install 99-grub-mkconfig.install; do
-    [[ -e /usr/lib/kernel/install.d/$p ]] && ln -sf /dev/null "/etc/kernel/install.d/$p"
-  done
+  [[ -L /etc/kernel/install.d/20-grub.install && $(readlink /etc/kernel/install.d/20-grub.install) == /dev/null ]] &&
+    rm -f /etc/kernel/install.d/20-grub.install
+  [[ -e /usr/lib/kernel/install.d/99-grub-mkconfig.install ]] && ln -sf /dev/null /etc/kernel/install.d/99-grub-mkconfig.install
   "$SYNC_BIN"
-  say "GRUB is now unused. Its packages are still installed (dnf protects them). To remove them: sudo $0 purge-grub"
+  say "Limine now boots this machine, but keep GRUB's packages: the Nobara updater needs them. sudo $0 purge-grub would break that updater."
   say "The old ext4 /boot (mount it with: mount /boot.old) can be wiped and reused once you are happy."
 }
 
@@ -180,6 +191,7 @@ cmd_purge_grub() {
   ((${#pk[@]})) || { say "No GRUB packages installed."; return 0; }
   say "Will remove: ${pk[*]}"
   warn "dnf marks these as protected; the protection files for them are moved to $BACKUP_DIR/protected.d first."
+  warn "The Nobara updater needs the grub2 tools, /boot/grub2/grub.cfg and 20-grub.install: removing GRUB makes it fail, and updates must then be done with dnf."
   read -rp "Remove GRUB and shim now? Limine is already booting this machine. [y/N] " a
   [[ $a == [yY]* ]] || { say "Nothing changed."; return 0; }
   mkdir -p "$BACKUP_DIR/protected.d"
