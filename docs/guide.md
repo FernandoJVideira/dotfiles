@@ -36,9 +36,11 @@ afterwards. The last lines of the output list anything that still needs you:
 
 - `./bootstrap.sh` asks first for the two tokens (hidden input; Enter skips one): a Gitea token with the
   `package` scope for `~/.npmrc`, and on Linux a Proton Pass personal access token for
-  `~/.config/proton-pass-cli/pat`. A skipped one is created with a `REPLACE_WITH_...` placeholder, and a
-  file that already holds a real token is never asked about or touched. Once `pat` holds a real token,
-  run `systemctl --user restart proton-pass-agent.service`. On macOS the installer runs `pass-cli login`
+  the login keyring (GNOME Keyring, via `secret-tool`). A skipped `~/.npmrc` is created with a
+  `REPLACE_WITH_...` placeholder, and a token already in place is never asked about or touched. A token
+  left in the old `~/.config/proton-pass-cli/pat` is moved into the keyring and the file deleted on the
+  next run. Once the keyring holds the token (`secret-tool store --label='Proton Pass personal access
+  token' service proton-pass-cli account pat`), run `systemctl --user restart proton-pass-agent.service`. On macOS the installer runs `pass-cli login`
   once instead.
 - The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
   ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
@@ -312,7 +314,7 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | Spotify isn't themed | start it once, then `spicetify-theme-sync --force` |
 | Zed lacks an extension | `zed-extensions-check` |
 | an image won't paste into Claude | use `Ctrl+V`, not `Cmd+V`, with an image on the clipboard |
-| the Proton Pass agent isn't running | put a real token in `~/.config/proton-pass-cli/pat`, then restart the unit |
+| the Proton Pass agent isn't running | put the token in the keyring with `secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`, then restart the unit |
 
 ## Where things live
 

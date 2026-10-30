@@ -3,6 +3,7 @@
 # ~/.claude/settings.json. The files themselves come from common/.claude (symlinked by symlink_dotfiles).
 
 source "$(dirname "${BASH_SOURCE[0]}")/log.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/secrets.sh"
 
 # ~/Brain (or $BRAIN_DIR): an Obsidian-style vault with one folder of notes per project, kept in step
 # between machines through a git remote. The skeleton is only created when missing and nothing already
@@ -31,9 +32,8 @@ brain_remote_answers() {
 
 # is a Proton Pass agent on its way up on this machine? (no point waiting for one otherwise)
 proton_agent_expected() {
-  local pat="$HOME/.config/proton-pass-cli/pat"
   [[ -S $HOME/.ssh/proton-pass-agent.sock ]] && return 0
-  [[ -s $pat ]] && ! grep -Fq REPLACE_WITH_ "$pat" && return 0
+  pat_ready && return 0
   command -v pass-cli >/dev/null && pass-cli info >/dev/null 2>&1
 }
 

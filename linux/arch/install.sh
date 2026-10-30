@@ -35,6 +35,7 @@ SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}
 SKEIN_REF="${SKEIN_REF:-arch}"
 # python-filelock: pipx (used by the Skein installer) imports it but the package does not depend on it
 sudo pacman -S --needed --noconfirm git base-devel python-filelock
+sudo pacman -S --needed --noconfirm gnome-keyring libsecret
 # a machine that still has Omadora's checkout: move it to Skein's name and ref first
 migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
 if [[ -d "$SKEIN_DIR/.git" ]]; then
@@ -160,17 +161,17 @@ if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
   hyprctl reload
 fi
 
-# The unit logs in with a personal access token from ~/.config/proton-pass-cli/pat. This script
-# creates the file with a placeholder (an existing one is left alone), enables the unit always and
-# only starts it once the placeholder has been replaced; the instructions are printed at the end.
+# The unit logs in with a personal access token from the login keyring (secret-tool). A token left in
+# the old ~/.config/proton-pass-cli/pat is moved there. This script enables the unit always and only
+# starts it once the keyring holds the token; the instructions are printed at the end.
 log "Enabling Proton Pass SSH agent..."
 mkdir -p -m 700 "$HOME/.ssh"
 create_secret_templates
 systemctl --user enable proton-pass-agent.service
-if secret_ready "$PROTON_PAT"; then
+if pat_ready; then
   systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
 else
-  log "Proton Pass agent enabled but NOT started: add your personal access token to ~/.config/proton-pass-cli/pat (instructions at the end)."
+  log "Proton Pass agent enabled but NOT started: the token is not in the keyring yet (instructions at the end)."
 fi
 
 log "Running shared dotfiles installer..."
