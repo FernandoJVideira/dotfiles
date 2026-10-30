@@ -13,10 +13,16 @@ it matters. A skill added or changed by the installer shows up from the next ses
 /coordinator add a "last seen" column to the members table, sortable, backed by the API
 ```
 
-It's a mode, like caveman. Start the session with `/coordinator` (alone, or with the first task)
-and it stays on: every later request that changes code goes through the same workflow, and you
-don't type the command again. Questions and explanations are answered directly, without
-sub-agents.
+It's a mode, like caveman. `hdev` starts Claude with it on (`HDEV_COORDINATOR=0` for a plain
+Claude), or type `/coordinator` yourself, alone or with the first task. It stays on: you don't type
+the command again. It starts from the project's notes in the Brain ([brain.md](brain.md)), so it
+already knows where the project stands.
+
+It **discusses by default and builds only when you say to**: "implement", "build it", "go". Until
+then it reads code, weighs options and logs decisions, with no sub-agents and no edits. Once you say
+go, it runs its workflow (discover, plan, implement, verify, review), and afterwards it is back to
+discussing. Its workflow and prompt templates are only loaded at that point, which is most of the
+token saving.
 
 | Say | Effect |
 |---|---|

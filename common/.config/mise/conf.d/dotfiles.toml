@@ -12,3 +12,7 @@ cloudflared = "latest"
 "aqua:golang-migrate/migrate" = "latest"
 dotnet = "10"
 java = ["temurin-27", "temurin-17"]
+# language servers Claude Code's LSP plugins start (symbol lookup and diagnostics instead of grep and reads)
+"go:golang.org/x/tools/gopls" = "latest"
+"npm:typescript-language-server" = "latest"
+"npm:typescript" = "latest"
