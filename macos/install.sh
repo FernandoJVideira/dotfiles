@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/symlink.sh"
 source "$SCRIPT_DIR/../lib/skein.sh"
+source "$SCRIPT_DIR/../lib/secrets.sh"
 
 # Check if Xcode Command Line Tools are installed, and install them if not
 if ! xcode-select -p &>/dev/null; then
@@ -47,11 +48,14 @@ migrate_skein_dirs
 
 symlink_dotfiles "$SCRIPT_DIR"
 
-# The agent serves the SSH keys from the Proton Pass login that pass-cli keeps in the keychain (the git
-# server, and so the Brain vault, are reached through it). Log in once, here, while someone is at the
-# keyboard; with no terminal it is left for later.
+# The agent serves the SSH keys from a Proton Pass login. With a personal access token in the login
+# Keychain the login needs nobody at the keyboard; without one, fall back to the web login (needs a
+# terminal). pass-cli keeps the session it creates; the token is only used when there is none.
 if command -v pass-cli &>/dev/null && ! pass-cli info &>/dev/null; then
-  if { : </dev/tty; } 2>/dev/null; then
+  if pat_ready; then
+    log "Logging in to Proton Pass with the token from the Keychain..."
+    pass-cli login --pat "$(pat_load)" >/dev/null || log "WARNING: the Proton Pass token login failed (revoked or expired?) - run: pass-cli login"
+  elif { : </dev/tty; } 2>/dev/null; then
     log "Logging in to Proton Pass (the SSH agent needs it)..."
     pass-cli login </dev/tty || log "WARNING: Proton Pass login failed - run: pass-cli login, then: launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent"
   else

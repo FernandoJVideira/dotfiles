@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Two secrets this repo can't ship: ~/.npmrc (the Gitea token for the @fernandojvideira npm registry,
-# every OS) and the Proton Pass personal access token the SSH agent unit logs in with (Linux only: it
-# lives in the login keyring, read with secret-tool; the macOS agent uses the login pass-cli keeps in
-# the keychain). create_secret_templates writes ~/.npmrc with everything but the token, and only when
+# every OS) and the Proton Pass personal access token the SSH agent logs in with. The token lives in
+# the system keyring: the login keyring on Linux (secret-tool), the login Keychain on macOS (security).
+# Linux's agent unit reads it at every start; on macOS the installer uses it for `pass-cli login --pat`
+# when there is no session, and the web login is the fallback. create_secret_templates writes ~/.npmrc with everything but the token, and only when
 # the file doesn't exist, so a file that is already there is never touched. migrate_pat_file moves a
 # token left in the old ~/.config/proton-pass-cli/pat into the keyring and deletes the file.
 # print_secret_instructions lists what is still missing and says what to do; it only looks for the
@@ -55,14 +56,41 @@ TEMPLATE
   )
 }
 
-# true when the keyring holds the Proton Pass token
-pat_ready() {
-  command -v secret-tool >/dev/null || return 1
-  [[ -n $(secret-tool lookup service proton-pass-cli account pat 2>/dev/null) ]]
+# The same names on both OSes: service proton-pass-cli, account pat. PAT_SERVICE can be overridden
+# (the tests use a throwaway name).
+PAT_SERVICE="${PAT_SERVICE:-proton-pass-cli}"
+
+# the stored token on stdout, nothing when there is none
+pat_load() {
+  if [[ $(uname -s) == Darwin ]]; then
+    security find-generic-password -s "$PAT_SERVICE" -a pat -w 2>/dev/null
+  elif command -v secret-tool >/dev/null; then
+    secret-tool lookup service "$PAT_SERVICE" account pat 2>/dev/null
+  fi
 }
 
+# true when the keyring holds the Proton Pass token
+pat_ready() {
+  [[ -n $(pat_load) ]]
+}
+
+# store the token. On macOS it goes to `security` through its interactive mode on stdin, so it never
+# appears in a command line (ps shows those to every user); the read-back checks that it was saved.
 pat_store() {
-  printf %s "$1" | secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat
+  local token="$1" esc
+  if [[ $(uname -s) == Darwin ]]; then
+    esc="${token//\\/\\\\}"; esc="${esc//\"/\\\"}"
+    printf 'add-generic-password -U -s %s -a pat -l "Proton Pass personal access token" -w "%s"\n' "$PAT_SERVICE" "$esc" \
+      | security -i >/dev/null 2>&1
+    [[ $(pat_load) == "$token" ]]
+  else
+    printf %s "$token" | secret-tool store --label='Proton Pass personal access token' service "$PAT_SERVICE" account pat
+  fi
+}
+
+# "login keyring" or "login Keychain", for messages
+pat_store_name() {
+  [[ $(uname -s) == Darwin ]] && printf 'login Keychain' || printf 'login keyring'
 }
 
 # Linux: move a token from the old pat file into the keyring, then delete the file
@@ -90,7 +118,7 @@ prompt_for_secrets() {
   local need_npm=0 need_pat=0 token=""
   migrate_pat_file
   if [[ ! -e $NPMRC ]] || secret_pending "$NPMRC"; then need_npm=1; fi
-  if [[ $(uname -s) == Linux ]] && ! pat_ready; then need_pat=1; fi
+  if ! pat_ready; then need_pat=1; fi
   [[ $need_npm == 0 && $need_pat == 0 ]] && return 0
   { : </dev/tty; } 2>/dev/null || return 0
 
@@ -105,11 +133,11 @@ prompt_for_secrets() {
   fi
   if [[ $need_pat == 1 ]]; then
     printf '    Proton Pass personal access token: the SSH agent logs in with it, and this run reaches git through the agent.\n'
-    if ask_secret '    Proton Pass token (stored in the login keyring): ' token && [[ -n $token ]]; then
+    if ask_secret "    Proton Pass token (stored in the $(pat_store_name)): " token && [[ -n $token ]]; then
       if pat_store "$token" 2>/dev/null; then
-        log "Saved the Proton Pass token in the keyring."
+        log "Saved the Proton Pass token in the $(pat_store_name)."
       else
-        log "WARNING: could not save the Proton Pass token: the keyring may be locked. The instructions at the end say how to add it later."
+        log "WARNING: could not save the Proton Pass token: the $(pat_store_name) may be locked. The instructions at the end say how to add it later."
       fi
     fi
   fi
@@ -129,11 +157,11 @@ create_secret_templates() {
 print_secret_instructions() {
   local pending=0 pat_pending=0
   secret_pending "$NPMRC" && pending=1
-  if [[ $(uname -s) == Linux ]] && ! pat_ready; then pat_pending=1; pending=1; fi
+  if ! pat_ready; then pat_pending=1; pending=1; fi
   if [[ $pending == 0 ]]; then
     local ready=()
     secret_ready "$NPMRC" && ready+=("~/.npmrc")
-    [[ $(uname -s) == Linux ]] && pat_ready && ready+=("Proton Pass token (keyring)")
+    pat_ready && ready+=("Proton Pass token ($(pat_store_name))")
     [[ ${#ready[@]} -eq 0 ]] || log "Tokens are in place, nothing to add: ${ready[*]}"
     return 0
   fi
@@ -149,12 +177,21 @@ print_secret_instructions() {
 
 EOF
   fi
-  if [[ $pat_pending == 1 ]]; then
+  if [[ $pat_pending == 1 && $(uname -s) == Darwin ]]; then
+    cat <<EOF
+  Proton Pass token (login Keychain)
+    Store a Proton Pass personal access token in the Keychain (security asks for it, hidden, twice).
+    Until you do, the SSH agent depends on a web login (pass-cli login).
+    Store it: security add-generic-password -U -s $PAT_SERVICE -a pat -l 'Proton Pass personal access token' -w
+    Then:     pass-cli login --pat "\$(security find-generic-password -s $PAT_SERVICE -a pat -w)"
+
+EOF
+  elif [[ $pat_pending == 1 ]]; then
     cat <<EOF
   Proton Pass token (login keyring)
     Store a Proton Pass personal access token in the keyring (it asks for the token on stdin).
     The SSH agent stays off until you do.
-    Store it: secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat
+    Store it: secret-tool store --label='Proton Pass personal access token' service $PAT_SERVICE account pat
     Then:     systemctl --user restart proton-pass-agent.service
 
 EOF
