@@ -60,7 +60,7 @@ Brain/
   INDEX.md                  one line per project and per knowledge note
   projects/<slug>/
     state.md                goal, status, next, open questions, Project Map (max 60 lines, rewritten)
-    decisions.md            "date | chose X over Y because Z", appended
+    decisions.md            "- date | chose X over Y because Z", one bullet per line, appended
     log.md                  commits and files per session; written only by the end hook
   knowledge/                lessons across projects, your own notes
   _agent/                   scratch
