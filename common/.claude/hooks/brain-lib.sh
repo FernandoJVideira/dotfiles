@@ -137,13 +137,13 @@ brain_resolve_conflicts() {
 # brain_resolve_conflicts; if that goes wrong the rebase is aborted and BRAIN_SYNC_NOTE tells the session.
 brain_pull() {
   brain_repo || return 0
-  local br id=() step
+  local br id=()
   br="$(git -C "$BRAIN_DIR" symbolic-ref -q --short HEAD)" || return 0
   brain_git fetch -q origin "$br" >/dev/null 2>&1 || return 0
   git -C "$BRAIN_DIR" rev-parse -q --verify "origin/$br" >/dev/null 2>&1 || return 0
   git -C "$BRAIN_DIR" config user.email >/dev/null || id=(-c user.name=brain -c user.email=brain@localhost)
   brain_git ${id[@]+"${id[@]}"} -c commit.gpgsign=false rebase -q "origin/$br" >/dev/null 2>&1 && return 0
-  for step in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
     [[ -n $(git -C "$BRAIN_DIR" diff --name-only --diff-filter=U 2>/dev/null) ]] || break
     brain_resolve_conflicts || break
     GIT_EDITOR=true git -C "$BRAIN_DIR" ${id[@]+"${id[@]}"} -c commit.gpgsign=false rebase --continue >/dev/null 2>&1 </dev/null && return 0

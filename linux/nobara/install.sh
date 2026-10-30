@@ -155,8 +155,8 @@ fi
 # argument"). dnf5 aborts the WHOLE transaction on an unavailable name unless
 # --skip-unavailable is given, so use it: one bad name then just warns below
 # instead of taking every other package (and this script, under set -e) with it.
-sudo dnf install -y --skip-unavailable fzf zoxide fd-find bat fastfetch jq libnotify gdb
-for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb; do
+sudo dnf install -y --skip-unavailable fzf zoxide fd-find bat fastfetch jq libnotify gdb ShellCheck
+for pkg in fzf zoxide fd-find bat fastfetch jq libnotify gdb ShellCheck; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - the zsh config expects it."
 done
 
@@ -265,7 +265,7 @@ sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
 # (secret-tool); a token left in the old ~/.config/proton-pass-cli/pat is moved there. The unit is
 # enabled always, but only started once the keyring holds the token (a start without a token fails
 # ExecStartPre, which would abort this script under set -e). The instructions are printed at the end.
-mkdir -p -m 700 "$HOME/.ssh"
+mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 create_secret_templates
 if systemctl --user enable proton-pass-agent.service; then
   if pat_ready; then

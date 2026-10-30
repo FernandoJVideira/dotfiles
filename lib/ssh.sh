@@ -12,7 +12,7 @@ DEPLOY_SOCK="$HOME/.ssh/proton-deploy-agent.sock"
 # config stays a symlink.
 ensure_ssh_include() {
   local cfg="$HOME/.ssh/config" line='Include config.d/*.conf' tmp
-  mkdir -p -m 700 "$HOME/.ssh"
+  mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
   if [[ ! -e $cfg ]]; then
     printf '%s\n' "$line" >"$cfg" && chmod 600 "$cfg"
     log "Created $cfg with an Include for ~/.ssh/config.d."
@@ -32,8 +32,8 @@ check_deploy_agent() {
   command -v ssh-add >/dev/null || return 0
   # only where Proton Pass is in use (logged in): anywhere else there is nothing to wait for
   command -v pass-cli >/dev/null && pass-cli info >/dev/null 2>&1 || return 0
-  local i rc=2
-  for i in 1 2 3 4 5 6 7 8; do
+  local rc=2
+  for _ in 1 2 3 4 5 6 7 8; do
     SSH_AUTH_SOCK="$DEPLOY_SOCK" ssh-add -L >/dev/null 2>&1; rc=$?
     [[ -S $DEPLOY_SOCK && $rc -eq 0 ]] && { log "The Deploy-vault SSH agent is serving a key."; return 0; }
     sleep 2

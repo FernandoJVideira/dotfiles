@@ -29,6 +29,7 @@ brew "mise"
 brew "proton-pass-cli"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+brew "shellcheck"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Terminal multiplexer
