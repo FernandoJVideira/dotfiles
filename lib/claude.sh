@@ -5,15 +5,36 @@
 source "$(dirname "${BASH_SOURCE[0]}")/log.sh"
 
 # ~/Brain (or $BRAIN_DIR): an Obsidian-style vault with one folder of notes per project, kept in step
-# between machines through a git remote (BRAIN_REMOTE). The skeleton is only created when missing and
-# nothing already there is touched. See docs/brain.md.
-BRAIN_REMOTE="${BRAIN_REMOTE:-git@git.fernandovideira.com:FernandoJVideira/agent-brain.git}"
+# between machines through a git remote. The skeleton is only created when missing and nothing already
+# there is touched. See docs/brain.md.
+#
+# Which remote (BRAIN_REMOTE) is decided once, when the vault isn't linked to one yet:
+#   1. $BRAIN_REMOTE in the environment ("none" = keep the vault on this machine only)
+#   2. the one saved on this machine, ~/.config/dotfiles/brain-remote
+#   3. the owner's default, when it answers (it is private, so answering proves the access)
+#   4. otherwise ask for one's own remote; Enter keeps the vault local
+# A vault that already has a commit keeps its origin and none of this runs again.
+BRAIN_DEFAULT_REMOTE="${BRAIN_DEFAULT_REMOTE:-git@git.fernandovideira.com:FernandoJVideira/agent-brain.git}"
+BRAIN_REMOTE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/brain-remote"
 
 # ssh options for the server: no prompts, short timeouts, and the Proton Pass agent's socket when it
 # exists (this script's shell doesn't have SSH_AUTH_SOCK yet on a fresh machine)
 brain_ssh_cmd() {
   local sock="$HOME/.ssh/proton-pass-agent.sock"
   printf 'ssh -o BatchMode=yes -o ConnectTimeout=5%s' "$([[ -S $sock ]] && printf ' -o IdentityAgent=%s' "$sock")"
+}
+
+# does this remote answer (an empty repo does too)?
+brain_remote_answers() {
+  GIT_SSH_COMMAND="$(brain_ssh_cmd)" git ls-remote "$1" >/dev/null 2>&1
+}
+
+# is a Proton Pass agent on its way up on this machine? (no point waiting for one otherwise)
+proton_agent_expected() {
+  local pat="$HOME/.config/proton-pass-cli/pat"
+  [[ -S $HOME/.ssh/proton-pass-agent.sock ]] && return 0
+  [[ -s $pat ]] && ! grep -Fq REPLACE_WITH_ "$pat" && return 0
+  command -v pass-cli >/dev/null && pass-cli info >/dev/null 2>&1
 }
 
 # the agent (started earlier by the OS installer) needs a few seconds to log in; give it up to 20
@@ -27,11 +48,57 @@ wait_for_ssh_agent() {
   return 1
 }
 
+# the default isn't reachable from here, so this is someone else's machine (or the owner's, not logged in
+# yet): ask for a remote of their own. Sets BRAIN_REMOTE, empty when none.
+ask_brain_remote() {
+  local answer=""
+  BRAIN_REMOTE=""
+  if ! { : </dev/tty; } 2>/dev/null; then
+    log "The Brain vault stays on this machine: $BRAIN_DEFAULT_REMOTE isn't reachable and there is no terminal to ask on. To sync it, rerun with BRAIN_REMOTE=<your git remote>."
+    return 0
+  fi
+  printf '\n\033[32m==>\033[0m The Brain (Claude'"'"'s project memory) syncs through a git remote, and the default one\n'
+  printf '    (%s) isn'"'"'t reachable from here.\n' "$BRAIN_DEFAULT_REMOTE"
+  printf '    Give a remote of your own (an empty private repo, e.g. git@host:you/brain.git), or press Enter to\n'
+  printf '    keep the vault on this machine only (a rerun of ./bootstrap.sh asks again).\n'
+  IFS= read -r -p '    Brain remote: ' answer </dev/tty 2>/dev/tty || answer=""
+  answer="${answer#"${answer%%[![:space:]]*}"}"; answer="${answer%"${answer##*[![:space:]]}"}"
+  [[ -n $answer ]] || return 0
+  if brain_remote_answers "$answer"; then
+    mkdir -p "$(dirname "$BRAIN_REMOTE_FILE")" && printf '%s\n' "$answer" >"$BRAIN_REMOTE_FILE"
+    BRAIN_REMOTE="$answer"
+    log "Saved the Brain remote in $BRAIN_REMOTE_FILE"
+  else
+    log "WARNING: $answer didn't answer (wrong URL, or no access), so the vault stays on this machine; rerun ./bootstrap.sh."
+  fi
+}
+
+choose_brain_remote() {
+  if [[ -n ${BRAIN_REMOTE+x} ]]; then
+    :
+  elif [[ -s $BRAIN_REMOTE_FILE ]]; then
+    BRAIN_REMOTE="$(head -n 1 "$BRAIN_REMOTE_FILE")"
+  elif brain_remote_answers "$BRAIN_DEFAULT_REMOTE"; then
+    BRAIN_REMOTE="$BRAIN_DEFAULT_REMOTE"
+  else
+    ask_brain_remote
+  fi
+  [[ $BRAIN_REMOTE == none ]] && BRAIN_REMOTE=""
+  return 0
+}
+
 create_brain_vault() {
   local vault="${BRAIN_DIR:-$HOME/Brain}" ssh refs
-  # only a vault that isn't linked to the server yet needs the agent right now
-  if [[ -n $BRAIN_REMOTE ]] && command -v git >/dev/null && ! git -C "$vault" rev-parse -q --verify HEAD >/dev/null 2>&1; then
-    wait_for_ssh_agent || log "The Proton Pass SSH agent isn't answering, so the Brain vault stays local for now."
+  if git -C "$vault" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+    BRAIN_REMOTE="$(git -C "$vault" remote get-url origin 2>/dev/null || true)"
+  elif command -v git >/dev/null; then
+    # not linked yet: the agent may still be logging in, and the remote has to be chosen
+    if proton_agent_expected; then
+      wait_for_ssh_agent || log "The Proton Pass SSH agent isn't answering yet."
+    fi
+    choose_brain_remote
+  else
+    BRAIN_REMOTE=""
   fi
   ssh="$(brain_ssh_cmd)"
 
