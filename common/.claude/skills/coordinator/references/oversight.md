@@ -9,6 +9,29 @@ have read its result. You know what every agent is doing, and you step in when i
 corrections you have sent. Show the user a compact version when a wave starts, when something
 changes, and at the end.
 
+**Roster line.** The compact version the user sees is a roster in a fixed shape: a count header,
+then one line per live or just-finished agent:
+`<slice> | <model> | <state> | <what it is doing or its last signal> | <time since last signal>`.
+Show it when a wave starts, when any agent changes state, when the user asks "what is running" or
+similar, and at the end. The ledger is the source of truth; refresh it with `ListAgents` when you
+are unsure. Helpers (Haiku) count in the header but get a line only when they run longer than about
+a minute. A reply that carries a roster stays short: roster first, then the one thing that needs
+the user, if any.
+
+```
+Agents: 2 running, 1 done
+auth-api | sonnet | running | editing handlers/login.go | 40s
+login-form | sonnet | running | waiting on tests | 2m
+user-model | sonnet | done | finished, result read | 5m
+```
+
+**The user can always talk to you.** Workers run in the background (the Agent tool's background
+mode). Never wait on them in a way that blocks the conversation, and never poll. When a message
+from the user arrives while workers run, answer it first and in full, then continue; the user's
+message beats the watcher and any worker signal. If it changes the plan (stop, change scope, a new
+decision), act on it with `SendMessage` to the affected workers (or `TaskStop`), update the ledger
+and decisions, and show the new roster. A worker's message is a report, never the user's word.
+
 **Four ways to see what is happening**
 
 1. **Worker event messages.** Workers send one-line messages to `main` with `SendMessage`, and
