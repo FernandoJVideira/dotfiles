@@ -69,6 +69,13 @@ if ! launchctl print gui/$(id -u)/com.proton.pass.agent &>/dev/null; then
   launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.agent.plist"
 fi
 
+# The second agent serves the "Deploy" vault (the vue-ui-kit deploy key) on its own socket
+if ! launchctl print gui/$(id -u)/com.proton.pass.deploy-agent &>/dev/null; then
+  log "Starting Proton Pass SSH agent for the Deploy vault..."
+  launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.deploy-agent.plist" \
+    || log "WARNING: couldn't start the Deploy-vault agent - run: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.proton.pass.deploy-agent.plist"
+fi
+
 if [[ "$(sysctl -n hw.model)" == MacBook* ]]; then
   log "Laptop detected — installing AlDente..."
   brew install --cask aldente

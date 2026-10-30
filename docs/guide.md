@@ -45,6 +45,14 @@ afterwards. The last lines of the output list anything that still needs you:
   when there is no Proton Pass session (`pass-cli login --pat`), and uses the web login (`pass-cli login`)
   when there is no token either. To store it by hand on macOS:
   `security add-generic-password -U -s proton-pass-cli -a pat -l 'Proton Pass personal access token' -w`.
+- A second Proton Pass agent serves the `Deploy` vault (the vue-ui-kit deploy key) on
+  `~/.ssh/proton-deploy-agent.sock`, because `pass-cli ssh-agent` loads one vault per process and the main
+  agent has to stay on `SSH` only. A personal access token is granted vaults one by one, so give each
+  machine's token access once: `pass-cli personal-access-token list` shows the names, then
+  `pass-cli personal-access-token access grant --personal-access-token-name <name> --vault-name Deploy`.
+  The installer links `common/.ssh/config.d/vue-ui-kit-deploy.conf` and adds `Include config.d/*.conf` to
+  the top of `~/.ssh/config`, so `ssh -T vue-ui-kit-deploy` authenticates as the repo. Once that works, the
+  old private key file in `~/.ssh/deploy-keys` and its old Host block can go.
 - The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
   ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
@@ -317,6 +325,7 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | Spotify isn't themed | start it once, then `spicetify-theme-sync --force` |
 | Zed lacks an extension | `zed-extensions-check` |
 | an image won't paste into Claude | use `Ctrl+V`, not `Cmd+V`, with an image on the clipboard |
+| `vue-ui-kit-deploy` is denied, or the installer warns the Deploy agent serves no key | grant the token access to the `Deploy` vault (above), then restart `proton-pass-deploy-agent.service` (Linux) or `launchctl kickstart -k gui/$(id -u)/com.proton.pass.deploy-agent` (macOS) |
 | the Proton Pass agent isn't running | Linux: put the token in the keyring with `secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`, then restart the unit. macOS: `pass-cli login`, or store the token in the Keychain (see above) and run `pass-cli login --pat`, then `launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent` |
 
 ## Where things live

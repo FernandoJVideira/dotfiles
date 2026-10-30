@@ -1,0 +1,17 @@
+[Unit]
+Description=Proton Pass SSH Agent (Deploy vault)
+# the main agent's unit logs pass-cli in; this one only serves a second vault on its own socket
+After=proton-pass-agent.service
+Wants=proton-pass-agent.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+# wait for the login the main unit does; failing here (no session) retries instead of skipping
+ExecStartPre=/bin/sh -c 'for i in $$(seq 20); do pass-cli info >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=/usr/bin/pass-cli ssh-agent start --vault-name Deploy --socket-path %h/.ssh/proton-deploy-agent.sock
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

@@ -278,6 +278,16 @@ else
   log "WARNING: could not enable proton-pass-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-agent.service from a desktop session."
 fi
 
+# A second agent serves the "Deploy" vault on its own socket (the vue-ui-kit deploy key); the main
+# one serves only "SSH". It needs the token to have access to that vault (docs/guide.md).
+if systemctl --user enable proton-pass-deploy-agent.service; then
+  if pat_ready; then
+    systemctl --user restart proton-pass-deploy-agent.service || log "WARNING: proton-pass-deploy-agent failed to start - check: journalctl --user -u proton-pass-deploy-agent"
+  fi
+else
+  log "WARNING: could not enable proton-pass-deploy-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-deploy-agent.service from a desktop session."
+fi
+
 # Crash watcher: follows systemd-coredump entries in the journal and pops a
 # "Process crashed" notification with a "Diagnose with Claude" action. The
 # scripts in ~/.local/bin and the unit were just symlinked above. Reading the
