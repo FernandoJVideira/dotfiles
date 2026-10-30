@@ -10,7 +10,7 @@ symlink_dotfiles(){
     local file
 
     while IFS= read -r -d '' file; do
-        local relative_path="${file#$dir/}"
+        local relative_path="${file#"$dir"/}"
         local target="$HOME/$relative_path"
 
         mkdir -p "$(dirname "$target")"
@@ -27,7 +27,7 @@ unlink_dotfiles(){
     local file
 
     while IFS= read -r -d '' file; do
-        local relative_path="${file#$dir/}"
+        local relative_path="${file#"$dir"/}"
         local target="$HOME/$relative_path"
 
         if [[ -L "$target" ]]; then

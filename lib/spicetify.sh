@@ -49,7 +49,7 @@ _spicetify_sha256() {
 }
 
 _spicetify_fetch_and_install() {
-  local suffix=$1 tmp=$2 tag asset url expected actual
+  local suffix=$1 tmp=$2 asset url expected actual
 
   curl -fsSL -o "$tmp/release.json" "$SPICETIFY_API" || {
     log "WARNING: couldn't fetch Spicetify's release info - skipping Spicetify."

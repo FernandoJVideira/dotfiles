@@ -91,7 +91,7 @@ sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed mpv
 # Zed's terminal font (common/.config/zed/settings.json)
 sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # Tools the shared zsh config assumes
-sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq
+sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq shellcheck
 
 limine_setup
 
@@ -165,7 +165,7 @@ fi
 # the old ~/.config/proton-pass-cli/pat is moved there. This script enables the unit always and only
 # starts it once the keyring holds the token; the instructions are printed at the end.
 log "Enabling Proton Pass SSH agent..."
-mkdir -p -m 700 "$HOME/.ssh"
+mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 create_secret_templates
 systemctl --user enable proton-pass-agent.service
 if pat_ready; then

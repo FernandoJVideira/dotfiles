@@ -64,22 +64,22 @@ if command -v pass-cli &>/dev/null && ! pass-cli info &>/dev/null; then
 fi
 
 # Activate Proton Pass agent if not already running
-if ! launchctl print gui/$(id -u)/com.proton.pass.agent &>/dev/null; then
+if ! launchctl print gui/"$(id -u)"/com.proton.pass.agent &>/dev/null; then
   log "Starting Proton Pass SSH agent..."
-  launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.agent.plist"
+  launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.proton.pass.agent.plist"
 fi
 
 # The second agent serves the "Deploy" vault (the vue-ui-kit deploy key) on its own socket
-if ! launchctl print gui/$(id -u)/com.proton.pass.deploy-agent &>/dev/null; then
+if ! launchctl print gui/"$(id -u)"/com.proton.pass.deploy-agent &>/dev/null; then
   log "Starting Proton Pass SSH agent for the Deploy vault..."
-  launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.deploy-agent.plist" \
+  launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.proton.pass.deploy-agent.plist" \
     || log "WARNING: couldn't start the Deploy-vault agent - run: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.proton.pass.deploy-agent.plist"
 fi
 
 # GUI apps inherit launchd's environment, not zsh's, so SSH_AUTH_SOCK is set there too
-if ! launchctl print gui/$(id -u)/com.proton.pass.agent-env &>/dev/null; then
+if ! launchctl print gui/"$(id -u)"/com.proton.pass.agent-env &>/dev/null; then
   log "Exporting SSH_AUTH_SOCK to the login session..."
-  launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.proton.pass.agent-env.plist" \
+  launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.proton.pass.agent-env.plist" \
     || log "WARNING: couldn't export SSH_AUTH_SOCK to the session - run: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.proton.pass.agent-env.plist"
 fi
 

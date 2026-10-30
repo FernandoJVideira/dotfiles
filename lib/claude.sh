@@ -39,8 +39,8 @@ proton_agent_expected() {
 
 # the agent (started earlier by the OS installer) needs a few seconds to log in; give it up to 20
 wait_for_ssh_agent() {
-  local sock="$HOME/.ssh/proton-pass-agent.sock" i rc
-  for i in $(seq 10); do
+  local sock="$HOME/.ssh/proton-pass-agent.sock" rc
+  for _ in $(seq 10); do
     SSH_AUTH_SOCK="$sock" ssh-add -l >/dev/null 2>&1; rc=$?
     [[ -S $sock && $rc -ne 2 ]] && return 0
     sleep 2
