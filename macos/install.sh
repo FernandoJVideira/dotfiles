@@ -50,16 +50,18 @@ symlink_dotfiles "$SCRIPT_DIR"
 
 # The agent serves the SSH keys from a Proton Pass login. With a personal access token in the login
 # Keychain the login needs nobody at the keyboard; without one, fall back to the web login (needs a
-# terminal). pass-cli keeps the session it creates; the token is only used when there is none.
-if command -v pass-cli &>/dev/null && ! pass-cli info &>/dev/null; then
-  if pat_ready; then
-    log "Logging in to Proton Pass with the token from the Keychain..."
-    pass-cli login --pat "$(pat_load)" >/dev/null || log "WARNING: the Proton Pass token login failed (revoked or expired?) - run: pass-cli login"
-  elif { : </dev/tty; } 2>/dev/null; then
-    log "Logging in to Proton Pass (the SSH agent needs it)..."
-    pass-cli login </dev/tty || log "WARNING: Proton Pass login failed - run: pass-cli login, then: launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent"
-  else
-    log "WARNING: not logged in to Proton Pass and no terminal to ask on - run: pass-cli login"
+# terminal). The session is tested by running it (pass-cli info), not by looking for it; one that
+# cannot be used is cleared and replaced by a token login.
+if command -v pass-cli &>/dev/null; then
+  rc=0
+  proton_login_pat || rc=$?
+  if [[ $rc -eq 2 ]]; then
+    if { : </dev/tty; } 2>/dev/null; then
+      log "Logging in to Proton Pass (the SSH agent needs it)..."
+      pass-cli login </dev/tty || log "WARNING: Proton Pass login failed - run: pass-cli login, then: launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent"
+    else
+      log "WARNING: not logged in to Proton Pass and no terminal to ask on - run: pass-cli login"
+    fi
   fi
 fi
 

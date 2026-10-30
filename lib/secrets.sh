@@ -74,6 +74,37 @@ pat_ready() {
   [[ -n $(pat_load) ]]
 }
 
+# true only when pass-cli can actually use its session (a session file that cannot be decrypted fails here)
+proton_session_ok() {
+  command -v pass-cli >/dev/null || return 1
+  if command -v timeout >/dev/null; then
+    timeout 15 pass-cli info >/dev/null 2>&1
+  else
+    pass-cli info >/dev/null 2>&1
+  fi
+}
+
+# Make sure pass-cli has a working session using the keyring token. 0: the session works; 2: it does
+# not and there is no token (the caller falls back to the web login); 1: it still does not work after
+# the token login (already warned about). A broken local session is cleared first.
+proton_login_pat() {
+  local out
+  proton_session_ok && return 0
+  pat_ready || return 2
+  out="$(pass-cli info 2>&1)" || true
+  if [[ -n $out ]]; then
+    log "The local Proton Pass session is unusable; clearing it before the token login."
+    pass-cli logout --force >/dev/null 2>&1 || true
+  fi
+  log "Logging in to Proton Pass with the token from the ${PAT_STORE_NAME:-$(pat_store_name)}..."
+  pass-cli login --pat "$(pat_load)" >/dev/null || log "WARNING: the Proton Pass token login failed (revoked or expired?) - run: pass-cli login"
+  if proton_session_ok; then
+    return 0
+  fi
+  log "WARNING: the Proton Pass session still does not work after the token login - run: pass-cli info"
+  return 1
+}
+
 # store the token. On macOS it goes to `security` through its interactive mode on stdin, so it never
 # appears in a command line (ps shows those to every user); the read-back checks that it was saved.
 pat_store() {

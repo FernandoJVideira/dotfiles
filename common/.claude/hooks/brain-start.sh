@@ -6,6 +6,7 @@ set -uo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-lib.sh"
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-memory.sh"
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-update.sh"
 brain_read_input
 
 [[ -n $(brain_field agent_id) ]] && exit 0
@@ -20,6 +21,7 @@ case "$(brain_field source)" in
     if [[ -d $BRAIN_DIR/.git ]] && ! git -C "$BRAIN_DIR" rev-parse -q --verify HEAD >/dev/null 2>&1; then
       BRAIN_SYNC_NOTE="Brain sync is not linked to the server yet on this machine (the first clone failed, usually no SSH access). Tell the user to run ./bootstrap.sh from the dotfiles repo."
     fi
+    update_note="$(brain_dotfiles_behind 2>/dev/null || true)"
     ;;
 esac
 
@@ -64,6 +66,7 @@ else
   ctx="$ctx"$'\n\n'"No note for this project yet. Create $state when its first goal or decision is settled (format in references/memory.md)."
 fi
 
+[[ -n ${update_note:-} ]] && ctx="$ctx"$'\n\n'"$update_note"
 [[ -n ${BRAIN_SYNC_NOTE:-} ]] && ctx="$ctx"$'\n\n'"$BRAIN_SYNC_NOTE"
 
 jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
