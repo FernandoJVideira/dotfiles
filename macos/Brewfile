@@ -78,6 +78,9 @@ cask "spotify"
 cask "bruno"
 # Document editor
 cask "onlyoffice"
+
+# the Brain vault (docs/brain.md): Claude's project memory, synced by the LiveSync plugin
+cask "obsidian"
 # Native GUI tool for relational databases
 cask "tableplus"
 # Mesh VPN based on WireGuard

@@ -107,3 +107,17 @@ install_rtk() {
         + [{matcher: "Bash", hooks: [{type: "command", command: $cmd}]}]' "$settings" >"$tmp" \
     && mv "$tmp" "$settings" && log "RTK $RTK_VERSION: Bash output is filtered before Claude reads it."
 }
+
+# Anthropic's code-intelligence plugins: Claude looks symbols up through the language server and sees type
+# errors after an edit, instead of grepping and reading files. They need gopls and
+# typescript-language-server on PATH (both from mise, common/.config/mise/conf.d). Safe to repeat; a
+# plugin that is already installed is left as it is. Needs `claude` (mise installs it).
+install_lsp_plugins() {
+  command -v claude >/dev/null || { log "WARNING: claude isn't on PATH yet, so the LSP plugins weren't installed."; return 1; }
+  local plugin out status=0
+  for plugin in gopls-lsp typescript-lsp; do
+    out="$(claude plugin install "$plugin@claude-plugins-official" 2>&1)" || { log "WARNING: $plugin: $(printf '%s' "$out" | tail -n 1)"; status=1; }
+  done
+  [[ $status == 0 ]] && log "Claude LSP plugins: gopls-lsp and typescript-lsp."
+  return $status
+}

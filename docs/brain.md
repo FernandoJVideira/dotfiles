@@ -5,6 +5,23 @@ project's state, what changed and why, so it doesn't re-read and re-discover. Th
 Obsidian-style vault of plain markdown, `~/Brain` (set `BRAIN_DIR` to move it), and your Obsidian
 LiveSync keeps it in step across machines.
 
+## On each machine
+
+The bootstrap does everything below except the sync, on macOS, Nobara and Arch alike: the vault
+folder, the hooks, the skill overrides, `gopls` and `typescript-language-server` (mise), Anthropic's
+`gopls-lsp` and `typescript-lsp` plugins, and Obsidian itself (Homebrew cask, Arch package, Nobara
+Flatpak `md.obsidian.Obsidian`). The sync is a one-time step in Obsidian on each machine:
+
+1. Open `~/Brain` as a vault.
+2. Install the **Self-hosted LiveSync** community plugin and import the setup URI of your CouchDB
+   (made once, on the first device, with the plugin's "copy setup URI").
+3. Let it finish the first sync before starting Claude, so the notes are there.
+
+LiveSync syncs while Obsidian is running. I haven't confirmed that it picks up notes the hooks wrote
+while Obsidian was closed, so keep Obsidian open on the machines you use, or run LiveSync's headless
+client. A project that has no note yet is simply created on first use, and two machines writing the
+same file at once is LiveSync's conflict to resolve.
+
 ## How a session goes
 
 1. `hdev` opens the project in Herdr and starts `claude /coordinator` in the agent pane
