@@ -16,8 +16,21 @@ the tokens that log it in; the hooks use its socket even when the session was st
 app, and never prompt). Without that access the vault stays local, the session tells you, and a rerun of
 `./bootstrap.sh` links it.
 
-The remote is `BRAIN_REMOTE` in `lib/claude.sh`
-(`git@git.fernandovideira.com:FernandoJVideira/agent-brain.git`).
+Which remote the vault syncs to is decided once, the first time a machine's vault is linked:
+
+1. `BRAIN_REMOTE` in the environment (`none` keeps the vault on that machine only), for unattended runs.
+2. The remote saved on the machine, `~/.config/dotfiles/brain-remote`.
+3. The owner's default, `BRAIN_DEFAULT_REMOTE` in `lib/claude.sh`, when it answers. It is a private repo,
+   so answering proves the access, and the owner is never asked anything.
+4. Otherwise the installer says the default isn't reachable and asks for a remote of your own (an empty
+   private repo, such as `git@host:you/brain.git`). It must answer, and it is then saved. Enter keeps
+   the vault on this machine, and the next `./bootstrap.sh` asks again.
+
+The vault is always built from scratch, never downloaded from a template: its notes are loaded into
+Claude's context at every session start, so unreviewed text from a template repo would end up there. A
+forker only needs to set their own `BRAIN_DEFAULT_REMOTE`. If you are the owner and the bootstrap asks
+anyway, your server wasn't reachable (usually the Proton token was skipped); press Enter and rerun once
+the agent is up. A vault that has a first commit keeps its origin and is never asked about again.
 
 ## How the sync works
 

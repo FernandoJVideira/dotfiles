@@ -76,7 +76,8 @@ prompt_for_secrets() {
 
   printf '\n\033[32m==>\033[0m Tokens: paste each one (hidden), or press Enter to add it later.\n'
   if [[ $need_npm == 1 ]]; then
-    printf '    Gitea token with the "package" scope: git.fernandovideira.com > Settings > Applications.\n'
+    printf '    Only needed for the @fernandojvideira npm registry (skip it if that is not you). A Gitea token\n'
+    printf '    with the "package" scope: git.fernandovideira.com > Settings > Applications.\n'
     if ask_secret '    npm registry token (~/.npmrc): ' token && [[ -n $token ]]; then
       create_npmrc_template
       fill_secret "$NPMRC" "$token" "$NPM_PLACEHOLDER" && log "Saved $NPMRC."
