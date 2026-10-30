@@ -134,6 +134,8 @@ INDEX
   # the append-only notes merge by union, so two machines adding lines never conflict
   [[ -e $vault/.gitignore ]] || printf '%s\n' '.obsidian/' '.trash/' '.DS_Store' '*.sync-conflict-*' >"$vault/.gitignore"
   [[ -e $vault/.gitattributes ]] || printf '%s\n' 'log.md merge=union' 'decisions.md merge=union' >"$vault/.gitattributes"
+  grep -qxF 'projects/*/memory/MEMORY.md merge=union' "$vault/.gitattributes" \
+    || { [[ -z $(tail -c 1 "$vault/.gitattributes") ]] || echo >>"$vault/.gitattributes"; echo 'projects/*/memory/MEMORY.md merge=union' >>"$vault/.gitattributes"; }
 
   if [[ ! -e $vault/.git ]]; then
     git -C "$vault" init -q -b main
@@ -172,13 +174,13 @@ INDEX
 install_claude_hooks() {
   local settings="$HOME/.claude/settings.json" dir="$HOME/.claude/hooks" tmp
   command -v jq >/dev/null || { log "WARNING: jq is missing, so the Claude hooks weren't added."; return 1; }
-  [[ -x $dir/brain-start.sh && -x $dir/brain-end.sh && -x $dir/brain-sync.sh ]] || { log "WARNING: $dir/brain-*.sh aren't linked yet."; return 1; }
+  [[ -x $dir/brain-start.sh && -x $dir/brain-end.sh && -x $dir/brain-sync.sh && -x $dir/brain-prompt.sh ]] || { log "WARNING: $dir/brain-*.sh aren't linked yet."; return 1; }
   mkdir -p "$HOME/.claude"
   [[ -f $settings ]] || echo '{}' >"$settings"
   [[ -e $settings.pre-brain ]] || cp "$settings" "$settings.pre-brain"
 
   tmp="$(mktemp)"
-  jq --arg start "bash $dir/brain-start.sh" --arg end "bash $dir/brain-end.sh" --arg sync "bash $dir/brain-sync.sh" '
+  jq --arg start "bash $dir/brain-start.sh" --arg end "bash $dir/brain-end.sh" --arg sync "bash $dir/brain-sync.sh" --arg prompt "bash $dir/brain-prompt.sh" '
     def without_brain: map(select(([.hooks[]?.command] | join(" ")) | contains("brain-") | not));
     .hooks //= {}
     | .hooks.SessionStart = ((.hooks.SessionStart // []) | without_brain)
@@ -188,8 +190,10 @@ install_claude_hooks() {
     | .hooks.PreCompact = ((.hooks.PreCompact // []) | without_brain)
         + [{hooks: [{type: "command", command: $end, timeout: 5}]}]
     | .hooks.PostToolUse = ((.hooks.PostToolUse // []) | without_brain)
-        + [{matcher: "^(Write|Edit|MultiEdit|Bash)$", hooks: [{type: "command", command: $sync, timeout: 5}]}]' "$settings" >"$tmp" \
-    && mv "$tmp" "$settings" && log "Claude hooks: project memory at session start, git log at session end, notes pushed within seconds of a write."
+        + [{matcher: "^(Write|Edit|MultiEdit|Bash)$", hooks: [{type: "command", command: $sync, timeout: 5}]}]
+    | .hooks.UserPromptSubmit = ((.hooks.UserPromptSubmit // []) | without_brain)
+        + [{hooks: [{type: "command", command: $prompt, timeout: 5}]}]' "$settings" >"$tmp" \
+    && mv "$tmp" "$settings" && log "Claude hooks: project memory at session start, git log at session end, notes pushed within seconds of a write, other machines' notes noticed at each prompt."
 }
 
 # Skills from other people that overlap or that I don't reach for: listed by name only, so their

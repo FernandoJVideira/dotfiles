@@ -6,7 +6,8 @@
 if [[ ${1:-} != --worker ]]; then
   IFS= read -r -d '' input
   vault="${BRAIN_DIR:-$HOME/Brain}"
-  [[ $input == *"${vault##*/}"* && -d $vault/.git ]] || exit 0
+  [[ $input == *"${vault##*/}"* || $input == */.claude/projects/*/memory/* ]] || exit 0
+  [[ -d $vault/.git ]] || exit 0
   : >"$vault/.git/brain-sync.stamp" || exit 0
   lock="$vault/.git/brain-sync.lock"
   if ! mkdir "$lock" 2>/dev/null; then

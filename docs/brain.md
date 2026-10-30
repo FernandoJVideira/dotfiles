@@ -40,12 +40,15 @@ the agent is up. A vault that has a first commit keeps its origin and is never a
 
 ## How the sync works
 
-Sync happens in the background while you work, and again at the session boundaries:
+Sync happens in the background while you work, as well as at the session boundaries:
 
 - **After a note is written**: a `PostToolUse` hook (`brain-sync.sh`) notices when a tool call touched
   the vault. After a few seconds of quiet it commits, rebases onto the server's changes and pushes, in
   the background. It prints nothing, so it costs no tokens, and a tool call that does not touch the
   vault costs it a few milliseconds.
+- **Each prompt**: a `UserPromptSubmit` hook (`brain-prompt.sh`) checks the server in the background at
+  most every 2 minutes (`BRAIN_FETCH_INTERVAL` seconds to change it), fast-forwards the vault, and
+  tells Claude with one short line only when notes of the current project changed.
 - **Session start** (`startup` and `resume`): the hook commits any loose edits, pulls the server's
   changes (a rebase), and pushes anything still waiting. A `/clear` or a compaction doesn't pull.
 - **Session end and compaction**: the hook commits the notes and pushes in the background (a
@@ -53,8 +56,15 @@ Sync happens in the background while you work, and again at the session boundari
 - **Offline or no SSH**: every step stays quiet and the session uses the local copy. A later sync
   retries and pushes whatever was missed.
 - **Same lines changed on two machines**: `log.md` and `decisions.md` merge by union, so lines added on
-  both sides are all kept. A real clash (say `state.md` rewritten on both) is not merged: the vault
-  stays as it was, Claude is told, and you fix it with `git -C ~/Brain pull --rebase`.
+  both sides are all kept. Any other clash is resolved by keeping the version with the newer
+  `updated:` date and saving the other as `<name>.conflict-<host>.<ext>`. Nothing is lost and the vault
+  is never left unmerged; Claude folds the conflict file into the page at its next checkpoint.
+- **Claude Code's auto-memory**: each project's own memory lives in `projects/<slug>/memory/` in the
+  vault, and `~/.claude/projects/<dir>/memory` (where `<dir>` is the project path with every
+  non-alphanumeric character as `-`) is a symlink to it, made at the first session start after the
+  bootstrap, so that first session may still read the old copy. An existing local directory is merged
+  in (same-name files that differ keep the vault's and save yours as `<name>.from-<host>.<ext>`), so
+  memories from this machine appear in the vault, and so in git.
 - One gap: the other machine only sees the notes once the first has pushed. If you switch within seconds
   of the last write, or the push failed, run `git -C ~/Brain push` on the first machine.
 - `.obsidian/` is not synced (per-machine settings, and plugin data that can hold credentials). Open
@@ -89,6 +99,7 @@ Brain/
     decisions.md            "- date | chose X over Y because Z", one bullet per line, appended
     log.md                  commits and files per session; written only by the end hook
     topics/<name>.md        one durable how or why per page (summary, updated, [[wikilinks]])
+    memory/                 Claude Code's own auto-memory (MEMORY.md index plus notes), symlinked from ~/.claude
   knowledge/<name>.md       lessons that hold across projects, same page format
   _agent/                   scratch
 ```
@@ -107,6 +118,7 @@ contradictions, orphan pages and a `state.md` over its limit.
 | Piece | Cost | Notes |
 |---|---|---|
 | Brain hook | about 800 tokens max | `state.md`, last decisions, topic names with summaries, git summary; silent without a vault or outside a project. Topic pages cost nothing until opened |
+| Prompt hook | nothing unless notes changed, then under 400 bytes | `brain-prompt.sh`: one line naming the changed notes of the current project |
 | `coordinator` skill | about 2k tokens | was 6.4k: the workflow and prompt templates now load only on "implement" |
 | Skill listing | names plus descriptions | `common/.claude/skill-overrides.json` lists overlapping third-party skills by name only; `humanizer` is invoked by hand |
 | Plugin skills | per plugin | not affected by `skillOverrides`: turn plugins you don't use for coding off in `/plugin`, and the claude.ai ones in its settings |
@@ -138,7 +150,8 @@ To take it out, delete the `PreToolUse` entry ending in `rtk hook claude` from `
 
 ## Files
 
-`common/.claude/hooks/brain-{lib,start,end,sync}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
+`common/.claude/hooks/brain-{lib,start,end,sync,prompt,memory}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
 hooks and the skill overrides into `~/.claude/settings.json` (leaving Herdr's hook alone) and holds
 `install_rtk`. `common/.claude/skills/coordinator/` the skill: `SKILL.md` (discuss, memory, the gate),
 `references/implement.md` (workflow, caps, prompts), `memory.md`, `oversight.md`, `frontend.md`, `nuxt.md`.
+`common/.claude/CLAUDE.md` holds the standing preferences for every project (linked to `~/.claude/CLAUDE.md` by the bootstrap); a machine that already has its own `~/.claude/CLAUDE.md` loses it to the link, since the bootstrap links with `ln -sf`, so copy anything you want to keep into this file first.

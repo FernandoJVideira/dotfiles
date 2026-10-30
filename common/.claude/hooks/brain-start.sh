@@ -5,6 +5,7 @@
 set -uo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-lib.sh"
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-memory.sh"
 brain_read_input
 
 [[ -n $(brain_field agent_id) ]] && exit 0
@@ -32,6 +33,7 @@ state="$note_dir/state.md"
 ctx="Project memory (the Brain, an Obsidian vault): project \`$slug\`, notes in $note_dir. Read-only here; the coordinator updates state.md and decisions.md at checkpoints (see the coordinator skill's references/memory.md)."
 
 if [[ -f $state ]]; then
+  brain_link_memory "$cwd" "$slug"
   ctx="$ctx"$'\n\n'"## state.md"$'\n'"$(brain_body "$state" | head -c 3500)"
 
   if [[ -s $note_dir/decisions.md ]]; then
