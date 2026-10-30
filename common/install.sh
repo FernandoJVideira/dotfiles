@@ -12,6 +12,7 @@ source "$SCRIPT_DIR/../lib/draft.sh"
 source "$SCRIPT_DIR/../lib/mise.sh"
 source "$SCRIPT_DIR/../lib/secrets.sh"
 source "$SCRIPT_DIR/../lib/claude.sh"
+source "$SCRIPT_DIR/../lib/ssh.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
@@ -19,6 +20,11 @@ symlink_dotfiles "$SCRIPT_DIR"
 # ~/.npmrc (and the Proton Pass token file on Linux) with a placeholder where the token goes;
 # existing files are left as they are. The instructions come at the end.
 create_secret_templates
+
+# ~/.ssh/config reads ~/.ssh/config.d (just linked): the vue-ui-kit deploy key's Host block lives there
+# and uses the second Proton Pass agent, the one for the Deploy vault. Non-fatal.
+ensure_ssh_include || log "WARNING: ~/.ssh/config wasn't updated (see above)."
+check_deploy_agent
 
 # Dev tools (Go, Node, Java, .NET, Neovim, Herdr, Claude Code...) from the mise list just linked
 # above. Before the Herdr steps below, which need herdr on the PATH. Non-fatal.

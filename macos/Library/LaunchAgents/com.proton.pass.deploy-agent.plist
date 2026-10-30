@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.proton.pass.deploy-agent</string>
+
+    <!-- A second agent for the "Deploy" vault, on its own socket (the main one serves only "SSH"). -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>exec /opt/homebrew/bin/pass-cli ssh-agent start --vault-name Deploy --socket-path "$HOME/.ssh/proton-deploy-agent.sock"</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- without access to the vault it exits at once: retry every 30 s, not in a tight loop -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/fvideira</string>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/proton-deploy-agent.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/proton-deploy-agent.error.log</string>
+</dict>
+</plist>

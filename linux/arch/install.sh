@@ -173,6 +173,12 @@ if pat_ready; then
 else
   log "Proton Pass agent enabled but NOT started: the token is not in the keyring yet (instructions at the end)."
 fi
+# A second agent serves the "Deploy" vault on its own socket (the vue-ui-kit deploy key); the main
+# one serves only "SSH". It needs the token to have access to that vault (docs/guide.md).
+systemctl --user enable proton-pass-deploy-agent.service
+if pat_ready; then
+  systemctl --user restart proton-pass-deploy-agent.service || log "WARNING: proton-pass-deploy-agent failed to start - check: journalctl --user -u proton-pass-deploy-agent"
+fi
 
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
