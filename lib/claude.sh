@@ -260,10 +260,12 @@ install_rtk() {
 # Anthropic's code-intelligence plugins: Claude looks symbols up through the language server and sees type
 # errors after an edit, instead of grepping and reading files. They need gopls and
 # typescript-language-server on PATH (both from mise, common/.config/mise/conf.d). Safe to repeat; a
-# plugin that is already installed is left as it is. Needs `claude` (mise installs it).
+# plugin that is already installed is left as it is. The official marketplace is added first because a fresh
+# Claude install only knows the built-in one. Needs `claude` (mise installs it).
 install_lsp_plugins() {
   command -v claude >/dev/null || { log "WARNING: claude isn't on PATH yet, so the LSP plugins weren't installed."; return 1; }
   local plugin out status=0
+  out="$(claude plugin marketplace add anthropics/claude-plugins-official 2>&1)" || { log "WARNING: claude-plugins-official marketplace: $(printf '%s' "$out" | tail -n 1)"; status=1; }
   for plugin in gopls-lsp typescript-lsp; do
     out="$(claude plugin install "$plugin@claude-plugins-official" 2>&1)" || { log "WARNING: $plugin: $(printf '%s' "$out" | tail -n 1)"; status=1; }
   done

@@ -35,9 +35,14 @@ _draft_sha256() {
   fi
 }
 
-# the version a draft binary reports ("Draft CLI version: v0.2.3" -> v0.2.3), empty if it can't run
+# the version a draft binary reports ("Draft CLI version: v0.2.3" -> v0.2.3): -v, else the older `version` subcommand; empty if it can't run
 _draft_version() {
-  "$1" version 2>/dev/null | grep -Eo 'v[0-9]+(\.[0-9]+)*' | head -1
+  local arg v
+  for arg in -v version; do
+    v="$("$1" "$arg" 2>/dev/null | grep -Eo 'v[0-9]+(\.[0-9]+)*' | head -1)"
+    [[ -n $v ]] && { printf '%s\n' "$v"; return 0; }
+  done
+  return 0
 }
 
 _draft_fetch_and_install() {
