@@ -32,7 +32,7 @@ changes, and at the end.
    `OUT-OF-SCOPE <path>` and `OVERLAP <path> <a> <b>` once per path, `IDLE <slice> <seconds>` once
    per quiet spell, and `ACTIVE <slice> <path>` when an idle slice moves again. It stops itself
    after 20 events or 15 minutes with no change. Set `timeout_ms` to 1800000 and `TaskStop` it
-   when the wave ends. Re-arm only under the limits in "Cost and loop limits" in `SKILL.md`.
+   when the wave ends. Re-arm only under the limits in "Cost and loop limits" in `implement.md`.
 4. **The working tree.** `git status`, `git diff --stat` and `git diff <path>` on a slice's files,
    read-only, when you want facts instead of the worker's account. Never Read or tail a worker's
    `output_file`: it is the full transcript and floods your context.

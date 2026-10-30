@@ -24,6 +24,9 @@
 # Only Herdr's own CLI is used (workspace / tab / pane / agent). Knobs, all optional:
 #   HDEV_AGENT=claude   any kind `herdr agent start --kind` knows (codex, gemini, ...), or
 #                       "none" for just the editor
+#   HDEV_COORDINATOR=1  Claude starts with the coordinator skill on (`claude /coordinator`): it has the
+#                       project's notes from the Brain and talks design with you, and builds only when
+#                       you say to. 0 starts a plain Claude. Only applies to HDEV_AGENT=claude
 #   HDEV_EDITOR=nvim    what runs in the top pane
 #   HDEV_RATIO=0.6      share of the height the editor keeps (the agent gets the rest)
 #   HDEV_TERM=right     a shell split off the agent's pane: "right" (agent | shell), "down"
@@ -47,6 +50,7 @@ h() { herdr ${HDEV_SESSION:+--session "$HDEV_SESSION"} "$@"; }
 dir=$(cd "${1:-.}" 2>/dev/null && pwd -P) || die "no such directory: ${1:-.}"
 label=$(basename "$dir")
 kind=${HDEV_AGENT:-claude}
+coordinator=${HDEV_COORDINATOR:-1}
 editor=${HDEV_EDITOR:-nvim}
 ratio=${HDEV_RATIO:-0.6}
 term=${HDEV_TERM:-right}
@@ -128,8 +132,13 @@ fi
 if [[ $kind != none ]]; then
   if ! command -v "$kind" >/dev/null 2>&1; then
     echo "hdev: '$kind' isn't installed (or not on PATH) - the bottom pane is a plain shell; install it and run: herdr agent start $agent_name --kind $kind --pane $bottom" >&2
-  elif ! h agent start "$agent_name" --kind "$kind" --pane "$bottom" >/dev/null; then
-    echo "hdev: couldn't start $kind in $bottom (the pane stays a plain shell): herdr agent start $agent_name --kind $kind --pane $bottom" >&2
+  else
+    # claude's first prompt is the /coordinator command; anything after -- goes to the agent
+    agent_args=()
+    [[ $kind == claude && $coordinator == 1 ]] && agent_args=(-- /coordinator)
+    if ! h agent start "$agent_name" --kind "$kind" --pane "$bottom" ${agent_args[@]+"${agent_args[@]}"} >/dev/null; then
+      echo "hdev: couldn't start $kind in $bottom (the pane stays a plain shell): herdr agent start $agent_name --kind $kind --pane $bottom" >&2
+    fi
   fi
 fi
 finish
