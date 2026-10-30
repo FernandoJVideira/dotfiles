@@ -34,10 +34,14 @@ cd ~/Developer/Personal/dotfiles
 On a first Arch install, the Skein installer ends with a reboot, so run `./bootstrap.sh` once more
 afterwards. The last lines of the output list anything that still needs you:
 
-- `~/.npmrc` and, on Linux, `~/.config/proton-pass-cli/pat` are created with a `REPLACE_WITH_...`
-  placeholder where a token goes. Replace it with a Gitea token that has the `package` scope for the
-  first file, and a Proton Pass personal access token for the second. A file that already exists is
-  never touched. Once `pat` holds a real token, run `systemctl --user restart proton-pass-agent.service`.
+- `./bootstrap.sh` asks first for the two tokens (hidden input; Enter skips one): a Gitea token with the
+  `package` scope for `~/.npmrc`, and on Linux a Proton Pass personal access token for
+  `~/.config/proton-pass-cli/pat`. A skipped one is created with a `REPLACE_WITH_...` placeholder, and a
+  file that already holds a real token is never asked about or touched. Once `pat` holds a real token,
+  run `systemctl --user restart proton-pass-agent.service`. On macOS the installer runs `pass-cli login`
+  once instead.
+- The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
+  ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
   prints the commands and leaves the decision to you.
 - Register Cloudflare WARP: `warp-cli registration new` (it asks you to accept Cloudflare's terms), then

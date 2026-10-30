@@ -47,6 +47,18 @@ migrate_skein_dirs
 
 symlink_dotfiles "$SCRIPT_DIR"
 
+# The agent serves the SSH keys from the Proton Pass login that pass-cli keeps in the keychain (the git
+# server, and so the Brain vault, are reached through it). Log in once, here, while someone is at the
+# keyboard; with no terminal it is left for later.
+if command -v pass-cli &>/dev/null && ! pass-cli info &>/dev/null; then
+  if { : </dev/tty; } 2>/dev/null; then
+    log "Logging in to Proton Pass (the SSH agent needs it)..."
+    pass-cli login </dev/tty || log "WARNING: Proton Pass login failed - run: pass-cli login, then: launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent"
+  else
+    log "WARNING: not logged in to Proton Pass and no terminal to ask on - run: pass-cli login"
+  fi
+fi
+
 # Activate Proton Pass agent if not already running
 if ! launchctl print gui/$(id -u)/com.proton.pass.agent &>/dev/null; then
   log "Starting Proton Pass SSH agent..."
