@@ -260,8 +260,8 @@ sudo dnf install -y --skip-unavailable gdisk dosfstools rsync efibootmgr limine
 sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
   || log "WARNING: limine-migrate.sh auto failed - run it by hand: sudo linux/nobara-boot/limine-migrate.sh prepare|finish"
 
-# Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
-# shared .zshenv). The unit logs in with a personal access token read from the login keyring
+# Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket, set by the zsh startup file
+# and by environment.d for the whole session). The unit logs in with a personal access token read from the login keyring
 # (secret-tool); a token left in the old ~/.config/proton-pass-cli/pat is moved there. The unit is
 # enabled always, but only started once the keyring holds the token (a start without a token fails
 # ExecStartPre, which would abort this script under set -e). The instructions are printed at the end.
