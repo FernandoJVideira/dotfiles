@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/../lib/herdr.sh"
 source "$SCRIPT_DIR/../lib/draft.sh"
 source "$SCRIPT_DIR/../lib/mise.sh"
 source "$SCRIPT_DIR/../lib/secrets.sh"
+source "$SCRIPT_DIR/../lib/claude.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
@@ -22,6 +23,11 @@ create_secret_templates
 # Dev tools (Go, Node, Java, .NET, Neovim, Herdr, Claude Code...) from the mise list just linked
 # above. Before the Herdr steps below, which need herdr on the PATH. Non-fatal.
 install_mise_tools || log "WARNING: the mise dev tools weren't all installed (see above) - rerun ./bootstrap.sh to retry."
+
+# Claude Code's memory: the Brain vault, and the hooks that load a project's notes at session start
+# and log what git saw at the end (the scripts were just linked into ~/.claude/hooks). Non-fatal.
+create_brain_vault
+install_claude_hooks || log "WARNING: the Claude hooks weren't added (see above) - rerun ./bootstrap.sh to retry."
 
 # Herdr's config.toml is generated from config.base.toml plus the current theme (and replaces the
 # old symlink to the repo). The plugin step below reloads it.
