@@ -35,13 +35,16 @@ On a first Arch install, the Skein installer ends with a reboot, so run `./boots
 afterwards. The last lines of the output list anything that still needs you:
 
 - `./bootstrap.sh` asks first for the two tokens (hidden input; Enter skips one): a Gitea token with the
-  `package` scope for `~/.npmrc`, and on Linux a Proton Pass personal access token for
-  the login keyring (GNOME Keyring, via `secret-tool`). A skipped `~/.npmrc` is created with a
-  `REPLACE_WITH_...` placeholder, and a token already in place is never asked about or touched. A token
-  left in the old `~/.config/proton-pass-cli/pat` is moved into the keyring and the file deleted on the
-  next run. Once the keyring holds the token (`secret-tool store --label='Proton Pass personal access
-  token' service proton-pass-cli account pat`), run `systemctl --user restart proton-pass-agent.service`. On macOS the installer runs `pass-cli login`
-  once instead.
+  `package` scope for `~/.npmrc`, and a Proton Pass personal access token for the system keyring (GNOME
+  Keyring through `secret-tool` on Linux, the login Keychain through `security` on macOS). A skipped
+  `~/.npmrc` is created with a `REPLACE_WITH_...` placeholder, and a token already in place is never asked
+  about or touched. On Linux, a token left in the old `~/.config/proton-pass-cli/pat` is moved into the
+  keyring and the file deleted on the next run. Once the Linux keyring holds the token
+  (`secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`),
+  run `systemctl --user restart proton-pass-agent.service`. On macOS the installer logs in with that token
+  when there is no Proton Pass session (`pass-cli login --pat`), and uses the web login (`pass-cli login`)
+  when there is no token either. To store it by hand on macOS:
+  `security add-generic-password -U -s proton-pass-cli -a pat -l 'Proton Pass personal access token' -w`.
 - The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
   ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
@@ -314,7 +317,7 @@ To change something, edit the file under `common/`, `macos/` or `linux/<distro>/
 | Spotify isn't themed | start it once, then `spicetify-theme-sync --force` |
 | Zed lacks an extension | `zed-extensions-check` |
 | an image won't paste into Claude | use `Ctrl+V`, not `Cmd+V`, with an image on the clipboard |
-| the Proton Pass agent isn't running | put the token in the keyring with `secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`, then restart the unit |
+| the Proton Pass agent isn't running | Linux: put the token in the keyring with `secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`, then restart the unit. macOS: `pass-cli login`, or store the token in the Keychain (see above) and run `pass-cli login --pat`, then `launchctl kickstart -k gui/$(id -u)/com.proton.pass.agent` |
 
 ## Where things live
 
