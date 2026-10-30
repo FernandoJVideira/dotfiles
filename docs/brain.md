@@ -49,6 +49,10 @@ Sync happens in the background while you work, as well as at the session boundar
 - **Each prompt**: a `UserPromptSubmit` hook (`brain-prompt.sh`) checks the server in the background at
   most every 2 minutes (`BRAIN_FETCH_INTERVAL` seconds to change it), fast-forwards the vault, and
   tells Claude with one short line only when notes of the current project changed.
+- **Force a sync**: the `/sync` skill commits, rebases onto the server and pushes right now, ignoring the
+  2-minute throttle. Use it in a session that was open before the hooks were registered (it has no
+  prompt hook) or to get the other machine's notes at once. It reports what changed and re-reads the
+  notes the session relies on.
 - **Session start** (`startup` and `resume`): the hook commits any loose edits, pulls the server's
   changes (a rebase), and pushes anything still waiting. A `/clear` or a compaction doesn't pull.
 - **Session end and compaction**: the hook commits the notes and pushes in the background (a
@@ -154,4 +158,5 @@ To take it out, delete the `PreToolUse` entry ending in `rtk hook claude` from `
 hooks and the skill overrides into `~/.claude/settings.json` (leaving Herdr's hook alone) and holds
 `install_rtk`. `common/.claude/skills/coordinator/` the skill: `SKILL.md` (discuss, memory, the gate),
 `references/implement.md` (workflow, caps, prompts), `memory.md`, `oversight.md`, `frontend.md`, `nuxt.md`.
+`common/.claude/skills/sync/SKILL.md` the `/sync` skill (forced sync of the vault in an open session).
 `common/.claude/CLAUDE.md` holds the standing preferences for every project (linked to `~/.claude/CLAUDE.md` by the bootstrap); a machine that already has its own `~/.claude/CLAUDE.md` loses it to the link, since the bootstrap links with `ln -sf`, so copy anything you want to keep into this file first.
