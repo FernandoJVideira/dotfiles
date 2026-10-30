@@ -5,6 +5,12 @@ project's state, what changed and why, so it doesn't re-read and re-discover. Th
 Obsidian-style vault of plain markdown, `~/Brain` (set `BRAIN_DIR` to move it). It is a git repo, and the
 session hooks keep it in step across machines through your server.
 
+The design is adapted from Karpathy's "LLM wiki"
+([gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)): instead of re-deriving
+everything each session, Claude keeps a small persistent wiki up to date, so the memory compounds. The
+original has a layer of raw sources; this one leaves it out, because you never write in the vault and the
+conversation itself is the source. Claude owns every file; you read it (Obsidian is the viewer).
+
 ## On each machine
 
 The bootstrap does everything, on macOS, Nobara and Arch alike: the vault (cloned from the server when the
@@ -34,22 +40,26 @@ the agent is up. A vault that has a first commit keeps its origin and is never a
 
 ## How the sync works
 
-Sync happens at the moments you switch machines, not in the background:
+Sync happens in the background while you work, and again at the session boundaries:
 
+- **After a note is written**: a `PostToolUse` hook (`brain-sync.sh`) notices when a tool call touched
+  the vault. After a few seconds of quiet it commits, rebases onto the server's changes and pushes, in
+  the background. It prints nothing, so it costs no tokens, and a tool call that does not touch the
+  vault costs it a few milliseconds.
 - **Session start** (`startup` and `resume`): the hook commits any loose edits, pulls the server's
-  changes (a rebase), and pushes anything still waiting from the last session. A `/clear` or a compaction
-  doesn't pull.
+  changes (a rebase), and pushes anything still waiting. A `/clear` or a compaction doesn't pull.
 - **Session end and compaction**: the hook commits the notes and pushes in the background (a
-  `SessionEnd` hook only has 1.5 s, and a push can take longer).
-- **Offline or no SSH**: both steps stay quiet and the session uses the local copy. The next start
-  pushes whatever was missed.
+  `SessionEnd` hook only has 1.5 s, and a push can take longer). Start and end are the safety net.
+- **Offline or no SSH**: every step stays quiet and the session uses the local copy. A later sync
+  retries and pushes whatever was missed.
 - **Same lines changed on two machines**: `log.md` and `decisions.md` merge by union, so lines added on
   both sides are all kept. A real clash (say `state.md` rewritten on both) is not merged: the vault
   stays as it was, Claude is told, and you fix it with `git -C ~/Brain pull --rebase`.
-- One gap: the other machine only sees a session's notes once the first has pushed. If you switch
-  seconds after quitting, or the push failed, run `git -C ~/Brain push` on the first machine.
+- One gap: the other machine only sees the notes once the first has pushed. If you switch within seconds
+  of the last write, or the push failed, run `git -C ~/Brain push` on the first machine.
 - `.obsidian/` is not synced (per-machine settings, and plugin data that can hold credentials). Open
-  `~/Brain` in Obsidian on each machine to read or edit; its changes travel at the next session boundary.
+  `~/Brain` in Obsidian on each machine to read; Claude owns the files, so edits you make there may be
+  rewritten.
   Don't also run LiveSync on this folder: two syncers fight over the files.
 
 ## How a session goes
@@ -57,25 +67,29 @@ Sync happens at the moments you switch machines, not in the background:
 1. `hdev` opens the project in Herdr and starts `claude /coordinator` in the agent pane
    (`HDEV_COORDINATOR=0` starts a plain Claude).
 2. A SessionStart hook (`~/.claude/hooks/brain-start.sh`) loads the project's `state.md`, the last five
-   decisions and the commits since the last checkpoint into the session. About 800 tokens at most.
+   decisions, the topic pages' names with their one-line summaries and the commits since the last
+   checkpoint into the session. About 800 tokens at most.
 3. The coordinator says what it understood, then you talk. It **discusses**: options, trade-offs, a
    recommendation, the reason. No agent is spawned and no file is edited until you say to implement
    ("implement", "build it", "go").
-4. Settled decisions are appended to `decisions.md` at once. `state.md` is rewritten when a task ends or
-   the topic changes, and on "save".
-5. When the session ends (or is compacted) a second hook (`brain-end.sh`, no model, no network) appends
-   what git saw to `log.md`.
+4. Settled decisions are appended to `decisions.md` at once. When a task ends, the topic changes or you
+   say "save", Claude updates the topic pages the conversation touched, keeps `state.md` short and fixes
+   `INDEX.md`. To answer a question about the past it reads `INDEX.md` first, then only the pages it
+   points to.
+5. `brain-sync.sh` commits and pushes those writes in the background. When the session ends (or is
+   compacted) `brain-end.sh` (no model, no network) appends what git saw to `log.md`.
 
 ## The vault
 
 ```
 Brain/
-  INDEX.md                  one line per project and per knowledge note
+  INDEX.md                  catalog: one line per page, under Projects and Knowledge; read first
   projects/<slug>/
     state.md                goal, status, next, open questions, Project Map (max 60 lines, rewritten)
     decisions.md            "- date | chose X over Y because Z", one bullet per line, appended
     log.md                  commits and files per session; written only by the end hook
-  knowledge/                lessons across projects, your own notes
+    topics/<name>.md        one durable how or why per page (summary, updated, [[wikilinks]])
+  knowledge/<name>.md       lessons that hold across projects, same page format
   _agent/                   scratch
 ```
 
@@ -83,14 +97,16 @@ Brain/
 repo with no remote uses the folder name). Notes are plain and complete sentences, written for a reader
 who hasn't seen the session. **No secrets go in the vault**: it syncs to a server.
 
-Edit anything in Obsidian. The coordinator only writes `state.md`, `decisions.md` and the `INDEX.md`
-line of a project; the hook only writes `log.md`; your other notes are never touched.
+The vault is Claude's, written from your conversations. Read it in Obsidian, but write nothing there.
+Claude writes `state.md`, `decisions.md`, the topic and knowledge pages and `INDEX.md`; the hook only
+writes `log.md`. Topic pages cost nothing until Claude opens one. "Lint the brain" makes it check for
+contradictions, orphan pages and a `state.md` over its limit.
 
 ## What loads every session (the token budget)
 
 | Piece | Cost | Notes |
 |---|---|---|
-| Brain hook | about 800 tokens max | silent without a vault or outside a project |
+| Brain hook | about 800 tokens max | `state.md`, last decisions, topic names with summaries, git summary; silent without a vault or outside a project. Topic pages cost nothing until opened |
 | `coordinator` skill | about 2k tokens | was 6.4k: the workflow and prompt templates now load only on "implement" |
 | Skill listing | names plus descriptions | `common/.claude/skill-overrides.json` lists overlapping third-party skills by name only; `humanizer` is invoked by hand |
 | Plugin skills | per plugin | not affected by `skillOverrides`: turn plugins you don't use for coding off in `/plugin`, and the claude.ai ones in its settings |
@@ -122,7 +138,7 @@ To take it out, delete the `PreToolUse` entry ending in `rtk hook claude` from `
 
 ## Files
 
-`common/.claude/hooks/brain-{lib,start,end}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
+`common/.claude/hooks/brain-{lib,start,end,sync}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
 hooks and the skill overrides into `~/.claude/settings.json` (leaving Herdr's hook alone) and holds
 `install_rtk`. `common/.claude/skills/coordinator/` the skill: `SKILL.md` (discuss, memory, the gate),
 `references/implement.md` (workflow, caps, prompts), `memory.md`, `oversight.md`, `frontend.md`, `nuxt.md`.

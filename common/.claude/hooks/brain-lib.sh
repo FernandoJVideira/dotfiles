@@ -110,3 +110,23 @@ brain_push_bg() {
     nohup git -C "$BRAIN_DIR" push -q -u origin HEAD >/dev/null 2>&1 </dev/null &
   disown 2>/dev/null || true
 }
+
+# anything the vault still has to commit or push
+brain_dirty() {
+  [[ -n $(git -C "$BRAIN_DIR" status --porcelain 2>/dev/null) ]] && return 0
+  [[ $(git -C "$BRAIN_DIR" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0) != 0 ]]
+}
+
+# commit, rebase onto the server's notes, push, all in the foreground. Callers run it detached (brain-sync.sh).
+# A rebase conflict leaves the vault untouched and returns 1; offline or a failed push is silent.
+brain_sync_now() {
+  brain_repo || return 0
+  local t=()
+  command -v timeout >/dev/null && t=(timeout 20)
+  brain_commit
+  BRAIN_SYNC_NOTE=""
+  brain_pull
+  [[ -z $BRAIN_SYNC_NOTE ]] || return 1
+  [[ $(git -C "$BRAIN_DIR" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 1) != 0 ]] || return 0
+  GIT_SSH_COMMAND="$(brain_ssh 5)" ${t[@]+"${t[@]}"} git -C "$BRAIN_DIR" push -q -u origin HEAD >/dev/null 2>&1 </dev/null || true
+}

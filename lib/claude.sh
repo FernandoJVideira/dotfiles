@@ -116,8 +116,11 @@ create_brain_vault() {
     cat >"$vault/INDEX.md" <<'INDEX'
 # Brain
 
-One line per project and per knowledge note. Machine-written notes live in `projects/<slug>/`
-(`state.md`, `decisions.md`, `log.md`); your own notes go in `knowledge/` or anywhere else.
+The Brain. Everything here is written by Claude from conversations; nothing is a source you edit.
+`projects/<slug>/` holds `state.md` (current status), `decisions.md`, `log.md` (written by hooks), and
+`topics/` (one page per durable how/why, each with a one-line `summary:` in its frontmatter).
+`knowledge/` holds lessons that hold across projects. This file is the catalog: one line per page,
+grouped under Projects and Knowledge.
 
 ## Projects
 
@@ -169,13 +172,13 @@ INDEX
 install_claude_hooks() {
   local settings="$HOME/.claude/settings.json" dir="$HOME/.claude/hooks" tmp
   command -v jq >/dev/null || { log "WARNING: jq is missing, so the Claude hooks weren't added."; return 1; }
-  [[ -x $dir/brain-start.sh && -x $dir/brain-end.sh ]] || { log "WARNING: $dir/brain-*.sh aren't linked yet."; return 1; }
+  [[ -x $dir/brain-start.sh && -x $dir/brain-end.sh && -x $dir/brain-sync.sh ]] || { log "WARNING: $dir/brain-*.sh aren't linked yet."; return 1; }
   mkdir -p "$HOME/.claude"
   [[ -f $settings ]] || echo '{}' >"$settings"
   [[ -e $settings.pre-brain ]] || cp "$settings" "$settings.pre-brain"
 
   tmp="$(mktemp)"
-  jq --arg start "bash $dir/brain-start.sh" --arg end "bash $dir/brain-end.sh" '
+  jq --arg start "bash $dir/brain-start.sh" --arg end "bash $dir/brain-end.sh" --arg sync "bash $dir/brain-sync.sh" '
     def without_brain: map(select(([.hooks[]?.command] | join(" ")) | contains("brain-") | not));
     .hooks //= {}
     | .hooks.SessionStart = ((.hooks.SessionStart // []) | without_brain)
@@ -183,8 +186,10 @@ install_claude_hooks() {
     | .hooks.SessionEnd = ((.hooks.SessionEnd // []) | without_brain)
         + [{hooks: [{type: "command", command: $end, timeout: 5}]}]
     | .hooks.PreCompact = ((.hooks.PreCompact // []) | without_brain)
-        + [{hooks: [{type: "command", command: $end, timeout: 5}]}]' "$settings" >"$tmp" \
-    && mv "$tmp" "$settings" && log "Claude hooks: project memory at session start, git log at session end."
+        + [{hooks: [{type: "command", command: $end, timeout: 5}]}]
+    | .hooks.PostToolUse = ((.hooks.PostToolUse // []) | without_brain)
+        + [{matcher: "^(Write|Edit|MultiEdit|Bash)$", hooks: [{type: "command", command: $sync, timeout: 5}]}]' "$settings" >"$tmp" \
+    && mv "$tmp" "$settings" && log "Claude hooks: project memory at session start, git log at session end, notes pushed within seconds of a write."
 }
 
 # Skills from other people that overlap or that I don't reach for: listed by name only, so their
