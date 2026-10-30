@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # SessionEnd and PreCompact: write what git says changed into the project's log.md and move the checkpoint
 # forward. No model, no network, under a second (SessionEnd hooks get a 1.5 s budget). Only for projects
-# that already have a state.md, so it never litters the vault with folders.
+# that already have a state.md, so it never litters the vault with folders. Then the vault is committed and
+# pushed to the server (see brain_push_bg).
 set -uo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/brain-lib.sh"
 brain_read_input
 
 [[ -n $(brain_field agent_id) ]] && exit 0
+# whichever way this exits, commit the notes and send them to the server in the background
+trap 'brain_commit; brain_push_bg' EXIT
 cwd="$(brain_field cwd)"
 cwd="${cwd:-$PWD}"
 git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1 || exit 0

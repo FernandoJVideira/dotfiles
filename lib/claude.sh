@@ -4,10 +4,46 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/log.sh"
 
-# ~/Brain (or $BRAIN_DIR): an Obsidian-style vault with one folder of notes per project. Only created
-# when missing; nothing that is already there is touched. See docs/brain.md.
+# ~/Brain (or $BRAIN_DIR): an Obsidian-style vault with one folder of notes per project, kept in step
+# between machines through a git remote (BRAIN_REMOTE). The skeleton is only created when missing and
+# nothing already there is touched. See docs/brain.md.
+BRAIN_REMOTE="${BRAIN_REMOTE:-git@git.fernandovideira.com:FernandoJVideira/agent-brain.git}"
+
+# ssh options for the server: no prompts, short timeouts, and the Proton Pass agent's socket when it
+# exists (this script's shell doesn't have SSH_AUTH_SOCK yet on a fresh machine)
+brain_ssh_cmd() {
+  local sock="$HOME/.ssh/proton-pass-agent.sock"
+  printf 'ssh -o BatchMode=yes -o ConnectTimeout=5%s' "$([[ -S $sock ]] && printf ' -o IdentityAgent=%s' "$sock")"
+}
+
+# the agent (started earlier by the OS installer) needs a few seconds to log in; give it up to 20
+wait_for_ssh_agent() {
+  local sock="$HOME/.ssh/proton-pass-agent.sock" i rc
+  for i in $(seq 10); do
+    SSH_AUTH_SOCK="$sock" ssh-add -l >/dev/null 2>&1; rc=$?
+    [[ -S $sock && $rc -ne 2 ]] && return 0
+    sleep 2
+  done
+  return 1
+}
+
 create_brain_vault() {
-  local vault="${BRAIN_DIR:-$HOME/Brain}"
+  local vault="${BRAIN_DIR:-$HOME/Brain}" ssh refs
+  # only a vault that isn't linked to the server yet needs the agent right now
+  if [[ -n $BRAIN_REMOTE ]] && command -v git >/dev/null && ! git -C "$vault" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+    wait_for_ssh_agent || log "The Proton Pass SSH agent isn't answering, so the Brain vault stays local for now."
+  fi
+  ssh="$(brain_ssh_cmd)"
+
+  # a machine with no vault yet takes the server's copy
+  if [[ ! -e $vault/.git && -n $BRAIN_REMOTE ]] && [[ ! -e $vault || -z $(ls -A "$vault" 2>/dev/null) ]]; then
+    if GIT_SSH_COMMAND="$ssh" git clone -q "$BRAIN_REMOTE" "$vault" 2>/dev/null; then
+      log "Cloned the Brain vault from $BRAIN_REMOTE"
+    else
+      rm -rf "$vault" 2>/dev/null
+    fi
+  fi
+
   mkdir -p "$vault/projects" "$vault/knowledge" "$vault/_agent"
   if [[ ! -e $vault/INDEX.md ]]; then
     cat >"$vault/INDEX.md" <<'INDEX'
@@ -21,6 +57,43 @@ One line per project and per knowledge note. Machine-written notes live in `proj
 ## Knowledge
 INDEX
     log "Created the Brain vault at $vault"
+  fi
+
+  [[ -n $BRAIN_REMOTE ]] && command -v git >/dev/null || return 0
+  # per-machine Obsidian settings (and the plugin data that may hold credentials) stay out of git;
+  # the append-only notes merge by union, so two machines adding lines never conflict
+  [[ -e $vault/.gitignore ]] || printf '%s\n' '.obsidian/' '.trash/' '.DS_Store' '*.sync-conflict-*' >"$vault/.gitignore"
+  [[ -e $vault/.gitattributes ]] || printf '%s\n' 'log.md merge=union' 'decisions.md merge=union' >"$vault/.gitattributes"
+
+  if [[ ! -e $vault/.git ]]; then
+    git -C "$vault" init -q -b main
+    git -C "$vault" remote add origin "$BRAIN_REMOTE"
+  fi
+  if ! git -C "$vault" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+    # no commits yet: join the server's history if it has one. If the server can't be reached, stop here
+    # without a commit of our own (a root commit made offline would never merge with the server's);
+    # the next ./bootstrap.sh retries, and the hooks do nothing until then.
+    if ! refs="$(GIT_SSH_COMMAND="$ssh" git -C "$vault" ls-remote origin 2>/dev/null)"; then
+      log "WARNING: couldn't reach $BRAIN_REMOTE (no SSH access yet?), so the Brain vault stays local; rerun ./bootstrap.sh once it works."
+      return 0
+    fi
+    if [[ -n $refs ]]; then
+      GIT_SSH_COMMAND="$ssh" git -C "$vault" fetch -q origin main 2>/dev/null || { log "WARNING: couldn't fetch the Brain vault; rerun ./bootstrap.sh."; return 0; }
+      if [[ -z $(find "$vault/projects" "$vault/knowledge" -type f 2>/dev/null | head -n 1) ]]; then
+        git -C "$vault" checkout -q -f -B main origin/main
+        git -C "$vault" branch -q --set-upstream-to=origin/main main 2>/dev/null || true
+        log "Brain vault joined the history on $BRAIN_REMOTE"
+      else
+        log "WARNING: $vault has notes and so does $BRAIN_REMOTE; merge them by hand (git -C $vault)."
+        return 1
+      fi
+    else
+      git -C "$vault" add -A
+      git -C "$vault" -c commit.gpgsign=false commit -q -m "brain: first commit from $(hostname -s)" || true
+    fi
+  fi
+  if ! GIT_SSH_COMMAND="$ssh" git -C "$vault" push -q -u origin HEAD 2>/dev/null; then
+    log "WARNING: couldn't push the Brain vault to $BRAIN_REMOTE (offline, or no SSH access). The hooks retry."
   fi
 }
 
