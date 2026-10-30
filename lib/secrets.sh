@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Two files hold secrets this repo can't ship: ~/.npmrc (the Gitea token for the @fernandojvideira
-# npm registry, every OS) and ~/.config/proton-pass-cli/pat (the Proton Pass personal access token
-# the SSH agent unit logs in with, Linux only: the macOS agent uses the login pass-cli keeps in the
-# keychain). create_secret_templates writes each one with everything but the token, and only when
-# the file doesn't exist, so a file that is already there is never touched. print_secret_instructions
-# lists the ones that still hold the placeholder and says what to do; it only looks for the
-# placeholder text and never reads or prints anything else in them. prompt_for_secrets, called first
-# thing by bootstrap.sh, asks for the tokens up front (hidden input, Enter skips one), so everything
-# after it runs unattended and the SSH agent is up before the Brain vault is cloned through it.
+# Two secrets this repo can't ship: ~/.npmrc (the Gitea token for the @fernandojvideira npm registry,
+# every OS) and the Proton Pass personal access token the SSH agent unit logs in with (Linux only: it
+# lives in the login keyring, read with secret-tool; the macOS agent uses the login pass-cli keeps in
+# the keychain). create_secret_templates writes ~/.npmrc with everything but the token, and only when
+# the file doesn't exist, so a file that is already there is never touched. migrate_pat_file moves a
+# token left in the old ~/.config/proton-pass-cli/pat into the keyring and deletes the file.
+# print_secret_instructions lists what is still missing and says what to do; it only looks for the
+# placeholder text and never reads or prints a token. prompt_for_secrets, called first thing by
+# bootstrap.sh, asks for the tokens up front (hidden input, Enter skips one), so everything after it
+# runs unattended and the SSH agent is up before the Brain vault is cloned through it.
 
 source "$(dirname "${BASH_SOURCE[0]}")/log.sh"
 
 NPMRC="$HOME/.npmrc"
-PROTON_PAT="$HOME/.config/proton-pass-cli/pat"
+PROTON_PAT_FILE="$HOME/.config/proton-pass-cli/pat"
 NPM_PLACEHOLDER="REPLACE_WITH_YOUR_GITEA_TOKEN"
-PAT_PLACEHOLDER="REPLACE_WITH_YOUR_PROTON_PASS_PAT"
 
 # true when the file exists and still holds a placeholder
 secret_pending() {
@@ -55,22 +55,42 @@ TEMPLATE
   )
 }
 
-create_pat_template() {
-  [[ -e $PROTON_PAT ]] && return 0
-  (
-    umask 077
-    mkdir -p -m 700 "$(dirname "$PROTON_PAT")"
-    printf '%s\n' "$PAT_PLACEHOLDER" >"$PROTON_PAT"
-  )
+# true when the keyring holds the Proton Pass token
+pat_ready() {
+  command -v secret-tool >/dev/null || return 1
+  [[ -n $(secret-tool lookup service proton-pass-cli account pat 2>/dev/null) ]]
 }
 
-# Ask for each token that is still missing: the file doesn't exist, or it holds the placeholder. A
-# token that is already in place is never asked for or touched. Enter skips (the file then gets the
-# placeholder and the instructions at the end of the run apply). No terminal: skip silently.
+pat_store() {
+  printf %s "$1" | secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat
+}
+
+# Linux: move a token from the old pat file into the keyring, then delete the file
+migrate_pat_file() {
+  [[ $(uname -s) == Linux && -f $PROTON_PAT_FILE ]] || return 0
+  local token
+  token="$(tr -d '[:space:]' <"$PROTON_PAT_FILE")"
+  if [[ -z $token || $token == *REPLACE_WITH_* ]]; then
+    rm -f "$PROTON_PAT_FILE"
+  elif pat_ready; then
+    return 0
+  elif pat_store "$token" 2>/dev/null; then
+    rm -f "$PROTON_PAT_FILE"
+    log "Moved the Proton Pass token from $PROTON_PAT_FILE into the keyring."
+  else
+    log "WARNING: could not store the Proton Pass token in the keyring (locked?); kept $PROTON_PAT_FILE."
+  fi
+  return 0
+}
+
+# Ask for each token that is still missing: ~/.npmrc doesn't exist or holds the placeholder, or the
+# keyring has no Proton Pass token. A token that is already in place is never asked for or touched.
+# Enter skips (the instructions at the end of the run apply). No terminal: skip silently.
 prompt_for_secrets() {
   local need_npm=0 need_pat=0 token=""
+  migrate_pat_file
   if [[ ! -e $NPMRC ]] || secret_pending "$NPMRC"; then need_npm=1; fi
-  if [[ $(uname -s) == Linux ]] && { [[ ! -e $PROTON_PAT ]] || secret_pending "$PROTON_PAT"; }; then need_pat=1; fi
+  if [[ $(uname -s) == Linux ]] && ! pat_ready; then need_pat=1; fi
   [[ $need_npm == 0 && $need_pat == 0 ]] && return 0
   { : </dev/tty; } 2>/dev/null || return 0
 
@@ -85,9 +105,12 @@ prompt_for_secrets() {
   fi
   if [[ $need_pat == 1 ]]; then
     printf '    Proton Pass personal access token: the SSH agent logs in with it, and this run reaches git through the agent.\n'
-    if ask_secret '    Proton Pass token (~/.config/proton-pass-cli/pat): ' token && [[ -n $token ]]; then
-      create_pat_template
-      fill_secret "$PROTON_PAT" "$token" "$PAT_PLACEHOLDER" && log "Saved $PROTON_PAT."
+    if ask_secret '    Proton Pass token (stored in the login keyring): ' token && [[ -n $token ]]; then
+      if pat_store "$token" 2>/dev/null; then
+        log "Saved the Proton Pass token in the keyring."
+      else
+        log "WARNING: could not save the Proton Pass token: the keyring may be locked. The instructions at the end say how to add it later."
+      fi
     fi
   fi
   token=""
@@ -99,26 +122,23 @@ create_secret_templates() {
     create_npmrc_template
     log "Created $NPMRC with a placeholder token."
   fi
-  if [[ $(uname -s) == Linux && ! -e $PROTON_PAT ]]; then
-    create_pat_template
-    log "Created $PROTON_PAT with a placeholder token."
-  fi
+  migrate_pat_file
   return 0
 }
 
 print_secret_instructions() {
-  local pending=0
+  local pending=0 pat_pending=0
   secret_pending "$NPMRC" && pending=1
-  [[ $(uname -s) == Linux ]] && secret_pending "$PROTON_PAT" && pending=1
+  if [[ $(uname -s) == Linux ]] && ! pat_ready; then pat_pending=1; pending=1; fi
   if [[ $pending == 0 ]]; then
     local ready=()
     secret_ready "$NPMRC" && ready+=("~/.npmrc")
-    [[ $(uname -s) == Linux ]] && secret_ready "$PROTON_PAT" && ready+=("~/.config/proton-pass-cli/pat")
-    [[ ${#ready[@]} -eq 0 ]] || log "Token files are in place, nothing to add: ${ready[*]}"
+    [[ $(uname -s) == Linux ]] && pat_ready && ready+=("Proton Pass token (keyring)")
+    [[ ${#ready[@]} -eq 0 ]] || log "Tokens are in place, nothing to add: ${ready[*]}"
     return 0
   fi
 
-  printf '\n\033[33m==> Tokens to add\033[0m (each file was created with a placeholder in place of the token):\n\n'
+  printf '\n\033[33m==> Tokens to add\033[0m:\n\n'
   if secret_pending "$NPMRC"; then
     cat <<EOF
   ~/.npmrc
@@ -129,12 +149,12 @@ print_secret_instructions() {
 
 EOF
   fi
-  if [[ $(uname -s) == Linux ]] && secret_pending "$PROTON_PAT"; then
+  if [[ $pat_pending == 1 ]]; then
     cat <<EOF
-  ~/.config/proton-pass-cli/pat
-    Replace $PAT_PLACEHOLDER with a Proton Pass personal access token (the file holds
-    the token and nothing else). The SSH agent stays off until you do.
-    Edit it:  ${EDITOR:-nvim} ~/.config/proton-pass-cli/pat
+  Proton Pass token (login keyring)
+    Store a Proton Pass personal access token in the keyring (it asks for the token on stdin).
+    The SSH agent stays off until you do.
+    Store it: secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat
     Then:     systemctl --user restart proton-pass-agent.service
 
 EOF

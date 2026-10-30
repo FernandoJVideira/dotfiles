@@ -50,10 +50,10 @@ export PATH="$SKEIN_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH
 log "Installing Hyprland and quickshell runtime dependencies..."
 sudo dnf install -y --skip-unavailable \
   hyprland quickshell xdg-desktop-portal-hyprland \
-  wireplumber pipewire gnome-keyring jq gum wl-clipboard slurp hyprpicker \
+  wireplumber pipewire gnome-keyring gnome-keyring-pam jq gum wl-clipboard slurp hyprpicker \
   wtype brightnessctl bluez networkmanager qrencode libnotify \
   jetbrains-mono-nerd-fonts hack-nerd-fonts
-for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker hack-nerd-fonts; do
+for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker hack-nerd-fonts gnome-keyring-pam; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - check for a COPR."
 done
 
@@ -261,19 +261,18 @@ sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
   || log "WARNING: limine-migrate.sh auto failed - run it by hand: sudo linux/nobara-boot/limine-migrate.sh prepare|finish"
 
 # Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket via the
-# shared .zshenv). The unit logs in with a personal access token read from
-# ~/.config/proton-pass-cli/pat. That file is created with a placeholder (an existing one is left
-# alone); the unit is enabled always, but only started once the placeholder has been replaced (a
-# start without a token fails ExecStartPre, which would abort this script under set -e). The
-# instructions are printed at the end.
+# shared .zshenv). The unit logs in with a personal access token read from the login keyring
+# (secret-tool); a token left in the old ~/.config/proton-pass-cli/pat is moved there. The unit is
+# enabled always, but only started once the keyring holds the token (a start without a token fails
+# ExecStartPre, which would abort this script under set -e). The instructions are printed at the end.
 mkdir -p -m 700 "$HOME/.ssh"
 create_secret_templates
 if systemctl --user enable proton-pass-agent.service; then
-  if secret_ready "$PROTON_PAT"; then
+  if pat_ready; then
     log "Starting the Proton Pass SSH agent..."
     systemctl --user restart proton-pass-agent.service || log "WARNING: proton-pass-agent failed to start - check: journalctl --user -u proton-pass-agent"
   else
-    log "Proton Pass agent enabled but NOT started: add your personal access token to ~/.config/proton-pass-cli/pat (instructions at the end)."
+    log "Proton Pass agent enabled but NOT started: the token is not in the keyring yet (instructions at the end)."
   fi
 else
   log "WARNING: could not enable proton-pass-agent (no user systemd session?) - run: systemctl --user enable --now proton-pass-agent.service from a desktop session."
