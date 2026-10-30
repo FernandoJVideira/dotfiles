@@ -94,12 +94,16 @@ brain_notice_add() {
 }
 
 # While a rebase is stopped, stage 2 is the upstream side and stage 3 the local commit being replayed.
-# Keep the note with the newer `updated:` date (local on a tie or no date) and park the other next to
-# it as <name>.conflict-<host>.<ext>. A file deleted on one side keeps the side that still has it.
+# Keep the note whose last commit is newer, else the one with the newer `updated:` date (local on a tie
+# or no date), and park the other next to it as <name>.conflict-<host>.<ext>. A file deleted on one side keeps the side that still has it.
 brain_resolve_conflicts() {
-  local f ours theirs od td keep lose dest host tmp
+  local f ours theirs od td keep lose dest host tmp hf br ot tt
   host="$(hostname -s 2>/dev/null || uname -n)"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/brain.XXXXXX")" || return 1
+  hf="$(git -C "$BRAIN_DIR" rev-parse --git-path rebase-merge/head-name 2>/dev/null)"
+  [[ $hf == /* ]] || hf="$BRAIN_DIR/$hf"
+  br=""
+  [[ -r $hf ]] && { br="$(<"$hf")"; br="${br#refs/heads/}"; }
   while IFS= read -r f; do
     [[ -n $f ]] || continue
     ours="$tmp/ours"
@@ -113,9 +117,16 @@ brain_resolve_conflicts() {
       continue
     fi
     if [[ -e $ours && -e $theirs ]]; then
-      od="$(brain_front "$ours" updated)"
-      td="$(brain_front "$theirs" updated)"
-      if [[ -n $od && -n $td && $od > $td ]]; then keep="$ours"; lose="$theirs"; else keep="$theirs"; lose="$ours"; fi
+      ot=""; tt=""
+      [[ -n $br ]] && ot="$(git -C "$BRAIN_DIR" log -1 --format=%ct "origin/$br" -- "$f" 2>/dev/null)"
+      tt="$(git -C "$BRAIN_DIR" log -1 --format=%ct REBASE_HEAD -- "$f" 2>/dev/null)"
+      if [[ $ot =~ ^[0-9]+$ && $tt =~ ^[0-9]+$ && $ot -ne $tt ]]; then
+        if (( ot > tt )); then keep="$ours"; lose="$theirs"; else keep="$theirs"; lose="$ours"; fi
+      else
+        od="$(brain_front "$ours" updated)"
+        td="$(brain_front "$theirs" updated)"
+        if [[ -n $od && -n $td && $od > $td ]]; then keep="$ours"; lose="$theirs"; else keep="$theirs"; lose="$ours"; fi
+      fi
     elif [[ -e $theirs ]]; then
       keep="$theirs"; lose=""
     else

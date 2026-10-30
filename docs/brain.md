@@ -55,13 +55,16 @@ Sync happens in the background while you work, as well as at the session boundar
   notes the session relies on.
 - **Session start** (`startup` and `resume`): the hook commits any loose edits, pulls the server's
   changes (a rebase), and pushes anything still waiting. A `/clear` or a compaction doesn't pull.
+- **Dotfiles behind**: at `startup` and `resume` the hook (`brain-update.sh`) tells Claude once if the
+  dotfiles repo is behind its remote, so the machine gets pulled and re-bootstrapped. It fetches in the
+  background at most every 6 hours, so a new commit shows up at the session after the fetch.
 - **Session end and compaction**: the hook commits the notes and pushes in the background (a
   `SessionEnd` hook only has 1.5 s, and a push can take longer). Start and end are the safety net.
 - **Offline or no SSH**: every step stays quiet and the session uses the local copy. A later sync
   retries and pushes whatever was missed.
 - **Same lines changed on two machines**: `log.md` and `decisions.md` merge by union, so lines added on
-  both sides are all kept. Any other clash is resolved by keeping the version with the newer
-  `updated:` date and saving the other as `<name>.conflict-<host>.<ext>`. Nothing is lost and the vault
+  both sides are all kept. Any other clash is resolved by keeping the version committed later
+  (`updated:` is the fallback, the local one wins a tie) and saving the other as `<name>.conflict-<host>.<ext>`. Nothing is lost and the vault
   is never left unmerged; Claude folds the conflict file into the page at its next checkpoint.
 - **Claude Code's auto-memory**: each project's own memory lives in `projects/<slug>/memory/` in the
   vault, and `~/.claude/projects/<dir>/memory` (where `<dir>` is the project path with every
@@ -122,6 +125,7 @@ contradictions, orphan pages and a `state.md` over its limit.
 | Piece | Cost | Notes |
 |---|---|---|
 | Brain hook | about 800 tokens max | `state.md`, last decisions, topic names with summaries, git summary; silent without a vault or outside a project. Topic pages cost nothing until opened |
+| Dotfiles-behind note | nothing unless the repo is behind, then about 40 tokens | `brain-update.sh`: one line at session start |
 | Prompt hook | nothing unless notes changed, then under 400 bytes | `brain-prompt.sh`: one line naming the changed notes of the current project |
 | `coordinator` skill | about 2k tokens | was 6.4k: the workflow and prompt templates now load only on "implement" |
 | Skill listing | names plus descriptions | `common/.claude/skill-overrides.json` lists overlapping third-party skills by name only; `humanizer` is invoked by hand |
@@ -154,7 +158,7 @@ To take it out, delete the `PreToolUse` entry ending in `rtk hook claude` from `
 
 ## Files
 
-`common/.claude/hooks/brain-{lib,start,end,sync,prompt,memory}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
+`common/.claude/hooks/brain-{lib,start,end,sync,prompt,memory,update}.sh` the hooks. `lib/claude.sh` creates the vault, merges the
 hooks and the skill overrides into `~/.claude/settings.json` (leaving Herdr's hook alone) and holds
 `install_rtk`. `common/.claude/skills/coordinator/` the skill: `SKILL.md` (discuss, memory, the gate),
 `references/implement.md` (workflow, caps, prompts), `memory.md`, `oversight.md`, `frontend.md`, `nuxt.md`.

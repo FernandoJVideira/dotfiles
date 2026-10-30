@@ -42,7 +42,7 @@ afterwards. The last lines of the output list anything that still needs you:
   keyring and the file deleted on the next run. Once the Linux keyring holds the token
   (`secret-tool store --label='Proton Pass personal access token' service proton-pass-cli account pat`),
   run `systemctl --user restart proton-pass-agent.service`. On macOS the installer logs in with that token
-  when there is no Proton Pass session (`pass-cli login --pat`), and uses the web login (`pass-cli login`)
+  when `pass-cli info` fails, e.g. no session or one that cannot be decrypted (it runs `pass-cli logout --force` first; `pass-cli login --pat`), and uses the web login (`pass-cli login`)
   when there is no token either. To store it by hand on macOS:
   `security add-generic-password -U -s proton-pass-cli -a pat -l 'Proton Pass personal access token' -w`.
 - A second Proton Pass agent serves the `Deploy` vault (the vue-ui-kit deploy key) on
@@ -53,6 +53,8 @@ afterwards. The last lines of the output list anything that still needs you:
   The installer links `common/.ssh/config.d/vue-ui-kit-deploy.conf` and adds `Include config.d/*.conf` to
   the top of `~/.ssh/config`, so `ssh -T vue-ui-kit-deploy` authenticates as the repo. Once that works, the
   old private key file in `~/.ssh/deploy-keys` and its old Host block can go.
+  `common/.ssh/config.d/gitea.conf` likewise points `Host git.fernandovideira.com` at the main Proton Pass
+  agent, with no `IdentityFile`.
 - The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
   ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
