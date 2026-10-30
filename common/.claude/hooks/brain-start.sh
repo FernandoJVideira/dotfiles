@@ -38,6 +38,15 @@ if [[ -f $state ]]; then
     ctx="$ctx"$'\n\n'"## Recent decisions"$'\n'"$(tail -n 5 "$note_dir/decisions.md")"
   fi
 
+  if compgen -G "$note_dir/topics/*.md" >/dev/null; then
+    topics="" n=0
+    for f in "$note_dir"/topics/*.md; do
+      [[ $((n += 1)) -le 12 ]] || break
+      topics="$topics"$'\n'"- $(basename "$f" .md): $(brain_front "$f" summary)"
+    done
+    ctx="$ctx"$'\n\n'"## Topics$(printf '%s' "$topics" | head -c 600)"
+  fi
+
   # what moved in git since the last checkpoint, computed here so it costs no model tokens
   last="$(brain_front "$state" commit)"
   if [[ -n $last ]] && git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then

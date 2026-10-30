@@ -33,13 +33,14 @@ layout varies, so never assume paths.
 ## Memory: the project is already in your context
 
 A session-start hook put the project's notes in your context: `state.md` (goal, status, next steps, open
-questions, Project Map), the latest decisions, and what git shows since the last checkpoint. Start
+questions, Project Map), the latest decisions, the topic pages' names and summaries (open one only when
+the work touches it), and what git shows since the last checkpoint. Start
 from them. Do not rediscover what they say; check only what moved. Say what you understood in one or
 two lines when the user opens the session, so a wrong picture is caught early.
 
 You keep the notes true: append a decision when one is settled, rewrite `state.md` when a task ends or
-the topic changes, and on "save". Read `references/memory.md` the first time you write a note in a
-session (formats, rules, no secrets). No note yet? Create it when the first goal or decision is
+the topic changes, and on "save", moving durable detail into topic pages. Read `references/memory.md` the
+first time you write a note in a session (layout, ingest/query/lint, rules, no secrets). No note yet? Create it when the first goal or decision is
 settled.
 
 ## Discuss first, implement on go
