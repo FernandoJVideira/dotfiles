@@ -10,6 +10,18 @@ brain_read_input
 [[ -n $(brain_field agent_id) ]] && exit 0
 [[ -d $BRAIN_DIR ]] || exit 0
 
+# pick up what the other machines wrote (a /clear or compaction inside a session needs no pull)
+case "$(brain_field source)" in
+  startup | resume | "")
+    brain_commit
+    brain_pull
+    brain_push_bg
+    if [[ -d $BRAIN_DIR/.git ]] && ! git -C "$BRAIN_DIR" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+      BRAIN_SYNC_NOTE="Brain sync is not linked to the server yet on this machine (the first clone failed, usually no SSH access). Tell the user to run ./bootstrap.sh from the dotfiles repo."
+    fi
+    ;;
+esac
+
 cwd="$(brain_field cwd)"
 cwd="${cwd:-$PWD}"
 slug="$(brain_slug "$cwd")"
@@ -40,5 +52,7 @@ if [[ -f $state ]]; then
 else
   ctx="$ctx"$'\n\n'"No note for this project yet. Create $state when its first goal or decision is settled (format in references/memory.md)."
 fi
+
+[[ -n ${BRAIN_SYNC_NOTE:-} ]] && ctx="$ctx"$'\n\n'"$BRAIN_SYNC_NOTE"
 
 jq -n --arg ctx "$ctx" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'

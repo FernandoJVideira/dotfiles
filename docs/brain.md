@@ -2,25 +2,42 @@
 
 The goal is fewer tokens per project without losing quality. Claude starts every session knowing the
 project's state, what changed and why, so it doesn't re-read and re-discover. The memory is an
-Obsidian-style vault of plain markdown, `~/Brain` (set `BRAIN_DIR` to move it), and your Obsidian
-LiveSync keeps it in step across machines.
+Obsidian-style vault of plain markdown, `~/Brain` (set `BRAIN_DIR` to move it). It is a git repo, and the
+session hooks keep it in step across machines through your server.
 
 ## On each machine
 
-The bootstrap does everything below except the sync, on macOS, Nobara and Arch alike: the vault
-folder, the hooks, the skill overrides, `gopls` and `typescript-language-server` (mise), Anthropic's
-`gopls-lsp` and `typescript-lsp` plugins, and Obsidian itself (Homebrew cask, Arch package, Nobara
-Flatpak `md.obsidian.Obsidian`). The sync is a one-time step in Obsidian on each machine:
+The bootstrap does everything, on macOS, Nobara and Arch alike: the vault (cloned from the server when the
+machine has none, otherwise started and pushed), the hooks, the skill overrides, `gopls` and
+`typescript-language-server` (mise), Anthropic's `gopls-lsp` and `typescript-lsp` plugins, and Obsidian
+itself (Homebrew cask, Arch package, Nobara Flatpak `md.obsidian.Obsidian`). Nothing to set up by hand,
+except that the machine reaches the server through the Proton Pass SSH agent (the installer asks for
+the tokens that log it in; the hooks use its socket even when the session was started from the desktop
+app, and never prompt). Without that access the vault stays local, the session tells you, and a rerun of
+`./bootstrap.sh` links it.
 
-1. Open `~/Brain` as a vault.
-2. Install the **Self-hosted LiveSync** community plugin and import the setup URI of your CouchDB
-   (made once, on the first device, with the plugin's "copy setup URI").
-3. Let it finish the first sync before starting Claude, so the notes are there.
+The remote is `BRAIN_REMOTE` in `lib/claude.sh`
+(`git@git.fernandovideira.com:FernandoJVideira/agent-brain.git`).
 
-LiveSync syncs while Obsidian is running. I haven't confirmed that it picks up notes the hooks wrote
-while Obsidian was closed, so keep Obsidian open on the machines you use, or run LiveSync's headless
-client. A project that has no note yet is simply created on first use, and two machines writing the
-same file at once is LiveSync's conflict to resolve.
+## How the sync works
+
+Sync happens at the moments you switch machines, not in the background:
+
+- **Session start** (`startup` and `resume`): the hook commits any loose edits, pulls the server's
+  changes (a rebase), and pushes anything still waiting from the last session. A `/clear` or a compaction
+  doesn't pull.
+- **Session end and compaction**: the hook commits the notes and pushes in the background (a
+  `SessionEnd` hook only has 1.5 s, and a push can take longer).
+- **Offline or no SSH**: both steps stay quiet and the session uses the local copy. The next start
+  pushes whatever was missed.
+- **Same lines changed on two machines**: `log.md` and `decisions.md` merge by union, so lines added on
+  both sides are all kept. A real clash (say `state.md` rewritten on both) is not merged: the vault
+  stays as it was, Claude is told, and you fix it with `git -C ~/Brain pull --rebase`.
+- One gap: the other machine only sees a session's notes once the first has pushed. If you switch
+  seconds after quitting, or the push failed, run `git -C ~/Brain push` on the first machine.
+- `.obsidian/` is not synced (per-machine settings, and plugin data that can hold credentials). Open
+  `~/Brain` in Obsidian on each machine to read or edit; its changes travel at the next session boundary.
+  Don't also run LiveSync on this folder: two syncers fight over the files.
 
 ## How a session goes
 

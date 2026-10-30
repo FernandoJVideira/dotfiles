@@ -79,7 +79,7 @@ cask "bruno"
 # Document editor
 cask "onlyoffice"
 
-# the Brain vault (docs/brain.md): Claude's project memory, synced by the LiveSync plugin
+# the Brain vault (docs/brain.md): Claude's project memory, synced through git
 cask "obsidian"
 # Native GUI tool for relational databases
 cask "tableplus"

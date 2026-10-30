@@ -106,8 +106,8 @@ yay -S --needed --noconfirm ani-cli \
   || log "WARNING: ani-cli failed to install - check the AUR name."
 yay -S --needed --noconfirm onlyoffice-bin \
   || log "WARNING: onlyoffice-bin failed to install - check the AUR name."
-# Obsidian opens the Brain vault (docs/brain.md), Claude's project memory; the LiveSync plugin in it
-# keeps the vault in step with my other machines (set up inside Obsidian, once).
+# Obsidian opens the Brain vault (docs/brain.md), Claude's project memory; the session hooks keep
+# the vault in step with my other machines through git, so Obsidian here is only for reading and editing.
 sudo pacman -S --needed --noconfirm obsidian \
   || log "WARNING: obsidian failed to install - check the package name."
 # Cloudflare WARP (the AUR package carries Cloudflare's own build). Registering, which asks you to

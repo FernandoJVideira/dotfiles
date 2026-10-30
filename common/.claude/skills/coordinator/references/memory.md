@@ -1,7 +1,7 @@
 # Project memory: the Brain
 
 The Brain is an Obsidian-style vault (`~/Brain`, or `$BRAIN_DIR`), synced across the user's machines
-by Obsidian LiveSync. Each project has a folder, `projects/<slug>/`, where `<slug>` is `owner-repo` from the
+by the session hooks (git: pull at start, push at end). Each project has a folder, `projects/<slug>/`, where `<slug>` is `owner-repo` from the
 git remote (the session-start context names the exact path). A hook loads `state.md`, the last 5 lines of
 `decisions.md` and a "since the last checkpoint" git summary into every session, so a session starts
 knowing the project. Your job is to keep those notes true, short and about the why.
