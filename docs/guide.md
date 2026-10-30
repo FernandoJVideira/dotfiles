@@ -3,7 +3,8 @@
 The README explains how the repo is built. This guide is for living in what it installs: how a working
 day goes, which keys do what, how to change things, and what to check when something looks wrong. The
 deeper references are [herdr.md](herdr.md) (multiplexer), [claude-review.md](claude-review.md)
-(reviewing Claude's edits in Neovim) and [skills.md](skills.md) (Claude Code skills).
+(reviewing Claude's edits in Neovim), [skills.md](skills.md) (Claude Code skills) and
+[brain.md](brain.md) (the project memory Claude starts every session with).
 
 ## Contents
 

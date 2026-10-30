@@ -46,3 +46,64 @@ install_claude_hooks() {
         + [{hooks: [{type: "command", command: $end, timeout: 5}]}]' "$settings" >"$tmp" \
     && mv "$tmp" "$settings" && log "Claude hooks: project memory at session start, git log at session end."
 }
+
+# Skills from other people that overlap or that I don't reach for: listed by name only, so their
+# descriptions leave the context of every turn (they still run when invoked by name). The list is
+# common/.claude/skill-overrides.json; it is merged into ~/.claude/settings.json. skillOverrides does
+# not apply to plugin skills: those are switched off in /plugin.
+install_skill_overrides() {
+  local settings="$HOME/.claude/settings.json" list="${DOTFILES_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/common/.claude/skill-overrides.json" tmp
+  [[ -f $list && -f $settings ]] || return 0
+  tmp="$(mktemp)"
+  jq --slurpfile new "$list" '.skillOverrides = ((.skillOverrides // {}) + $new[0])' "$settings" >"$tmp" \
+    && mv "$tmp" "$settings" && log "Claude skills: overlapping third-party skills listed by name only."
+}
+
+# RTK (https://github.com/rtk-ai/rtk) shrinks the output of git, go, ls and other commands before Claude
+# reads it. Pinned to one release and checked against that release's checksums, and only the Apache-2.0
+# "rtk-oss" build: not the RTK Proxy daemon (it would sit in the middle of the API traffic), and its
+# telemetry stays off (the default). The hook is `rtk hook claude`, a PreToolUse hook on Bash that fails
+# open: if rtk is missing or anything goes wrong the command runs unchanged. To take it out, delete the
+# PreToolUse entry whose command ends in "rtk hook claude" from ~/.claude/settings.json.
+# NOT called automatically: run it yourself once you have read the note in docs/brain.md.
+RTK_VERSION="1.1.0"
+
+install_rtk() {
+  local target tmp want have settings="$HOME/.claude/settings.json" bin="$HOME/.local/bin/rtk"
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64) target=aarch64-apple-darwin ;;
+    Darwin-x86_64) target=x86_64-apple-darwin ;;
+    Linux-x86_64) target=x86_64-unknown-linux-musl ;;
+    Linux-aarch64 | Linux-arm64) target=aarch64-unknown-linux-gnu ;;
+    *) log "WARNING: no RTK build for $(uname -s) $(uname -m), skipping."; return 1 ;;
+  esac
+  command -v jq >/dev/null || { log "WARNING: jq is missing, so RTK wasn't set up."; return 1; }
+
+  have="$("$bin" --version 2>/dev/null | awk '{print $2}')"
+  if [[ $have != "$RTK_VERSION" ]]; then
+    local base="https://github.com/rtk-ai/rtk/releases/download/v$RTK_VERSION"
+    tmp="$(mktemp -d)"
+    log "Installing RTK $RTK_VERSION (rtk-oss, $target)..."
+    curl -fsSL -o "$tmp/rtk.tar.gz" "$base/rtk-oss-$target.tar.gz" \
+      && curl -fsSL -o "$tmp/checksums.txt" "$base/checksums.txt" || { rm -rf "$tmp"; return 1; }
+    want="$(awk -v f="rtk-oss-$target.tar.gz" '$2 == f {print $1}' "$tmp/checksums.txt")"
+    have="$( (shasum -a 256 "$tmp/rtk.tar.gz" 2>/dev/null || sha256sum "$tmp/rtk.tar.gz") | awk '{print $1}')"
+    if [[ -z $want || $have != "$want" ]]; then
+      log "WARNING: RTK's checksum didn't match, not installing it."
+      rm -rf "$tmp"
+      return 1
+    fi
+    tar -xzf "$tmp/rtk.tar.gz" -C "$tmp" rtk && mkdir -p "$HOME/.local/bin" && install -m 755 "$tmp/rtk" "$bin"
+    rm -rf "$tmp"
+  fi
+
+  [[ -f $settings ]] || echo '{}' >"$settings"
+  [[ -e $settings.pre-rtk ]] || cp "$settings" "$settings.pre-rtk"
+  tmp="$(mktemp)"
+  jq --arg cmd "$bin hook claude" '
+    .hooks //= {}
+    | .hooks.PreToolUse = ((.hooks.PreToolUse // [])
+        | map(select(([.hooks[]?.command] | join(" ")) | contains("rtk hook claude") | not)))
+        + [{matcher: "Bash", hooks: [{type: "command", command: $cmd}]}]' "$settings" >"$tmp" \
+    && mv "$tmp" "$settings" && log "RTK $RTK_VERSION: Bash output is filtered before Claude reads it."
+}
