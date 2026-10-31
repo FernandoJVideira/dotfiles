@@ -7,3 +7,8 @@ hl.on("hyprland.start", function()
     "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start hyprland-session.target"
   )
 end)
+
+-- Xwayland orders outputs by monitor ID, so mark the main display as X primary.
+hl.on("hyprland.start", function()
+  hl.exec_cmd((os.getenv("SKEIN_PATH") or (os.getenv("HOME") .. "/.local/share/skein")) .. "/libexec/skein-xwayland-primary")
+end)

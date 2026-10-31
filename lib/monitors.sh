@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Monitor layout shared by the Linux installers: detect the connected monitors,
 # rank them by refresh rate (fastest = primary, at 0x0, the rest chained to its
-# right in the same order) and write that layout into Hyprland's monitors.lua.
+# right in the same order, at explicit pixel offsets) and write that layout into Hyprland's monitors.lua.
 #
 # Detection asks the running Hyprland (it knows each monitor's real mode list),
 # so on a clean machine this only works from inside a Hyprland session. Outside
@@ -11,10 +11,11 @@
 source "$(dirname "${BASH_SOURCE[0]}")/log.sh"
 
 # Prints one line per monitor, fastest first:
-#   name<TAB>width<TAB>height<TAB>refresh_hz<TAB>drm_connector_dir
+#   name<TAB>width<TAB>height<TAB>refresh_hz<TAB>scale<TAB>drm_connector_dir
 # width/height/refresh are the best mode: the largest resolution, then the
 # highest refresh rate at it. refresh_hz is the monitor's exact current rate when
-# it already runs that mode (the mode list only has 2 decimals).
+# it already runs that mode (the mode list only has 2 decimals). scale is the
+# monitor's current scale; width/height are physical pixels.
 detect_monitors() {
   command -v hyprctl >/dev/null && command -v jq >/dev/null || return 1
   local json
@@ -28,16 +29,16 @@ detect_monitors() {
          | sort_by([.w * .h, .r]) | last
          # nested/virtual outputs can report no mode list: use the current mode
          // {w: $m.width, h: $m.height, r: $m.refreshRate}) as $b
-      | { name: $m.name, w: $b.w, h: $b.h,
+      | { name: $m.name, w: $b.w, h: $b.h, s: ($m.scale // 1),
           r: (if $m.width == $b.w and $m.height == $b.h
                  and (($m.refreshRate * 100 | round) == ($b.r * 100 | round))
               then $m.refreshRate else $b.r end) } ]
     | sort_by([-.r, .name])[]
-    | [.name, .w, .h, .r] | @tsv' <<<"$json" |
-  while IFS=$'\t' read -r name w h r; do
+    | [.name, .w, .h, .r, .s] | @tsv' <<<"$json" |
+  while IFS=$'\t' read -r name w h r scale; do
     local dir=""
     for dir in /sys/class/drm/card*-"$name"; do [[ -e "$dir" ]] && break; dir=""; done
-    printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$w" "$h" "$r" "$dir"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$w" "$h" "$r" "$scale" "$dir"
   done
 }
 
@@ -57,17 +58,20 @@ sync_hypr_monitors() {
   [[ -f "$lua" ]] || { log "WARNING: $lua not found - skipping the monitor layout."; return 1; }
   [[ -n "$monitors" ]] || { log "WARNING: no monitors detected (not in a Hyprland session?) - kept the existing monitor layout. Re-run this script from the desktop to regenerate it."; return 1; }
 
-  local tmp pos_body ws_body name i=0 first=1 ws
+  if awk '/^-- BEGIN generated: monitors/ { on = 1; next } /^-- END generated: monitors/ { on = 0 } on && $0 == "-- saved in Settings > Display" { found = 1 } END { exit !found }' "$lua"; then
+    log "Monitor layout saved in Settings > Display kept in $lua."
+    return 0
+  fi
+
+  local tmp pos_body ws_body name w scale x=0 i=0 ws
   tmp="$(mktemp -d)"
   pos_body="$tmp/pos"; ws_body="$tmp/ws"
   echo 'local configured_positions = {' >"$pos_body"
   : >"$ws_body"
-  while IFS=$'\t' read -r name _; do
-    if ((first)); then
-      echo "  [\"$name\"] = \"0x0\"," >>"$pos_body"; first=0
-    else
-      echo "  [\"$name\"] = \"auto-right\"," >>"$pos_body"
-    fi
+  while IFS=$'\t' read -r name w _ _ scale _; do
+    echo "  [\"$name\"] = \"${x}x0\"," >>"$pos_body"
+    # Hyprland positions are in logical pixels (physical / scale)
+    x=$((x + $(awk -v w="$w" -v s="${scale:-1}" 'BEGIN { printf "%d", w / (s > 0 ? s : 1) + 0.5 }')))
     for ws in 1 2 3 4 5; do
       printf 'hl.workspace_rule({ workspace = "%d", monitor = "%s", default = %s, persistent = true })\n' \
         $((i * 5 + ws)) "$name" "$([[ $ws == 1 ]] && echo true || echo false)" >>"$ws_body"

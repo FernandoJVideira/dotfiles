@@ -18,9 +18,10 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy
 -- the highest refresh rate is the main one at 0x0; the rest chain to its
 -- right, fastest first.
 -- BEGIN generated: monitors (lib/monitors.sh)
+-- saved in Settings > Display
 local configured_positions = {
   ["DP-1"] = "0x0",
-  ["HDMI-A-1"] = "auto-right",
+  ["HDMI-A-1"] = "1920x0",
 }
 -- END generated: monitors
 
@@ -71,8 +72,16 @@ for _, mon in ipairs(hl.get_monitors()) do
   pin_monitor(mon)
 end
 
+local xwayland_primary = (os.getenv("SKEIN_PATH") or (os.getenv("HOME") .. "/.local/share/skein"))
+  .. "/libexec/skein-xwayland-primary"
+
 hl.on("monitor.added", function(mon)
   pin_monitor(mon)
+  hl.exec_cmd(xwayland_primary)
+end)
+
+hl.on("monitor.removed", function()
+  hl.exec_cmd(xwayland_primary)
 end)
 
 -- 5 workspaces per monitor, in the order picked: main gets 1-5,
