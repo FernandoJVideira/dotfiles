@@ -1,0 +1,39 @@
+desktop-color: "#1a1b26"
+title-text: ""
+terminal-font: "Skein Regular 16"
+
++ label {
+  top = 8%
+  left = 0
+  width = 100%
+  align = "center"
+  text = "Skein Bootloader"
+  font = "Skein Regular 16"
+  color = "#9ece6a"
+}
+
++ boot_menu {
+  left = 20%
+  top = 20%
+  width = 60%
+  height = 50%
+  item_font = "Skein Regular 16"
+  item_color = "#c0caf5"
+  selected_item_font = "Skein Regular 16"
+  selected_item_color = "#9ece6a"
+  item_height = 28
+  item_padding = 6
+  item_spacing = 4
+  scrollbar = false
+}
+
++ progress_bar {
+  id = "__timeout__"
+  left = 20%
+  top = 75%
+  width = 60%
+  height = 6
+  fg_color = "#7aa2f7"
+  bg_color = "#24283b"
+  border_color = "#24283b"
+}

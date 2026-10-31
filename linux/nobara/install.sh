@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/../../lib/log.sh"
 source "$SCRIPT_DIR/../../lib/skein.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
 source "$SCRIPT_DIR/../../lib/secrets.sh"
+source "$SCRIPT_DIR/../../lib/grub.sh"
 
 # Install zsh and set it as the default shell (mirrors linux/arch/install.sh)
 log "Installing zsh..."
@@ -250,15 +251,8 @@ if [[ ! -x "$HOME/.local/bin/mise" ]]; then
   curl https://mise.run | sh
 fi
 
-# Bootloader: BIOS+GRUB -> UEFI+Limine (see linux/nobara-boot/limine-migrate.sh). `auto` picks
-# whichever phase applies: phase 1 repartitions the boot disk (asks you to type YES first),
-# phase 2 runs after you've switched the firmware to UEFI and booted Limine. On an already
-# migrated machine it just refreshes the menu theme and the kernel hook. A failure here
-# never aborts the rest of the install.
-log "Setting up the Limine bootloader..."
-sudo dnf install -y --skip-unavailable gdisk dosfstools rsync efibootmgr limine
-sudo "$SCRIPT_DIR/../nobara-boot/limine-migrate.sh" auto \
-  || log "WARNING: limine-migrate.sh auto failed - run it by hand: sudo linux/nobara-boot/limine-migrate.sh prepare|finish"
+# GRUB menu theme (Tokyo Night, same look as the Limine menu on Arch).
+grub_setup || log "WARNING: GRUB theme setup failed - run grub_setup by hand"
 
 # Proton Pass SSH agent (SSH_AUTH_SOCK already points at its socket, set by the zsh startup file
 # and by environment.d for the whole session). The unit logs in with a personal access token read from the login keyring
@@ -335,3 +329,15 @@ log "Rendering the starship prompt for the current theme..."
 log "Rendering the Zed theme for the current theme..."
 "$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."
 log "Zed installs its extensions (settings.json) the first time it starts - run zed-extensions-check afterwards to confirm."
+
+# The EAC boot entry needs the Nobara CA, DKMS and akmods keys enrolled as MOKs.
+# Enrolling asks for a one-time password and finishes in MokManager on the next
+# reboot, so it only runs with a terminal.
+if command -v nobara-eac-enroll >/dev/null && [[ -d /sys/firmware/efi ]] && ! nobara-eac-enroll --check; then
+  if [[ -t 0 ]]; then
+    log "Enrolling the Secure Boot keys for Easy Anti-Cheat..."
+    sudo nobara-eac-enroll || log "WARNING: nobara-eac-enroll failed - run: sudo nobara-eac-enroll"
+  else
+    log "Secure Boot keys for Easy Anti-Cheat not enrolled - run: sudo nobara-eac-enroll"
+  fi
+fi
