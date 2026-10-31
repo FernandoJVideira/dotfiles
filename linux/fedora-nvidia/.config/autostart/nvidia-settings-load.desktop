@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=NVIDIA X Server Settings
+# Override of /etc/xdg/autostart/nvidia-settings-load.desktop: it needs an X server and
+# fails (exit 1) on every Wayland login. Hidden=true disables it.
+Hidden=true
