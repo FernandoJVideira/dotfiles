@@ -17,8 +17,10 @@ case "$(uname -s)" in
   Linux)
     os_id=$(awk -F= '/^ID=/{gsub(/"/,"",$2); print tolower($2)}' /etc/os-release 2>/dev/null)
     os_id_like=$(awk -F= '/^ID_LIKE=/{gsub(/"/,"",$2); print tolower($2)}' /etc/os-release 2>/dev/null)
-    if [[ "$os_id" == "nobara" || "$os_id_like" == *fedora* ]]; then
+    if [[ "$os_id" == "nobara" ]]; then
       "$SCRIPT_DIR/linux/nobara/install.sh"
+    elif [[ "$os_id" == "fedora" || "$os_id_like" == *fedora* ]]; then
+      "$SCRIPT_DIR/linux/fedora/install.sh"
     else
       "$SCRIPT_DIR/linux/arch/install.sh"
     fi

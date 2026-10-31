@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nobara: theme the GRUB menu like the Limine one (Tokyo Night, "Skein Bootloader").
+# Nobara and Fedora: theme the GRUB menu like the Limine one (Tokyo Night, "Skein Bootloader").
 # Paths are overridable through GRUB_ETC_DEFAULT, GRUB_THEME_DIR, GRUB_CFG_TARGET and
 # GRUB_SKIP_MKCONFIG=1 so it can be tested without root.
 
