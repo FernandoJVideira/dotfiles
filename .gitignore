@@ -12,3 +12,7 @@ common/.config/zsh/local.zsh
 
 # Tutorial outline
 common/.config/zsh/TUTORIAL.md
+
+# Licensed fonts (Dank Mono is paid; this repo is public). lib/fonts.sh installs whatever is here.
+fonts/*
+!fonts/README.md

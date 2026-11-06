@@ -4,7 +4,9 @@
 config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
 config-file = ?"~/.config/skein/current/theme/ghostty.conf"
 
-# Font
+# Font. Dank Mono (installed from the gitignored fonts/ dir); the second font-family is the
+# fallback for Nerd Font icons and for machines without Dank Mono.
+font-family = "Dank Mono"
 font-family = "JetBrainsMono Nerd Font"
 font-style = Regular
 font-size = 14
