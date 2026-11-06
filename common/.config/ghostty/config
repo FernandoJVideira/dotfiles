@@ -3,6 +3,7 @@
 # Both are silently skipped when absent.
 config-file = ?"~/.local/state/omarchy/current/theme/ghostty.conf"
 config-file = ?"~/.config/skein/current/theme/ghostty.conf"
+config-file = ?"~/.config/dotfiles/theme/ghostty.conf"
 
 # Font. Dank Mono (installed from the gitignored fonts/ dir); the second font-family is the
 # fallback for Nerd Font icons and for machines without Dank Mono.

@@ -55,6 +55,10 @@ afterwards. The last lines of the output list anything that still needs you:
   old private key file in `~/.ssh/deploy-keys` and its old Host block can go.
   `common/.ssh/config.d/gitea.conf` likewise points `Host git.fernandovideira.com` at the main Proton Pass
   agent, with no `IdentityFile`.
+- On Linux, `./bootstrap.sh` then asks which profile to install: `skein` (the Skein desktop with dynamic
+  themes) or `apps` (only the apps, CLI tools and configs, keeping your desktop). The answer is saved in
+  `~/.local/state/dotfiles/profile`. To change it later, set `DOTFILES_PROFILE=skein` or
+  `DOTFILES_PROFILE=apps` (or edit that file) and rerun `./bootstrap.sh`.
 - The Brain vault (docs/brain.md) is cloned from the server through that SSH agent. If the agent wasn't
   ready, the vault stays local and the Claude session says so; rerun `./bootstrap.sh` once SSH works.
 - Conda needs Anaconda's Terms of Service accepted before it can use its default channels. The installer
@@ -228,6 +232,10 @@ go in `~/.config/skein/backgrounds/<theme>/` and join that theme's set.
 A switch restarts Spotify so it shows the new colors, which stops playback, and restarts Finder and the
 Dock when macOS's folder color changes. `THEME_SKIP=spotify`, `THEME_SKIP=finder` or both
 (`THEME_SKIP=spotify,finder`) leave them alone.
+
+Machines on the `apps` profile use a static One Dark theme and do not switch themes: the terminals, the
+prompt, Zed and Herdr read it from `~/.config/dotfiles/theme`, and Neovim uses NvChad's `onedark`.
+Spotify keeps its default look.
 
 ## The desktop
 

@@ -1,0 +1,36 @@
+# Static One Dark palette for apps-mode installs (no Skein)
+mode = "dark"
+
+accent = "#61afef"
+selection = "#3e4451"
+muted = "#5c6370"
+
+background = "#282c34"
+dark_background = "#21252b"
+darker_background = "#1b1f23"
+lighter_background = "#2c313a"
+
+foreground = "#abb2bf"
+dark_foreground = "#5c6370"
+light_foreground = "#9da5b4"
+bright_foreground = "#c8ccd4"
+
+hyprland_active_border = "rgba(61afefee) rgba(5c6370ee)"
+hyprland_inactive_border = "rgba(5c6370aa)"
+active_border_color = "#61afef"
+active_tab_background = "#61afef"
+
+red = "#e06c75"
+yellow = "#e5c07b"
+green = "#98c379"
+cyan = "#56b6c2"
+blue = "#61afef"
+magenta = "#c678dd"
+orange = "#d19a66"
+
+bright_red = "#ff616e"
+bright_yellow = "#f0c47b"
+bright_green = "#a5e075"
+bright_cyan = "#4cd1e0"
+bright_blue = "#4dc4ff"
+bright_magenta = "#de73ff"

@@ -8,6 +8,11 @@ source "$SCRIPT_DIR/../../lib/skein.sh"
 source "$SCRIPT_DIR/../../lib/monitors.sh"
 source "$SCRIPT_DIR/../../lib/limine.sh"
 source "$SCRIPT_DIR/../../lib/secrets.sh"
+source "$SCRIPT_DIR/../../lib/profile.sh"
+source "$SCRIPT_DIR/../../lib/static-theme.sh"
+
+# Skein or apps only; bootstrap.sh asks, a direct run reuses the saved choice
+resolve_profile
 
 # gum (the prompts below) is not on a minimal install yet
 sudo pacman -S --needed --noconfirm gum
@@ -35,56 +40,82 @@ SKEIN_REPO_URL="${SKEIN_REPO_URL:-https://github.com/FernandoJVideira/skein.git}
 SKEIN_REF="${SKEIN_REF:-arch}"
 # python-filelock: pipx (used by the Skein installer) imports it but the package does not depend on it
 sudo pacman -S --needed --noconfirm git base-devel python-filelock
-sudo pacman -S --needed --noconfirm gnome-keyring libsecret
-# a machine that still has Omadora's checkout: move it to Skein's name and ref first
-migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
-if [[ -d "$SKEIN_DIR/.git" ]]; then
-  log "Updating Skein..."
-  git -C "$SKEIN_DIR" pull --ff-only \
-    || log "WARNING: couldn't fast-forward Skein - resolve it in $SKEIN_DIR by hand."
-else
-  log "Cloning Skein ($SKEIN_REF)..."
-  mkdir -p "$(dirname "$SKEIN_DIR")"
-  git clone --branch "$SKEIN_REF" "$SKEIN_REPO_URL" "$SKEIN_DIR"
-  log "Running the Skein installer..."
-  # Its last step reboots; tolerate that failing (e.g. over SSH) so this script can finish.
-  bash "$SKEIN_DIR/install.sh" || log "WARNING: the Skein installer ended with an error - check ~/skein-install.log."
+sudo pacman -S --needed --noconfirm libsecret
+if ! is_apps_profile; then
+  sudo pacman -S --needed --noconfirm gnome-keyring
 fi
-# config, state and cache directories, and the old user units (before the dotfiles are linked into them)
-"$SKEIN_DIR/libexec/skein-migrate-names" || log "WARNING: skein-migrate-names failed - see above."
-export SKEIN_PATH="$SKEIN_DIR"
-export PATH="$SKEIN_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+if ! is_apps_profile; then
+  # a machine that still has Omadora's checkout: move it to Skein's name and ref first
+  migrate_skein_checkout "$SKEIN_DIR" "$SKEIN_REPO_URL" "$SKEIN_REF"
+  if [[ -d "$SKEIN_DIR/.git" ]]; then
+    log "Updating Skein..."
+    git -C "$SKEIN_DIR" pull --ff-only \
+      || log "WARNING: couldn't fast-forward Skein - resolve it in $SKEIN_DIR by hand."
+  else
+    log "Cloning Skein ($SKEIN_REF)..."
+    mkdir -p "$(dirname "$SKEIN_DIR")"
+    git clone --branch "$SKEIN_REF" "$SKEIN_REPO_URL" "$SKEIN_DIR"
+    log "Running the Skein installer..."
+    # Its last step reboots; tolerate that failing (e.g. over SSH) so this script can finish.
+    bash "$SKEIN_DIR/install.sh" || log "WARNING: the Skein installer ended with an error - check ~/skein-install.log."
+  fi
+  # config, state and cache directories, and the old user units (before the dotfiles are linked into them)
+  "$SKEIN_DIR/libexec/skein-migrate-names" || log "WARNING: skein-migrate-names failed - see above."
+  export SKEIN_PATH="$SKEIN_DIR"
+else
+  log "Apps profile: skipping Skein."
+fi
+if is_apps_profile; then
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+else
+  export PATH="$SKEIN_DIR/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
 
 # The login screen lives in Skein (libexec/skein-greeter): greetd with a Quickshell greeter instead
 # of SDDM. The Skein installer sets it up on a first install; this covers a machine that already had
 # Skein.
-if [[ ! -f /usr/local/share/skein-greeter/shell.qml ]]; then
-  log "Installing the Quickshell login screen..."
-  "$SKEIN_DIR/libexec/skein-greeter" install \
-    || log "WARNING: the greeter didn't install - run: skein-greeter install"
-fi
+if ! is_apps_profile; then
+  if [[ ! -f /usr/local/share/skein-greeter/shell.qml ]]; then
+    log "Installing the Quickshell login screen..."
+    "$SKEIN_DIR/libexec/skein-greeter" install \
+      || log "WARNING: the greeter didn't install - run: skein-greeter install"
+  fi
 
+else
+  log "Apps profile: skipping the login screen."
+fi
 log "Symlinking Linux-specific dotfiles..."
-symlink_dotfiles "$SCRIPT_DIR"
+# the apps profile leaves out the Hyprland and Skein parts
+distro_excl=()
+common_excl=()
+if is_apps_profile; then
+  distro_excl=(.config/hypr .config/skein .config/xdg-terminals.list)
+  common_excl=(.config/hypr .config/skein .local/bin/capslock-mode .config/fontconfig)
+fi
+symlink_dotfiles "$SCRIPT_DIR" "${distro_excl[@]}"
 # what both Linux distros share (Caps Lock as Super, see linux/common/.config/hypr/capslock.lua)
-symlink_dotfiles "$SCRIPT_DIR/../common"
+symlink_dotfiles "$SCRIPT_DIR/../common" "${common_excl[@]}"
 
 # Monitor layout: the fastest monitor becomes the primary at 0x0, the rest chain
 # to its right. Written into the (symlinked) monitors.lua; needs a running
 # Hyprland to read the mode lists, so on a first install from a TTY it is
 # skipped - re-run this script from the desktop.
-log "Detecting monitors..."
-sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$(detect_monitors || true)" || true
+if ! is_apps_profile; then
+  log "Detecting monitors..."
+  sync_hypr_monitors "$SCRIPT_DIR/.config/hypr/monitors.lua" "$(detect_monitors || true)" || true
 
-# The SDDM greeter runs on X11 and ignores monitors.lua, so give it an Xsetup
-# script that lays the screens out the same way (works at login time, no
-# detection needed here).
-log "Matching the SDDM login screen to the monitor layout..."
-sudo install -D -m 755 "$SCRIPT_DIR/../../lib/sddm-monitors.xsetup" /usr/local/bin/skein-sddm-monitors
-sudo install -d /etc/sddm.conf.d
-printf '[X11]\nDisplayCommand=/usr/local/bin/skein-sddm-monitors\n' \
-  | sudo tee /etc/sddm.conf.d/skein-monitors.conf >/dev/null
+  # The SDDM greeter runs on X11 and ignores monitors.lua, so give it an Xsetup
+  # script that lays the screens out the same way (works at login time, no
+  # detection needed here).
+  log "Matching the SDDM login screen to the monitor layout..."
+  sudo install -D -m 755 "$SCRIPT_DIR/../../lib/sddm-monitors.xsetup" /usr/local/bin/skein-sddm-monitors
+  sudo install -d /etc/sddm.conf.d
+  printf '[X11]\nDisplayCommand=/usr/local/bin/skein-sddm-monitors\n' \
+    | sudo tee /etc/sddm.conf.d/skein-monitors.conf >/dev/null
 
+else
+  log "Apps profile: skipping the monitor layout and the SDDM login screen setup."
+fi
 # Install workstation tools
 log "Installing workstation tools..."
 sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed mpv
@@ -93,7 +124,11 @@ sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # Tools the shared zsh config assumes
 sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq shellcheck libwebp
 
-limine_setup
+if ! is_apps_profile; then
+  limine_setup
+else
+  log "Apps profile: skipping Limine and its menu theme."
+fi
 
 yay -S --needed --noconfirm brave-origin-bin proton-pass-cli opendeck spotify
 # Spicetify patches Spotify in place, and the AUR package installs it root-owned in /opt/spotify
@@ -125,8 +160,12 @@ yay -S --needed --noconfirm localsend-bin gpu-screen-recorder \
   || log "WARNING: localsend-bin / gpu-screen-recorder failed to install - check the AUR names."
 
 # Set Brave Origin as the default browser
-log "Setting Brave Origin as the default browser..."
-xdg-settings set default-web-browser brave-origin.desktop
+if ! is_apps_profile; then
+  log "Setting Brave Origin as the default browser..."
+  xdg-settings set default-web-browser brave-origin.desktop
+else
+  log "Apps profile: leaving the default browser alone."
+fi
 
 if gum confirm "Install Discord (native app)?"; then
   log "Installing Discord..."
@@ -156,7 +195,7 @@ if [[ "$GAMING" == true ]]; then
     || log "WARNING: heroic-games-launcher-bin failed to install - check the AUR name."
 fi
 
-if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+if ! is_apps_profile && [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
   log "Reloading Hyprland..."
   hyprctl reload
 fi
@@ -183,33 +222,42 @@ fi
 log "Running shared dotfiles installer..."
 "$SCRIPT_DIR/../../common/install.sh"
 
-# Skein preferences (same as Nobara): Claude as the default agent and the idle
-# screensaver off. Both are plain state files; skein-default-agent would also
-# launch the agent, and `skeinctl toggle screensaver` flips instead of setting.
-log "Applying Skein preferences..."
-mkdir -p "$HOME/.config/skein/defaults" "$HOME/.local/state/skein/toggles"
-echo claude >"$HOME/.config/skein/defaults/agent"
-touch "$HOME/.local/state/skein/toggles/screensaver-off"
-
-# Re-apply the current theme so kitty's themed colors file exists (Skein defaults to
-# its own theme on a machine that's never had one set).
-log "Re-applying the current theme..."
-theme="$(cat "$HOME/.config/skein/current/theme.name" 2>/dev/null || echo matte-black)"
-# First run only: start from matte-black instead of Skein's own default theme; later
-# runs keep whatever theme was picked since.
-theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
-if [[ ! -f "$theme_marker" ]]; then
-  theme=matte-black
-  mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
+if ! is_apps_profile; then
+  # Skein preferences (same as Nobara): Claude as the default agent and the idle
+  # screensaver off. Both are plain state files; skein-default-agent would also
+  # launch the agent, and `skeinctl toggle screensaver` flips instead of setting.
+  log "Applying Skein preferences..."
+  mkdir -p "$HOME/.config/skein/defaults" "$HOME/.local/state/skein/toggles"
+  echo claude >"$HOME/.config/skein/defaults/agent"
+  touch "$HOME/.local/state/skein/toggles/screensaver-off"
+else
+  log "Apps profile: skipping the Skein preferences."
 fi
-skeinctl theme set "$theme" \
-  || log "WARNING: theme re-apply failed - run: skeinctl theme set <name> from the desktop."
 
-# Themed starship prompt: needs the shared symlinks (script + template) from above
-log "Rendering the starship prompt for the current theme..."
-"$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."
+if is_apps_profile; then
+  apply_static_theme || log "WARNING: the static theme failed - run: apply_static_theme (lib/static-theme.sh)."
+else
+  remove_static_theme
+  # Re-apply the current theme so kitty's themed colors file exists (Skein defaults to
+  # its own theme on a machine that's never had one set).
+  log "Re-applying the current theme..."
+  theme="$(cat "$HOME/.config/skein/current/theme.name" 2>/dev/null || echo matte-black)"
+  # First run only: start from matte-black instead of Skein's own default theme; later
+  # runs keep whatever theme was picked since.
+  theme_marker="$HOME/.local/state/dotfiles/theme-initialised"
+  if [[ ! -f "$theme_marker" ]]; then
+    theme=matte-black
+    mkdir -p "$(dirname "$theme_marker")" && touch "$theme_marker"
+  fi
+  skeinctl theme set "$theme" \
+    || log "WARNING: theme re-apply failed - run: skeinctl theme set <name> from the desktop."
 
-# Zed's theme follows the OS theme too (same shared-symlinks dependency)
-log "Rendering the Zed theme for the current theme..."
-"$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."
+  # Themed starship prompt: needs the shared symlinks (script + template) from above
+  log "Rendering the starship prompt for the current theme..."
+  "$HOME/.local/bin/starship-theme-sync" || log "WARNING: starship-theme-sync failed - the prompt keeps its static colors."
+
+  # Zed's theme follows the OS theme too (same shared-symlinks dependency)
+  log "Rendering the Zed theme for the current theme..."
+  "$HOME/.local/bin/zed-theme-sync" || log "WARNING: zed-theme-sync failed - Zed has no 'Desktop Theme' until the next theme change."
+fi
 log "Zed installs its extensions (settings.json) the first time it starts - run zed-extensions-check afterwards to confirm."
