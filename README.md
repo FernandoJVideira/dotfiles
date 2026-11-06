@@ -29,7 +29,7 @@ Every `.config` folder under `common/`, `macos/`, `linux/arch/`, or `linux/nobar
 ./bootstrap.sh
 ```
 
-It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release`: Nobara (or anything else `ID_LIKE=fedora`) goes to `linux/nobara/install.sh`, everything else to `linux/arch/install.sh`. All three end by calling `common/install.sh` (see Common below). Every script is idempotent, so rerunning one just reapplies the current state.
+It reads `uname -s` and hands off to `macos/install.sh` on macOS. On Linux it also checks `/etc/os-release`: Nobara (or anything else `ID_LIKE=fedora`) goes to `linux/nobara/install.sh`, everything else to `linux/arch/install.sh`. All three end by calling `common/install.sh` (see Common below). On Linux it also asks which install profile to use (see Linux install profiles below). Every script is idempotent, so rerunning one just reapplies the current state.
 
 ## macOS
 
@@ -57,6 +57,19 @@ Applying a theme renders the templates into `~/.config/skein/current/theme`, set
 - macOS's own accent color and folder/icon tint move to the nearest of the eight colors macOS offers (`macos-accent` hook). Finder and the Dock are restarted when the folder color changes, since they don't reliably redraw it themselves, so a copy in progress at that moment is interrupted; `THEME_SKIP=finder` avoids that.
 
 The installer applies `gruvbox-classic` the first time only, so rerunning it never undoes a theme picked since. It is the classic Gruvbox Dark this Mac always had, kept as a user theme in `macos/.config/skein/themes`; Skein's own `gruvbox` is the softer gruvbox-material variant.
+
+## Linux install profiles
+
+On Linux, `./bootstrap.sh` asks once, after the token questions, which profile to install:
+
+1. `skein`: the Skein desktop (Hyprland + Quickshell) with dynamic themes.
+2. `apps`: only the apps, CLI tools and configs. The existing desktop stays, with a static One Dark theme.
+
+The answer is saved in `~/.local/state/dotfiles/profile` and reused on reruns. `DOTFILES_PROFILE=skein|apps` overrides it. A machine with a Skein checkout (`~/.local/share/skein`) defaults to `skein` without asking, and so does a run with no terminal. An installer run directly never asks.
+
+The `apps` profile skips Skein, the Hyprland and Quickshell packages, the `hypr`, `skein` and fontconfig links, `capslock-mode`, monitor detection, the greeter, the Skein preferences, the GRUB or Limine theme, Nobara's KDE removal and the default-browser setting. Brave still installs. The static theme lives in `linux/apps-theme/one-dark`, is linked to `~/.config/dotfiles/theme`, and the starship, Zed and Herdr sync scripts fall back to it. Neovim uses NvChad's `onedark`, and Spotify keeps its default look.
+
+To switch a machine, set `DOTFILES_PROFILE` (or edit the saved file) and rerun `./bootstrap.sh`. Switching from `apps` to `skein` removes the static theme link. Switching from `skein` to `apps` does not uninstall Skein. The Linux sections below describe the `skein` profile.
 
 ## Linux (Arch + Skein)
 

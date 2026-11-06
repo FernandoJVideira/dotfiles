@@ -5,7 +5,7 @@
 
 Herdr has no include and no theme files, so its colors have to live in config.toml itself. The
 tracked part is ~/.config/herdr/config.base.toml; this appends a [theme.custom] block built from the
-theme's palette (current/theme/colors.toml) and writes the result to ~/.config/herdr/config.toml,
+theme's palette (current/theme/colors.toml, else the static apps-mode ~/.config/dotfiles/theme) and writes the result to ~/.config/herdr/config.toml,
 then tells a running server to reload it. Run by the herdr-sync theme hook on every theme change
 (Linux's skeinctl, macOS's `theme` command) and by common/install.sh.
 
@@ -112,7 +112,9 @@ def theme_block(p):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--colors", default=f"{HOME}/.config/skein/current/theme/colors.toml")
+    skein_colors = f"{HOME}/.config/skein/current/theme/colors.toml"
+    static_colors = f"{HOME}/.config/dotfiles/theme/colors.toml"
+    ap.add_argument("--colors", default=skein_colors if os.path.isfile(skein_colors) else static_colors)
     ap.add_argument("--base", default=f"{HOME}/.config/herdr/config.base.toml")
     ap.add_argument("--out", default=f"{HOME}/.config/herdr/config.toml")
     ap.add_argument("--print", action="store_true", help="print the theme block and write nothing")

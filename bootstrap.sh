@@ -15,6 +15,9 @@ case "$(uname -s)" in
     "$SCRIPT_DIR/macos/install.sh"
     ;;
   Linux)
+    # skein or apps: asked once, remembered, and exported for the installer below
+    source "$SCRIPT_DIR/lib/profile.sh"
+    resolve_profile --ask
     os_id=$(awk -F= '/^ID=/{gsub(/"/,"",$2); print tolower($2)}' /etc/os-release 2>/dev/null)
     os_id_like=$(awk -F= '/^ID_LIKE=/{gsub(/"/,"",$2); print tolower($2)}' /etc/os-release 2>/dev/null)
     if [[ "$os_id" == "nobara" ]]; then
