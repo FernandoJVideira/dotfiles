@@ -91,7 +91,7 @@ sudo pacman -S --needed --noconfirm element-desktop ghostty kitty zed mpv
 # Zed's terminal font (common/.config/zed/settings.json)
 sudo pacman -S --needed --noconfirm ttf-hack-nerd
 # Tools the shared zsh config assumes
-sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq shellcheck
+sudo pacman -S --needed --noconfirm fzf zoxide fd bat eza starship fastfetch jq shellcheck libwebp
 
 limine_setup
 
