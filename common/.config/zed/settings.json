@@ -1,85 +1,45 @@
 {
-  "icon_theme": "Warm Charmed Icons",
-  "agent_servers": {
-    "claude-acp": {
-      "default_config_options": {
-        "mode": "auto",
-        "model": "sonnet"
-      },
-      "type": "registry"
-    }
-  },
-  "buffer_font_family": "Dank Mono",
-  "buffer_font_fallbacks": ["JetBrainsMono Nerd Font Mono"],
-  "cli_default_open_behavior": "existing_window",
-  "ssh_connections": [
-    {
-      "host": "ssh.nexus.fernandovideira.com",
-      "username": "fvideira",
-      "args": [],
-      "projects": []
-    }
-  ],
+  // Appearance
   // Same name on every OS, different source: macOS symlinks a static Gruvbox file,
   // Linux renders it from the OS theme (common/.local/bin/zed-theme-sync).
   "theme": "Desktop Theme",
-  // Installed on first launch on every machine. Extensions added from Zed's UI
-  // only exist on that machine until they're listed here.
-  "auto_install_extensions": {
-    "charmed-icons": true,
-    "csharp": true,
-    "dockerfile": true,
-    "emmet": true,
-    "env": true,
-    "git-firefly": true,
-    "html": true,
-    "just": true,
-    "latex": true,
-    "log": true,
-    "lua": true,
-    "make": true,
-    "proto": true,
-    "sql": true,
-    "toml": true,
-    "unity-snippets": true,
-    "vue": true
-  },
-  "terminal": {
-    "font_family": "Dank Mono",
-    "font_fallbacks": ["JetBrainsMono Nerd Font Mono"],
-    "font_size": 14.0
-  },
-  "colorize_brackets": true,
-  "code_lens": "on",
-  "toolbar": {
-    "code_actions": true
-  },
-  "show_signature_help_after_edits": true,
-  "auto_signature_help": true,
-  "redact_private_values": true,
-  "git": {
-    "inline_blame": {
-      "enabled": true
-    }
-  },
-  "status_bar": {
-    "experimental.show": true
-  },
+  "icon_theme": "Warm Charmed Icons",
+  "buffer_font_family": "Dank Mono",
+  "buffer_font_fallbacks": ["JetBrainsMono Nerd Font Mono"],
+  "cursor_shape": "bar",
+  "cursor_blink": true,
+  // use relative line numbers
+  "relative_line_numbers": "enabled",
   "gutter": {
     "line_numbers": true
   },
-  "cursor_shape": "bar",
-  "cursor_blink": true,
+  "colorize_brackets": true,
+  // Indentation, rainbow indentation
+  "indent_guides": {
+    "enabled": true,
+    "coloring": "indent_aware"
+  },
+  "scrollbar": {
+    "show": "never"
+  },
+  "tab_bar": {
+    "show": true
+  },
+  // Only show error on tab
+  "tabs": {
+    "show_diagnostics": "errors"
+  },
+  // NOTE: Zen mode, refer https://github.com/zed-industries/zed/issues/4382 when it's resolved
+  "centered_layout": {
+    "left_padding": 0.15,
+    "right_padding": 0.15
+  },
   "use_system_window_tabs": true,
-  "git_panel": {
-    "tree_view": true,
-    "dock": "right"
+  "status_bar": {
+    "experimental.show": true
   },
-  "base_keymap": "VSCode",
-  // Finder modal width
-  "file_finder": {
-    "modal_max_width": "medium"
-  },
+
+  // Editing
   // Vim mode settings
   "vim_mode": true,
   "vim": {},
@@ -87,36 +47,32 @@
     "delay_ms": 500,
     "enabled": true
   },
-  // use relative line numbers
-  "relative_line_numbers": "enabled",
-  "tab_bar": {
-    "show": true
-  },
-  "scrollbar": {
-    "show": "never"
-  },
-  // Only show error on tab
-  "tabs": {
-    "show_diagnostics": "errors"
-  },
-  // Indentation, rainbow indentation
-  "indent_guides": {
-    "enabled": true,
-    "coloring": "indent_aware"
-  },
-  // NOTE: Zen mode, refer https://github.com/zed-industries/zed/issues/4382 when it's resolved
-  "centered_layout": {
-    "left_padding": 0.15,
-    "right_padding": 0.15
-  },
-  // Inlay hints preconfigured by Zed: Go, Rust, Typescript and Svelte
-  "inlay_hints": {
-    "enabled": true
+  "base_keymap": "VSCode",
+  "autosave": {
+    "after_delay": {
+      "milliseconds": 1000
+    }
   },
   "languages": {
     "Go": {
       "hard_tabs": true
     }
+  },
+  // Inlay hints preconfigured by Zed: Go, Rust, Typescript and Svelte
+  "inlay_hints": {
+    "enabled": true
+  },
+  "code_lens": "on",
+  "show_signature_help_after_edits": true,
+  "auto_signature_help": true,
+  "toolbar": {
+    "code_actions": true
+  },
+
+  // Files and search
+  // Finder modal width
+  "file_finder": {
+    "modal_max_width": "medium"
   },
   // File scan exclusions, hide on the file explorer and search
   "file_scan_exclusions": [
@@ -142,27 +98,98 @@
     "**/report",
     "**/node_modules"
   ],
-  // Turn off telemetry
-  "telemetry": {
-    "diagnostics": true,
-    "metrics": false
-  },
+
+  // Panels
   // Move all panel to the right
   "project_panel": {
     "auto_fold_dirs": false,
     "button": true,
     "dock": "right",
-    "git_status": true
+    "git_status": true,
+    "default_width": 300,
+    "starts_open": true
   },
   "outline_panel": {
-    "dock": "right"
+    "dock": "right",
+    "default_width": 300
   },
   "collaboration_panel": {
-    "dock": "right"
+    "dock": "right",
+    "default_width": 280
   },
-  "autosave": {
-    "after_delay": {
-      "milliseconds": 1000
+  "terminal": {
+    "font_family": "Dank Mono",
+    "font_fallbacks": ["JetBrainsMono Nerd Font Mono"],
+    "font_size": 14.0,
+    "dock": "bottom",
+    "starts_open": true
+  },
+
+  // Git
+  "git": {
+    "inline_blame": {
+      "enabled": true
     }
-  }
+  },
+  "git_panel": {
+    "tree_view": true,
+    "dock": "right",
+    "default_width": 380
+  },
+
+  // Agent and remote
+  "agent_servers": {
+    "claude-acp": {
+      "default_config_options": {
+        "mode": "auto",
+        "model": "opus"
+      },
+      "type": "registry"
+    }
+  },
+  "agent": {
+    "flexible": false,
+    "default_width": 300,
+    "threads_sidebar": { "position": "left" }
+  },
+  "ssh_connections": [
+    {
+      "host": "ssh.nexus.fernandovideira.com",
+      "username": "fvideira",
+      "args": [],
+      "projects": []
+    }
+  ],
+  "cli_default_open_behavior": "existing_window",
+
+  // Extensions
+  // Installed on first launch on every machine. Extensions added from Zed's UI
+  // only exist on that machine until they're listed here.
+  "auto_install_extensions": {
+    "charmed-icons": true,
+    "csharp": true,
+    "dockerfile": true,
+    "emmet": true,
+    "env": true,
+    "git-firefly": true,
+    "html": true,
+    "just": true,
+    "latex": true,
+    "log": true,
+    "lua": true,
+    "make": true,
+    "proto": true,
+    "sql": true,
+    "toml": true,
+    "unity-snippets": true,
+    "vue": true
+  },
+
+  // Privacy
+  // Turn off telemetry
+  "telemetry": {
+    "diagnostics": true,
+    "metrics": false
+  },
+  "redact_private_values": true
 }

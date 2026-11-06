@@ -5,6 +5,10 @@ covers what the settings do, the keys, the Hugo image bind, and how to change th
 
 ## Where the config lives
 
+`settings.json` is grouped under comment headers: Appearance, Editing, Files and search, Panels, Git,
+Agent and remote, Extensions and Privacy. A new setting belongs under the matching header. The next
+section follows the same order, so you can find a setting here the way you find it in the file.
+
 `common/.config/zed/` holds `settings.json` and `keymap.json`, and the installers symlink each file in it
 into `~/.config/zed`. Edit the files in the repo. Zed reloads settings on save, so most changes show up
 at once. If something does not apply, restart Zed. Both files are JSONC: comments and trailing commas are
@@ -12,36 +16,74 @@ allowed.
 
 ## What the settings do
 
-Theme. `"theme": "Desktop Theme"` has the same name on every OS. On Linux `zed-theme-sync` renders it
-from the current OS theme (see Themes in [guide.md](guide.md)). On macOS the name points at a static
-Gruvbox file.
+### Appearance
 
-Icons. `"icon_theme": "Warm Charmed Icons"` comes from the `charmed-icons` extension.
+- `"theme": "Desktop Theme"` has the same name on every OS. On Linux `zed-theme-sync` renders it from the
+  current OS theme (see Themes in [guide.md](guide.md)). On macOS the name points at a static Gruvbox
+  file.
+- `"icon_theme": "Warm Charmed Icons"` comes from the `charmed-icons` extension.
+- The buffer and the terminal use Dank Mono, with JetBrainsMono Nerd Font Mono as the fallback. Buffer and
+  UI font sizes stay at Zed's defaults, and the terminal is 14. Dank Mono is a licensed font, so the files
+  sit in the gitignored `fonts/` directory and `lib/fonts.sh` installs them. Without them Zed uses the
+  fallback.
+- The cursor is a blinking bar. Line numbers are relative and the gutter shows them.
+- Indent guides are colored by indent level, and bracket colorizing is on.
+- The scrollbar is hidden. The tab bar is shown, and tabs mark errors only (no warnings).
+- The centered layout uses 0.15 padding on each side.
+- `use_system_window_tabs` is on, and the status bar is shown (`experimental.show`).
 
-Fonts. The buffer and the terminal use Dank Mono, with JetBrainsMono Nerd Font Mono as the fallback.
-Buffer and UI font sizes stay at Zed's defaults, and the terminal is 14. Dank Mono is a licensed font, so
-the files sit in the gitignored `fonts/` directory and `lib/fonts.sh` installs them. Without them Zed
-uses the fallback.
+### Editing
 
-Editing.
-- Vim mode is on, with which-key after 500 ms. `base_keymap` is `VSCode`.
-- Line numbers are relative. The cursor is a blinking bar.
-- Hard tabs are on for Go only. Autosave runs 1000 ms after the last edit.
-- Indent guides are colored by indent level, and bracket colorizing, inlay hints, code lens and signature
-  help are on.
-- The scrollbar is hidden, and tabs mark errors only (no warnings).
-- Private values in config files are redacted, and git blame shows inline.
+- Vim mode is on, with which-key after 500 ms. `base_keymap` is `VSCode`. The `vim` block is empty, so
+  Vim settings stay at Zed's defaults.
+- Autosave runs 1000 ms after the last edit.
+- Hard tabs are on for Go only.
+- Inlay hints, code lens and signature help (also after edits) are on. The toolbar shows code actions.
 
-Layout. The project, outline, git and collaboration panels dock on the right. The centered layout uses
-0.15 padding on each side. `file_scan_exclusions` hides build output and editor folders such as `dist`,
-`out` and `node_modules` from the explorer and from search.
+### Files and search
 
-Extensions. `auto_install_extensions` lists what Zed installs on first launch. An extension added from
-Zed's UI exists only on that machine until it is listed. `zed-extensions-check` compares the installed
-extensions with the list: it reports the missing ones, and the ones installed here but not listed.
+- The file finder modal is medium width.
+- `file_scan_exclusions` hides build output and editor folders such as `dist`, `out` and `node_modules`
+  from the explorer and from search.
 
-Agent and SSH. `claude-acp` is the agent server, from Zed's registry, in `auto` mode with the `sonnet`
-model. One SSH connection, `ssh.nexus.fernandovideira.com`, is saved.
+### Panels
+
+The threads sidebar sits on the left with the agent panel beside it. The project, outline and
+collaboration panels dock on the right, and the terminal docks at the bottom (the git panel is under Git
+and the agent panel under Agent and remote). The project panel does not fold single-child directories
+(`auto_fold_dirs` is false) and shows git status.
+
+The project panel and the terminal open on startup (`starts_open`). Default widths in pixels are 300 for
+the project and outline panels and 280 for the collaboration panel. Dragging a panel edge resizes it for
+the session, while `default_width` sets the starting width.
+
+Zed saves which docks are open for each project and restores that state on the next launch, so
+`starts_open` only applies to a project that has no saved layout. To change an existing project, toggle
+the panel once (the terminal is `ctrl-\`) and Zed remembers it.
+
+### Git
+
+Git blame shows inline. The git panel docks on the right, shows files as a tree and defaults to 380 px.
+
+### Agent and remote
+
+- `claude-acp` is the agent server, from Zed's registry, in `auto` mode with the `sonnet` model.
+- The agent panel is 300 px wide. The width is fixed because `agent.flexible` is false. With the default
+  `true`, Zed ignores `default_width` and sizes the panel proportionally.
+- The threads sidebar is on the left.
+- One SSH connection, `ssh.nexus.fernandovideira.com`, is saved.
+- `cli_default_open_behavior` is `existing_window`, so opening a path from the shell uses the open window.
+
+### Extensions
+
+`auto_install_extensions` lists what Zed installs on first launch. An extension added from Zed's UI exists
+only on that machine until it is listed. `zed-extensions-check` compares the installed extensions with the
+list: it reports the missing ones, and the ones installed here but not listed.
+
+### Privacy
+
+Metrics telemetry is off and diagnostics stay on. Private values in config files are redacted
+(`redact_private_values`).
 
 ## Keys
 
@@ -103,6 +145,8 @@ or `xclip` (X11).
 
 ## Changing things
 
+- Add a setting: put it in `settings.json` under the header that matches it, and add a line to the same group
+  here if it matters to a user.
 - Add an extension: install it from Zed, then add its folder name from the `extensions/installed`
   directory to `auto_install_extensions`. Otherwise it stays on one machine.
 - Change a key: edit `keymap.json`. Each block has a context that decides where its keys apply. Run
