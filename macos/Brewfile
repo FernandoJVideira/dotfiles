@@ -23,6 +23,8 @@ brew "fzf"
 brew "gum"
 # Configurable static site generator
 brew "hugo"
+# WebP encoder (cwebp)
+brew "webp"
 # Polyglot runtime manager (asdf rust clone)
 brew "mise"
 # Command-line interface for Proton Pass

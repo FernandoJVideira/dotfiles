@@ -52,7 +52,7 @@ log "Installing Hyprland and quickshell runtime dependencies..."
 sudo dnf install -y --skip-unavailable \
   hyprland quickshell xdg-desktop-portal-hyprland \
   wireplumber pipewire gnome-keyring gnome-keyring-pam jq gum wl-clipboard slurp hyprpicker \
-  wtype brightnessctl bluez networkmanager qrencode libnotify \
+  wtype brightnessctl bluez networkmanager qrencode libnotify libwebp-tools \
   jetbrains-mono-nerd-fonts hack-nerd-fonts
 for pkg in hyprland quickshell xdg-desktop-portal-hyprland wl-clipboard slurp hyprpicker hack-nerd-fonts gnome-keyring-pam; do
   rpm -q "$pkg" &>/dev/null || log "WARNING: $pkg not installed - check for a COPR."
