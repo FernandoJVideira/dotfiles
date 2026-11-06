@@ -13,9 +13,13 @@ source "$SCRIPT_DIR/../lib/mise.sh"
 source "$SCRIPT_DIR/../lib/secrets.sh"
 source "$SCRIPT_DIR/../lib/claude.sh"
 source "$SCRIPT_DIR/../lib/ssh.sh"
+source "$SCRIPT_DIR/../lib/fonts.sh"
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"
+
+# Dank Mono (gitignored fonts/, licensed) for the terminals, Zed and, on Linux, the monospace default.
+install_fonts
 
 # ~/.npmrc (and the Proton Pass token file on Linux) with a placeholder where the token goes;
 # existing files are left as they are. The instructions come at the end.
