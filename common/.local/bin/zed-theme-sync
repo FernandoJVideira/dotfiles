@@ -13,12 +13,16 @@
 # Template syntax (same as Skein's own templates):
 #   {{ key }}           a color from colors.toml, or mode ("dark"/"light")
 #   {{ mix a b N }}     a blended with b, N percent of b
+#   {{ alpha }}         window background opacity, two hex digits: $ZED_THEME_ALPHA (default bf)
 # Colors come out as #rrggbb; the template appends the alpha digits itself.
 set -euo pipefail
 
 ZED_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zed"
 TEMPLATE="$ZED_DIR/desktop-theme.json.tpl"
 OUT="$ZED_DIR/themes/desktop-theme.json"
+
+alpha="${ZED_THEME_ALPHA:-bf}"
+[[ $alpha =~ ^[0-9A-Fa-f]{2}$ ]] || { echo "zed-theme-sync: ZED_THEME_ALPHA must be two hex digits" >&2; exit 1; }
 
 colors="${1:-}"
 if [[ -z $colors ]]; then
@@ -73,6 +77,7 @@ val=$(hex "$(get c orange)") || val=$(mix "$(get p red)" "$(get p yellow)" 50)
 set_p orange "$val"
 val=$(hex "$(get c darker_background)") || val=$(mix "$(get p background)" "#000000" 25)
 set_p darker_background "$val"
+set_p alpha "$alpha"
 set_p mode dark
 [[ $(get c mode) == light ]] && set_p mode light
 
@@ -81,7 +86,7 @@ tmp=
 cleanup() { rm -f "$sed_script" ${tmp:+"$tmp"}; }
 trap cleanup EXIT
 
-for key in mode background foreground accent darker_background orange bright_foreground \
+for key in mode alpha background foreground accent darker_background orange bright_foreground \
   red green yellow blue magenta cyan \
   bright_red bright_green bright_yellow bright_blue bright_magenta bright_cyan; do
   printf 's|{{ %s }}|%s|g\n' "$key" "$(get p "$key")" >>"$sed_script"

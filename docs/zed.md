@@ -18,9 +18,11 @@ allowed.
 
 ### Appearance
 
-- `"theme": "Desktop Theme"` has the same name on every OS. On Linux `zed-theme-sync` renders it from the
-  current OS theme (see Themes in [guide.md](guide.md)). On macOS the name points at a static Gruvbox
-  file.
+- `"theme": "Desktop Theme"` has the same name on every OS. `zed-theme-sync` renders it from the
+  current OS theme on Linux and macOS (see Themes in [guide.md](guide.md)). The window background is
+  translucent and blurred (`background.appearance: "blurred"`), 75% opaque (`bf`) by default. Change that
+  with `ZED_THEME_ALPHA=<two hex digits> zed-theme-sync`. On macOS Zed draws the blur, and on Hyprland the
+  compositor blurs it (`decoration.blur`). Popups, completions and modals stay opaque.
 - `"icon_theme": "Warm Charmed Icons"` comes from the `charmed-icons` extension.
 - The buffer and the terminal use Dank Mono, with JetBrainsMono Nerd Font Mono as the fallback. Buffer and
   UI font sizes stay at Zed's defaults, and the terminal is 14. Dank Mono is a licensed font, so the files
