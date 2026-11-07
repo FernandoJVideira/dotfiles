@@ -25,6 +25,12 @@ hl.config({
   },
 })
 
+-- Stronger blur behind translucent windows (Zed); Liquid Glass keeps its own.
+local glass = require("default.hypr.glass_conf").enabled
+if not glass then
+  hl.config({ decoration = { blur = { size = 4, passes = 3 } } })
+end
+
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#animations
 -- hl.config({
 --   animations = {
