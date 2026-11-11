@@ -43,18 +43,28 @@ the topic changes, and on "save", moving durable detail into topic pages. Read `
 first time you write a note in a session (layout, ingest/query/lint, rules, no secrets). No note yet? Create it when the first goal or decision is
 settled.
 
-## Discuss first, implement on go
+## Discuss, plan, then implement
 
-Two phases. **Discuss is the default**, and everything in it happens in your own turns.
+Three phases. **Discuss is the default**, and everything in it happens in your own turns.
 
 - **Discuss:** ideas, questions, design, explanations, code reading, git questions, reviewing
   what exists, and even "we should add X". You read code, weigh options, recommend, and log the
   decisions. **No agent is spawned, no file is edited.** A request that only mentions code is not a
   go-ahead. If you cannot tell whether the user wants it built now, ask in one line.
-- **Implement:** only when the user says to ("implement", "build it", "go", "do it", "make the
-  change", or any clear instruction to change the code now). Then read `references/implement.md`, and
-  run its workflow: Discover, Plan, Implement, Verify, Review. Small changes included: the
-  workflow shrinks for them, it does not disappear.
+- **Plan:** when the user says to implement ("implement", "build it", "go", "do it", "make the
+  change", or any clear instruction to change the code now), read `references/implement.md`, load
+  and call `EnterPlanMode` (a deferred tool: `ToolSearch` with `select:EnterPlanMode,ExitPlanMode`),
+  and write the plan as its step 2 says. Every task gets a plan; a small task gets a short one with
+  the same headings. Present it with `ExitPlanMode`. Never ask "is this plan ok?" in chat:
+  `ExitPlanMode` is the question.
+- **Implement:** only after the user approves the plan. Then run the rest of the workflow in
+  `implement.md`: Implement, Verify, Review. "Keep planning" with feedback means revise the plan and
+  present it again. A rejected plan builds nothing.
+- **Planning is your own work,** on the most powerful model available (Opus today): you discover,
+  decide and write the plan yourself. Never hand plan drafting to a `Plan` agent or a cheaper model;
+  helpers may only fetch facts for it, and a `Plan` agent may only review your draft, on
+  `model: "opus"`. If the session is not running on the most powerful model when
+  a plan is due, tell the user in one line and suggest switching (`/model opus`) before you plan.
 - When the work is done and reviewed, you are back in Discuss. Checkpoint the notes, then continue.
 - If three rounds of discussion do not converge, state the open choice with your recommendation and ask
   the user to pick.
@@ -115,12 +125,13 @@ only facts. That means you, every Sonnet worker and every Haiku helper.
 
 ## When you implement
 
-- `references/implement.md`: the workflow, the caps and the prompt templates. Read it before the first spawn.
+- `references/implement.md`: the workflow, the caps and the prompt templates. Read it when the user
+  says to implement, before you enter plan mode.
 - `references/oversight.md`: before you spawn two or more workers, and whenever an agent message or a
   watcher line arrives. Your word is final for them; only the user can overrule you; workers see the
   real code, so they may send you critiques and suggestions.
-- `references/frontend.md`: before you plan a slice that changes what the user sees (the
-  `vue-ui-design` skill and the user's style brief). `references/nuxt.md`: for Nuxt projects.
+- Frontend slices: invoke the `vue-ui-design` skill while planning them (see "Frontend slices" in
+  `implement.md`). `references/nuxt.md`: for Nuxt projects.
 
 ## Guardrails
 
