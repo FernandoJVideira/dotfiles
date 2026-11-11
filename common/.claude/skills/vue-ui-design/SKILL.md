@@ -30,6 +30,9 @@ good one.
   tokens, and how to extend the kit. Read it before writing any markup.
 - `references/style-brief.md`: every knob, its values, and the exact token or class it changes.
   Read it whenever the prompt says anything about look and feel.
+- `references/patterns.md`: patterns by screen type (lists and tables, dashboards, search and
+  filters, onboarding, landing pages, long-running tasks). Read the section for the screen you
+  are building, after the plan names the surface.
 
 ## 1. Read the project first
 
@@ -94,12 +97,13 @@ defaults that make generated UI look generated:
 | The same soft shadow under every card | Borders carry structure (`depth=flat` removes the kit's shadows). Shadow only on things that float: popovers, dialogs, sheets |
 | Gradient washes, glows, gradient text, glass on content | Solid token colors. The only gradient is the faint `--primary` glow (8% opacity) the kit's `Hero` components ship with; keep it, or build the hero section from plain markup when the brief is flat |
 | A row of four `StatCard`s with deltas on every dashboard | Show the metrics the user actually acts on. Two real numbers beat four filler ones; a table can be the dashboard |
-| ALL-CAPS tracked eyebrow above every heading | The heading alone. A label above content only when it carries information |
-| One word in a headline colored or italic | Set the whole headline well: size, weight, `tracking-tight` on large sizes only |
+| ALL-CAPS tracked eyebrow above every heading | The heading alone. A label above content only when it carries information. Flagship pages may put a small sentence-case label (`text-sm text-muted-foreground`, not uppercase, not tracked) above a feature chapter heading |
+| One word in a headline colored or italic | Set the whole headline well: size, weight, `tracking-tight` on large sizes only. A two-tone headline is fine: the lead sentence in `text-foreground`, its continuation in `text-muted-foreground`, same size and weight |
 | Numbered markers (01 / 02 / 03) | Only for a real sequence (`Stepper`, `Timeline`) |
 | `Badge` on everything, emoji as icons | `Badge` for a real status; icons from `@lucide/vue`, `size-4`, only where they speed up scanning |
 | Fade-and-rise on every section, hover lift on every card | No entrance motion on utility screens. Motion answers an action (open, expand, confirm) |
-| `→` on every link and button, "Get started" / "Learn more" | A verb that says what happens: "Create invoice", "Save changes" |
+| `→` on every link and button, "Get started" / "Learn more" | A verb that says what happens: "Create invoice", "Save changes". `→` only on secondary text links ("View all"), never on buttons |
+| Promo modal, countdown bar or signup popup over content | Nothing covers content uninvited. A promotion is a quiet dismissible banner; signup is asked for after the user has seen value |
 | Cream background with a terracotta accent, near-black with acid green | Pick color from the subject and the brief. The default here is neutral with one accent |
 | Center-aligned everything | Left-aligned content with a clear left edge; center only the rare focused moment |
 
@@ -150,8 +154,11 @@ icon from `@lucide/vue`. In Nuxt, add the kit's pre-hydration script (in `refere
 so a dark preference doesn't flash light. Dark is dimmed, not inverted: if a surface needs to
 stand out in dark mode, make it slightly lighter than the background, never darker.
 
-**Motion.** Utility surfaces: state changes only (open, close, expand, select), 150 to 300ms,
-the kit's `ease-settle` curve (`ease-[var(--ease-settle)]`), `transform` and `opacity` only. No
+**Motion.** Utility surfaces: state changes only (open, close, expand, select), at two speeds:
+micro feedback 100 to 150ms, panels 200 to 300ms with the kit's `ease-settle` curve
+(`ease-[var(--ease-settle)]`; details in `references/style-brief.md`), `transform` and `opacity`
+only for movement. Every animation starts and ends on a usable still state, and under
+`prefers-reduced-motion` the user gets the end state with no transition. No
 scroll-triggered effects, no ambient animation. Flagship surfaces may have one orchestrated
 moment (a page-load sequence or one scroll-linked scene) and nothing scattered. Never take over
 the scroll. Everything respects `prefers-reduced-motion` (the kit's own components already do;

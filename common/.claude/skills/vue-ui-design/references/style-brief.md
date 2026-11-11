@@ -46,6 +46,27 @@ shadows, `depth` is `soft` for that project unless the user says otherwise.
 | `editorial` | `density=airy type=editorial radius=sm depth=flat`, a serif or a distinctive sans for headings | Blogs, docs, content sites, portfolios |
 | `soft` | `density=airy radius=lg depth=layered` | Consumer apps, onboarding, anything that should feel friendly |
 
+## Reference products
+
+When the user says "like X", map it to knobs: take density, type, radius and color temperature,
+never the logo, copy or layout.
+
+| Reference | Knobs | Notes |
+|---|---|---|
+| Linear | `tool`, `mode=dark`, `depth=layered` | Accent used rarely; product UI as hero; two-tone headlines |
+| Notion | `tool`, `neutral=stone`, `radius=sm` | Warm grays, 14px body (`text-sm`), colored tags only for status |
+| Stripe | `density=airy`, `neutral=slate`, `radius=sm`, `depth=soft` for floating product mocks | Light-weight large headings, one saturated accent, visible grid |
+| Apple | `soft`, pill buttons (`rounded-full` on `Button`) | Centered flagship heroes, very short headlines, primary plus outline CTA pair |
+| Aesop | `editorial`, `radius=none`, warm off-white background, `#333`-like text, one muted rust accent | Serif display headings at regular weight, square buttons, photography carries the mood |
+| Pentagram | `editorial`, `radius=none` | Neo-grotesk sans, image-led, captions as a title plus a muted description |
+| Framer | `mode=dark`, `radius=md` | White primary button on black, one blue accent |
+
+Aesop's warm off-white as token overrides (`#fffef2` and `#333`):
+
+```css
+:root { --background: 57 100% 97%; --foreground: 0 0% 20%; }
+```
+
 ## `accent`
 
 Changes `--primary`, `--ring` and `--primary-foreground` in both modes, and `--chart-1`. `mono`
@@ -218,6 +239,10 @@ default. `font-mono` is for code, IDs and logs, never for labels or headings.
 | `editorial` | `text-4xl md:text-5xl font-semibold tracking-tight` (or `font-display font-normal`) | `text-2xl` | `text-base md:text-lg leading-relaxed` | Reading surfaces; serif body gets `leading-relaxed` or looser |
 | `bold` | `text-5xl md:text-7xl font-semibold tracking-tighter leading-[1.05]` | `text-3xl` | `text-lg` | Flagship heroes only; the headline is the design |
 
+On `editorial`, large headings may be set light: `font-normal` or `font-light` at `text-4xl` and
+up with `tracking-tight`, which reads calmer than semibold (Stripe and Pentagram set display type
+at weight 300 to 400). Never light below `text-2xl`.
+
 Large sizes get tighter tracking; small text never does. Line length stays under 80 characters
 (`max-w-prose`, `max-w-xl` for intros).
 
@@ -234,8 +259,10 @@ Large sizes get tighter tracking; small text never does. Line length stays under
 | motion | Allowed |
 |---|---|
 | `none` | Only the kit's built-in feedback (`.press`, overlay open/close). No transitions of your own |
-| `subtle` | Transitions on state changes (open, close, expand, select, reorder): 150 to 300ms, `ease-[var(--ease-settle)]`, `transform`/`opacity` only |
+| `subtle` | Transitions on state changes, at two speeds. Micro feedback (hover, press, toggle, color change): 100 to 150ms, `ease-out`, usually `transition-colors`. Panels and state changes (popover, menu, sheet, dialog, accordion, tab indicator, reorder): 200 to 300ms, `ease-[var(--ease-settle)]`. Nothing over 400ms on utility screens. `transform`/`opacity` only for movement |
 | `expressive` | Flagship surfaces only: one orchestrated moment (a page-load sequence, or one scroll-linked scene driven by scroll progress, never by hijacking the scroll). Utility screens in the same app stay `subtle` |
+
+The kit's `--ease-settle` (`cubic-bezier(0.16, 1, 0.3, 1)`) is the same curve Notion and Stripe use.
 
 Every level honors `prefers-reduced-motion` (`motion-safe:` / `motion-reduce:`), and none of
 them adds fade-ups to every section or hover lifts to every card.
