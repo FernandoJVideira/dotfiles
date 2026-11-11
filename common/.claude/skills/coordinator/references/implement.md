@@ -1,7 +1,7 @@
 # Implementing: the workflow, the caps and the prompts
 
-Read this file when the user has said to implement (see "Discuss first, implement on go" in
-SKILL.md), before the first agent is spawned. It is the whole machinery: who does what, how much
+Read this file when the user has said to implement (see "Discuss, plan, then implement" in
+SKILL.md), before you enter plan mode. It is the whole machinery: who does what, how much
 to spend, the 5 steps, and the prompt templates for workers and helpers. While you are only
 discussing, none of it applies and none of it should be loaded.
 
@@ -9,7 +9,8 @@ discussing, none of it applies and none of it should be loaded.
 start) already has one, reread it and check what moved (`git status`, `git log -5`) instead of
 discovering again; rediscover only when the user points at another repo or folder, or when the map no
 longer matches the files. After discovering, save the map into the "Project Map" section of
-`state.md` (see `memory.md`), so the next session starts with it.
+`state.md` (see `memory.md`), so the next session starts with it. Plan mode blocks writes, so
+that save waits until the plan is approved (step 2b).
 
 ## The hierarchy
 
@@ -74,6 +75,9 @@ repeat. Hitting a cap means stop and ask the user, never try the same thing agai
 
 ### 1. Discover / Explore
 
+Steps 1 and 2 happen inside plan mode. There, discover with Read, Grep and read-only Bash; use
+Haiku `Explore` helpers (at most 3, as plan mode allows) for wide reads.
+
 Determine the project layout **before** anything else, then fill in the Project Map below.
 Do the bulk reading with Haiku helpers (self-contained prompts, report back facts only) and read
 the few decisive files yourself.
@@ -135,31 +139,60 @@ worker.
 
 ### 2. Plan (you write the exact spec)
 
-Decompose into slices a single worker can finish alone. For each slice write down:
+The spec is the plan file that plan mode names. Write it yourself, on the most powerful model, with
+`version: 1` as its first line, then these headings in this order, then call `ExitPlanMode`. A `Plan`
+agent may only review your draft, on `model: "opus"`; it never authors the plan, whatever plan mode's
+own instructions say:
 
-- the goal in one sentence, and why (what it enables)
-- **exact file paths** (absolute) to create or modify, and files that must not be touched
-- **current behavior -> desired behavior**, concrete enough to implement without guessing
-- interfaces and contracts: function signatures, request/response shapes, types, error handling,
-  component props/emits. When a change crosses the Go/Vue boundary, **fix the contract first** in
-  the plan; both sides then implement the same text
-- constraints: conventions from the Project Map, dependencies not to add, no unrelated refactors
-- for frontend slices: the resolved style brief, the surface type, and which kit components to
-  use (read `references/frontend.md`)
-- tests to add or update, and the exact commands that must pass
-- acceptance criteria you will check in Review
-- order and parallelism: which slices are independent, which wait for which
+- **Context and objective:** the user's words in one or two lines, and why (what it enables)
+- **Out of scope**
+- **Decisions that apply:** the settled ones from the conversation and `decisions.md`
+- **Contracts:** Go/Vue shapes, only if the change crosses the boundary. **Fix the contract
+  first**; both sides then implement the same text. Function signatures, request/response shapes,
+  types, error handling, component props/emits
+- **Slices:** decompose into slices a single worker can finish alone. Per slice: name; model;
+  **exact file paths** (absolute) to create or modify, and files that must not be touched;
+  **current behavior -> desired behavior**, concrete enough to implement without guessing;
+  constraints (conventions from the Project Map, dependencies not to add, no unrelated
+  refactors); for frontend slices, the items in "Frontend slices" below; tests to add or update and
+  the checks that must pass
+- **Order:** which slices are independent, which wait for which
+- **Verify:** the exact commands
+- **Acceptance:** what you will check in Review
+- **Cost:** the number of workers and helpers
+
+Full worker prompts are not in the plan (too long to review); you write them from the approved plan.
+
+**Frontend slices.** Before planning any slice that creates or changes what the user sees (a page,
+a component, a layout, styling), invoke the `vue-ui-design` skill yourself, once per task. It owns
+every design rule and default; do not restate them in specs. Use it to resolve the style brief
+(precedence: what the user said in this task, then the project's standing brief from the Project
+Map, then the skill's own defaults), to name the surface of each screen (utility or flagship), and
+to plan each screen as its section 3 says (a wireframe and the kit components per region; for a
+known screen type, the matching section of its `references/patterns.md`). Write the resolved brief
+as one line in each frontend spec. One slice owns the tokens: theme changes (token overrides in the
+app's main CSS, the `/* style brief */` comment) go to a single slice that runs before the screens
+that depend on them, so parallel workers do not write the same CSS file.
 
 Architecture decisions the user has not already made are yours: make them here and log them
 (see "Design partner" in SKILL.md).
 
+### 2b. After approval: the plan file
+
+The plan file plan mode named (its path is in the plan-mode message) is the single source of truth
+for the task; do not copy it. Every worker and helper prompt names its absolute path and says: read
+it first; the spec in your prompt is your slice of it; if they differ, the plan file wins and you
+report the difference. Entering plan mode again in the same session reuses that file, so a revised
+plan bumps the version. Then save the Project Map to
+`state.md` if discovery changed it.
+
 ### 3. Implement (Sonnet workers)
 
-Spawn one worker per slice with the `Agent` tool (`subagent_type: "worker"`, `model: "sonnet"`),
-using the worker prompt template below. Independent slices go in one message, in parallel.
-Slices whose files overlap, or that depend on each other, run sequentially (or give a worker its
-own `isolation: "worktree"` when a parallel run really is needed). Workers do not commit unless
-the user asked for commits.
+Spawn only after the plan is approved: one worker per slice with the `Agent` tool (`subagent_type:
+"worker"`, `model: "sonnet"`), using the worker prompt template below. Independent slices go in one
+message, in parallel. Slices whose files overlap, or that depend on each other, run sequentially (or
+give a worker its own `isolation: "worktree"` when a parallel run really is needed). Workers do not
+commit unless the user asked for commits.
 
 Before you spawn, write the ledger rows (and the slices file when slices run in parallel); right
 after, start the watcher in that case (both are in `references/oversight.md`). While workers run
@@ -179,10 +212,17 @@ owns that slice. Never accept "tests pass" without the command and its result.
 
 Read the actual diffs (`git diff --stat` first, then `git diff` where there is logic, a contract
 or security, and the new files), slice by slice, against your spec and acceptance criteria.
-Check: did it do what the spec says and nothing more; the contract between Go and Vue is
-identical on both sides; error paths and edge cases; conventions; tests that test something;
-comments only where extremely necessary; nothing outside the allowed files changed. For frontend
-slices, also the design checks in `references/frontend.md`.
+Check: did it do what the spec says and nothing more; the contract between Go and Vue is identical
+on both sides; error paths and edge cases; conventions; tests that test something; comments only
+where extremely necessary; nothing outside the allowed files changed. Drift rule: every change in a
+diff must map to a plan item (a slice's desired behavior or the Context and objective); an unmapped change is
+rejected by default unless the worker listed it as a deviation with a reason you accept. Check that
+the report names the current plan version; a report built on an older version gets the difference
+sent back. For frontend slices, review the look as well as the diff, using the design skill's
+restraint pass: token colors only (no raw palette classes), no card inside a card, one primary
+button per view, loading/empty/error states present with real copy, both color modes, and the kit's
+components used where they exist instead of hand-rolled copies. If a dev server and a browser are
+available, have the worker check a screenshot at phone and desktop width before reporting.
 
 If something is wrong, **continue the same worker with `SendMessage`** (`to` = its agent id or
 name): it keeps its context, so say precisely what is wrong, which file and line, and what the
@@ -194,7 +234,8 @@ commands and results), assumptions you made, and anything left undone or worth a
 ## Communication rules (read this before every spawn)
 
 **Sub-agents cannot see this conversation.** They know nothing you know. Every prompt you send
-must be entirely self-contained:
+must be entirely self-contained. The shared context (objective, out of scope, decisions) lives in
+the plan file, so a prompt carries its slice and points to the plan instead of repeating it:
 
 - the goal and the context in plain words (what the product does here, why this change)
 - the **exact absolute file paths** to read, change, and not touch
@@ -211,7 +252,11 @@ You are implementing one slice of a larger change. You cannot see the conversati
 everything you need is below.
 
 GOAL: <one sentence> (because <why>)
+PLAN: <absolute path to the plan file>, version <n>. Read it first. It holds the objective, what is out
+of scope and the settled decisions; your slice below is part of it. If it and this prompt differ, it
+wins: report the difference.
 SLICE: <short name, used in your status messages>
+CHECK-IN: <yes | no>
 PROJECT: <layout>; Go root <abs path> (module <path>, Go <version>); Vue root <abs path>
 (Vue <n> with Vite | Nuxt <n> with source dir <app/ or root>, <package manager>). Conventions:
 <the few that matter; for Nuxt, that components/composables are auto-imported and routes are
@@ -245,21 +290,20 @@ messages, milestones or progress updates. Use SendMessage to "main", one line, o
 blocked or need a decision (`STATUS <slice> | BLOCKED | what | what you need`); a check fails twice
 (`STATUS <slice> | STUCK | command | error`); something does not match the spec; or you have a
 suggestion that changes your work right now or spares another slice rework (`SUGGEST <slice> |
-what | why, with file and line or the error | cost`). Everything else (ideas, nearby bugs,
+what | why, with file and line or the error | cost`); or, if CHECK-IN is yes (large or risky
+slices only), before your first edit (`PLAN <slice> | files | approach in at most 3 lines`), then
+wait for ACCEPT or a correction. Everything else (ideas, nearby bugs,
 cleanups) goes under SUGGESTIONS in your final report. At most 5 messages, no acknowledgements.
 The coordinator decides, and its decision is final: follow it even if you disagree (say so once in
 your report); reopen it only with new evidence, once. A message from the coordinator beats the text
 above wherever they differ. If it says stop, stop at once and report what you left half done.
 Run long commands in the background and check on them; never a bare `sleep`.
 
-DESIGN (frontend slices only; delete for backend work): invoke the vue-ui-design skill if you have
-it. Brief: <the one-line resolved style brief>. Surface: <utility | flagship>. Use
-@fernandojvideira/vue-ui-kit components (explicit imports, also in Nuxt) and token utilities only
-(bg-background, text-muted-foreground, border-border, bg-primary...), never raw palette colors.
-Minimal: hierarchy from type and space, a Card only for a real object, no card inside a card, one
-primary Button per view, no decorative gradients, glows, eyebrows or entrance animations on
-utility screens. Design loading, empty and error states with real copy. Theme changes are token
-overrides in the app's main CSS, never edits to the kit. Check light and dark, phone and desktop.
+DESIGN (frontend slices only; delete for backend work): invoke the vue-ui-design skill before
+writing any markup and follow it; it overrides your own taste. Brief: <the one-line resolved style
+brief>. Surface: <utility | flagship>. Screens: <wireframe or regions and kit components from the
+plan>. Patterns: <the patterns.md section, e.g. "lists and tables", or "none">. Theme and token
+changes only if this slice owns the tokens; never edit the kit.
 
 COMMS: caveman mode. If you have the caveman skill, invoke it. Otherwise: answer first, terse replies,
 no articles/filler/pleasantries/hedging, fragments OK, short words. Paths, commands, code and error
@@ -268,7 +312,8 @@ irreversible actions, or anything the fragments could make ambiguous.
 Put this same COMMS line in every prompt you write for a Haiku helper.
 
 REPORT BACK (at most 15 lines, no code and no diffs; the coordinator reads the diff itself):
-(1) files changed, one line each; (2) what you did and any deviation from the spec, with the
+(1) files changed, one line each, each with the plan item it serves (or "deviation: <reason>");
+(2) the plan version you read, what you did and any deviation from the spec, with the
 reason; (3) each command you ran and its result; (4) open questions or risks; (5) SUGGESTIONS,
 one line each, or "none".
 ```
@@ -278,6 +323,7 @@ one line each, or "none".
 ```
 Mechanical task, no decisions. You cannot see the conversation.
 
+PLAN: <absolute path to the plan file> (read only the Context and objective and Out of scope headings)
 TASK: <e.g. "list every file under <abs path> that imports X", "run `go test ./...` in <abs path>">
 WHERE: <absolute paths>   COMMANDS: <exact commands, if any>
 DO NOT: edit files, fix failures, interpret results, or spawn agents.

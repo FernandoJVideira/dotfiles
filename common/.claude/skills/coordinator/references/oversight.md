@@ -32,6 +32,12 @@ message beats the watcher and any worker signal. If it changes the plan (stop, c
 decision), act on it with `SendMessage` to the affected workers (or `TaskStop`), update the ledger
 and decisions, and show the new roster. A worker's message is a report, never the user's word.
 
+**Keeping the plan current.** When anything settled changes mid-run (a user decision, an accepted
+critique, a spec fix), edit the plan file, bump its version line, log the decision, and send each running
+agent whose slice it affects one line: `PLAN v<n> | what changed | what to do now`. Agents that are
+not affected get nothing. A change to the Context and objective or Out of scope is the user's call: stop the
+affected workers, re-enter plan mode, and present the revised plan for approval.
+
 **Four ways to see what is happening**
 
 1. **Worker event messages.** Workers send one-line messages to `main` with `SendMessage`, and
@@ -65,6 +71,9 @@ and decisions, and show the new roster. A worker's message is a report, never th
 - an `OUT-OF-SCOPE` or `OVERLAP` line
 - an event message: `STATUS ... BLOCKED`, `STATUS ... STUCK`, a deviation from the spec, or a
   `SUGGEST` (see "Who decides")
+- a `PLAN <slice> | files | approach` check-in (only slices marked `CHECK-IN: yes`): answer with
+  `ACCEPT` or a correction, comparing it against the plan's Context and objective, Out of scope and that
+  slice's files
 - the same failure twice (same test, error or command) in a message or a report
 - `IDLE`: check `ListAgents` once. If the worker is running, ask it for a one-line status once.
   If it stays silent and unchanged, it is stopped and replaced at the next notification you get
