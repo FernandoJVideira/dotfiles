@@ -31,14 +31,19 @@ brew tap felixkratz/formulae
 
 # Install dependencies from Brewfile
 log "Installing packages from Brewfile..."
-brew bundle --file="$SCRIPT_DIR/Brewfile"
+brew bundle --file="$SCRIPT_DIR/Brewfile" \
+  || log "WARNING: some Brewfile packages failed to install - rerun: brew bundle --file=$SCRIPT_DIR/Brewfile"
 
 # Initialize Hyprspace (creates a default config if one doesn't exist yet).
 # Runs before symlink_dotfiles so our own hyprspace/config.toml correctly
 # overwrites whatever this creates, same ordering reason as
 # omarchy-reinstall-configs on the Linux side.
-log "Initializing Hyprspace..."
-hyprspace init
+if command -v hyprspace &>/dev/null; then
+  log "Initializing Hyprspace..."
+  hyprspace init
+else
+  log "WARNING: hyprspace is not installed - skipping its init"
+fi
 
 # Create symlinks for dotfiles
 log "Symlinking macOS-specific dotfiles..."
@@ -87,7 +92,7 @@ fi
 
 if [[ "$(sysctl -n hw.model)" == MacBook* ]]; then
   log "Laptop detected — installing AlDente..."
-  brew install --cask aldente
+  brew install --cask aldente || log "WARNING: couldn't install AlDente - run: brew install --cask aldente"
 fi
 
 log "Applying macOS defaults..."
