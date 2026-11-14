@@ -164,8 +164,30 @@ INDEX
       git -C "$vault" -c commit.gpgsign=false commit -q -m "brain: first commit from $(hostname -s)" || true
     fi
   fi
-  if ! GIT_SSH_COMMAND="$ssh" git -C "$vault" push -q -u origin HEAD 2>/dev/null; then
-    log "WARNING: couldn't push the Brain vault to $BRAIN_REMOTE (offline, or no SSH access). The hooks retry."
+  sync_brain_vault "$vault" "$ssh"
+}
+
+# Sync the way the hooks do (commit, rebase onto what the other machines pushed, resolving clashing
+# notes, then push), so a vault that is merely behind the server isn't reported as unreachable. A
+# failed push shows git's own reason.
+sync_brain_vault() {
+  local vault=$1 ssh=$2 ahead err
+  BRAIN_DIR="$vault"
+  # shellcheck source=../common/.claude/hooks/brain-lib.sh
+  source "$(dirname "${BASH_SOURCE[0]}")/../common/.claude/hooks/brain-lib.sh"
+  brain_commit
+  BRAIN_SYNC_NOTE=""
+  brain_pull
+  if [[ -n $BRAIN_SYNC_NOTE ]]; then
+    log "WARNING: the Brain notes here and on $BRAIN_REMOTE changed in the same place and weren't merged; run: git -C $vault pull --rebase (and fix the conflict)."
+    return 0
+  fi
+  ahead="$(git -C "$vault" rev-list --count '@{u}..HEAD' 2>/dev/null)" || ahead=1
+  [[ $ahead != 0 ]] || return 0
+  if ! err="$(GIT_SSH_COMMAND="$ssh" git -C "$vault" push -q -u origin HEAD 2>&1 </dev/null)"; then
+    # git's reason is its first fatal/error/rejected line; the lines after it are hints
+    err="$(printf '%s\n' "$err" | grep -m 1 -E '^(fatal|error|ERROR|ssh|!)' || printf '%s\n' "$err" | grep -m 1 .)"
+    log "WARNING: couldn't push the Brain vault to $BRAIN_REMOTE (${err%.}). The hooks retry."
   fi
 }
 

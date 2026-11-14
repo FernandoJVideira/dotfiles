@@ -25,6 +25,8 @@ brew "gum"
 brew "hugo"
 # WebP encoder (cwebp)
 brew "webp"
+# Paste the clipboard image to a file or stdout (the Hugo save-img-hugo script)
+brew "pngpaste"
 # Polyglot runtime manager (asdf rust clone)
 brew "mise"
 # Command-line interface for Proton Pass
@@ -92,6 +94,3 @@ cask "tailscale-app"
 cask "unity-hub"
 # Multiplayer code editor
 cask "zed"
-go "github.com/air-verse/air"
-go "go.uber.org/mock/mockgen"
-go "github.com/sqlc-dev/sqlc/cmd/sqlc"

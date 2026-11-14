@@ -10,6 +10,10 @@ gh = "latest"
 just = "latest"
 cloudflared = "latest"
 "aqua:golang-migrate/migrate" = "latest"
+# Go dev tools: live reload, mock generation, type-safe SQL
+"go:github.com/air-verse/air" = "latest"
+"go:go.uber.org/mock/mockgen" = "latest"
+"go:github.com/sqlc-dev/sqlc/cmd/sqlc" = "latest"
 dotnet = "10"
 java = ["temurin-27", "temurin-17"]
 # language servers Claude Code's LSP plugins start (symbol lookup and diagnostics instead of grep and reads)
