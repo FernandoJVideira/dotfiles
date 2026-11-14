@@ -9,7 +9,18 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>exec /opt/homebrew/bin/pass-cli ssh-agent start --vault-name SSH --create-new-identities SSH --socket-path "$HOME/.ssh/proton-pass-agent.sock"</string>
+        <!-- Like the Linux unit: when pass-cli has no usable session (the server dropped it, or it cannot be
+             decrypted), log in with the token from the login Keychain before starting the agent. -->
+        <string><![CDATA[
+if ! /opt/homebrew/bin/pass-cli info >/dev/null 2>&1; then
+  pat="$(/usr/bin/security find-generic-password -s proton-pass-cli -a pat -w 2>/dev/null)"
+  if [ -n "$pat" ]; then
+    /opt/homebrew/bin/pass-cli logout --force >/dev/null 2>&1
+    PROTON_PASS_PERSONAL_ACCESS_TOKEN="$pat" /opt/homebrew/bin/pass-cli login
+  fi
+fi
+exec /opt/homebrew/bin/pass-cli ssh-agent start --vault-name SSH --create-new-identities SSH --socket-path "$HOME/.ssh/proton-pass-agent.sock"
+]]></string>
     </array>
 
     <key>RunAtLoad</key>
@@ -17,6 +28,10 @@
 
     <key>KeepAlive</key>
     <true/>
+
+    <!-- a failed login (offline, revoked token) retries every 30 s, not every 10 -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
 
     <key>WorkingDirectory</key>
     <string>/Users/fvideira</string>
