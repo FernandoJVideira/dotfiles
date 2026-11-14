@@ -94,6 +94,3 @@ cask "tailscale-app"
 cask "unity-hub"
 # Multiplayer code editor
 cask "zed"
-go "github.com/air-verse/air"
-go "go.uber.org/mock/mockgen"
-go "github.com/sqlc-dev/sqlc/cmd/sqlc"
