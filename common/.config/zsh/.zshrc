@@ -124,4 +124,7 @@ eval "$(mise activate zsh)"
 
 
 
-export PATH=$PATH:/home/fvideira/.spicetify
+export PATH=$PATH:$HOME/.spicetify
+
+# Machine-local aliases and overrides (untracked)
+[[ -f "$ZDOTDIR/local.zsh" ]] && source "$ZDOTDIR/local.zsh"

@@ -14,6 +14,10 @@ source "$SCRIPT_DIR/../lib/secrets.sh"
 source "$SCRIPT_DIR/../lib/claude.sh"
 source "$SCRIPT_DIR/../lib/ssh.sh"
 source "$SCRIPT_DIR/../lib/fonts.sh"
+source "$SCRIPT_DIR/../lib/git-filters.sh"
+
+# Clean filter that keeps Zed's ssh_connections out of the repo (see .gitattributes).
+register_git_filters || log "WARNING: the zed-ssh git filter wasn't registered (see above)."
 
 log "Symlinking shared dotfiles..."
 symlink_dotfiles "$SCRIPT_DIR"

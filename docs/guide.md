@@ -136,7 +136,7 @@ startup. Syntax highlighting, autosuggestions and substring history search are o
 | `h`, `hs` | `hdev`, `herdr server stop` |
 | `upd` | macOS only: `brew update && brew upgrade` |
 
-`nexus` and `atlas` are ssh shortcuts to two servers, and `ssh` itself runs with `TERM=xterm-256color`.
+Ssh shortcuts to your servers go in `~/.config/zsh/local.zsh` (untracked), and `ssh` itself runs with `TERM=xterm-256color`.
 
 tmux still exists for plain terminals and remote machines. Its prefix is `Ctrl+Space` (`Ctrl+B` also
 works). After the prefix: `v` splits side by side, `h` splits stacked, `c` opens a window, `x` closes

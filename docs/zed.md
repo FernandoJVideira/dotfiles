@@ -73,7 +73,7 @@ Git blame shows inline. The git panel docks on the right, shows files as a tree 
 - The agent panel is 300 px wide. The width is fixed because `agent.flexible` is false. With the default
   `true`, Zed ignores `default_width` and sizes the panel proportionally.
 - The threads sidebar is on the left.
-- One SSH connection, `nexus.example`, is saved.
+- SSH connections are machine-local: a git clean filter (`lib/git-filters/zed-strip-ssh`) strips `ssh_connections` before staging.
 - `cli_default_open_behavior` is `existing_window`, so opening a path from the shell uses the open window.
 
 ### Extensions

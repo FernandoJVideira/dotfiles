@@ -141,6 +141,7 @@
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
+        "fast": false,
         "mode": "auto",
         "model": "opus"
       },
@@ -148,18 +149,11 @@
     }
   },
   "agent": {
+    "dock": "left",
     "flexible": false,
     "default_width": 300,
     "threads_sidebar": { "position": "left" }
   },
-  "ssh_connections": [
-    {
-      "host": "nexus.example",
-      "username": "user",
-      "args": [],
-      "projects": []
-    }
-  ],
   "cli_default_open_behavior": "existing_window",
 
   // Extensions

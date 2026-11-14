@@ -1,0 +1,118 @@
+#!/usr/bin/env perl
+# Git clean filter: drops the "ssh_connections" member from Zed's settings.json (JSONC, so no JSON parser).
+use strict;
+use warnings;
+
+local $/;
+my $s = <STDIN>;
+$s = '' unless defined $s;
+my $n = length $s;
+
+# Find the member key outside strings and comments.
+my ($kstart, $kend);
+my $i = 0;
+while ($i < $n) {
+    my $c = substr($s, $i, 1);
+    if ($c eq '"') {
+        my $j = $i + 1;
+        while ($j < $n) {
+            my $d = substr($s, $j, 1);
+            if ($d eq '\\') { $j += 2; next }
+            last if $d eq '"';
+            $j++;
+        }
+        if (substr($s, $i, $j - $i + 1) eq '"ssh_connections"') {
+            my $k = $j + 1;
+            $k++ while $k < $n && substr($s, $k, 1) =~ /\s/;
+            if (substr($s, $k, 1) eq ':') { ($kstart, $kend) = ($i, $j); last }
+        }
+        $i = $j + 1;
+    } elsif ($c eq '/' && substr($s, $i + 1, 1) eq '/') {
+        my $e = index($s, "\n", $i);
+        $i = $e < 0 ? $n : $e + 1;
+    } elsif ($c eq '/' && substr($s, $i + 1, 1) eq '*') {
+        my $e = index($s, '*/', $i + 2);
+        $i = $e < 0 ? $n : $e + 2;
+    } else {
+        $i++;
+    }
+}
+
+if (defined $kstart) {
+    # Skip to the value, then past its matching bracket (strings and comments ignored).
+    my $p = index($s, ':', $kend) + 1;
+    $p++ while $p < $n && substr($s, $p, 1) =~ /\s/;
+    my $end = $p;
+    if (substr($s, $p, 1) eq '[') {
+        my $depth = 0;
+        while ($p < $n) {
+            my $c = substr($s, $p, 1);
+            if ($c eq '"') {
+                $p++;
+                while ($p < $n) {
+                    my $d = substr($s, $p, 1);
+                    if ($d eq '\\') { $p += 2; next }
+                    last if $d eq '"';
+                    $p++;
+                }
+            } elsif ($c eq '/' && substr($s, $p + 1, 1) eq '/') {
+                my $e = index($s, "\n", $p);
+                $p = $e < 0 ? $n : $e;
+                next;
+            } elsif ($c eq '/' && substr($s, $p + 1, 1) eq '*') {
+                my $e = index($s, '*/', $p + 2);
+                $p = $e < 0 ? $n : $e + 1;
+            } elsif ($c eq '[') {
+                $depth++;
+            } elsif ($c eq ']') {
+                $depth--;
+                if ($depth == 0) { $end = $p + 1; last }
+            }
+            $p++;
+        }
+    }
+
+    if ($end > $kend) {
+        my $from = $kstart;
+        my $to = $end;
+        # Take the whole line when the member sits alone on its lines.
+        my $ls = $from;
+        $ls-- while $ls > 0 && substr($s, $ls - 1, 1) =~ /[ \t]/;
+        my $at_bol = $ls == 0 || substr($s, $ls - 1, 1) eq "\n";
+        my $t = $to;
+        $t++ while $t < $n && substr($s, $t, 1) =~ /[ \t]/;
+        my $comma_after = substr($s, $t, 1) eq ',';
+        $t++ if $comma_after;
+        $t++ while $t < $n && substr($s, $t, 1) =~ /[ \t]/;
+        my $at_eol = $t >= $n || substr($s, $t, 1) eq "\n" || substr($s, $t, 2) eq "\r\n";
+
+        if ($comma_after) {
+            if ($at_bol && $at_eol) {
+                $from = $ls;
+                $t += substr($s, $t, 2) eq "\r\n" ? 2 : 1 if $t < $n;
+                $to = $t;
+            } else {
+                $to = $t;
+                $to++ while $to < $n && substr($s, $to, 1) =~ /[ \t]/;
+            }
+        } else {
+            # Last member: remove the preceding comma instead.
+            my $b = $from - 1;
+            $b-- while $b >= 0 && substr($s, $b, 1) =~ /\s/;
+            if ($b >= 0 && substr($s, $b, 1) eq ',') {
+                my $cs = $b;
+                $from = $cs;
+                my $e = $to;
+                $e++ while $e < $n && substr($s, $e, 1) =~ /[ \t]/;
+                $to = $e;
+            } elsif ($at_bol && $at_eol) {
+                $from = $ls;
+                $t += substr($s, $t, 2) eq "\r\n" ? 2 : 1 if $t < $n;
+                $to = $t;
+            }
+        }
+        substr($s, $from, $to - $from) = '';
+    }
+}
+
+print $s;

@@ -25,8 +25,6 @@ alias diff='diff --color=auto'
 alias df='df -h'
 alias sz='source ~/.config/zsh/.zshrc'
 alias ssh='TERM=xterm-256color ssh'
-alias nexus='TERM=xterm-256color ssh user@nexus.example'
-alias atlas='TERM=xterm-256color ssh user@atlas.example'
 alias h='hdev'
 alias hs='herdr server stop'
 
