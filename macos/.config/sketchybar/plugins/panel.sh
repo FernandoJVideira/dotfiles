@@ -42,10 +42,15 @@ cpu_load)
   ;;
 esac
 
+# A row fits 31 characters (label.width 300 minus 2 x 22 padding, at 8.1 pt per JetBrains Mono 13.5
+# character); a longer one (a process name, an SSID) is cut with an ellipsis instead of off the edge.
+max=31
 args=()
 for i in 1 2 3 4 5 6; do
   if ((i <= ${#rows[@]})); then
-    args+=(--set "$panel.i$i" drawing=on label="${rows[$((i - 1))]}")
+    row="${rows[$((i - 1))]}"
+    ((${#row} > max)) && row="${row:0:max-1}…"
+    args+=(--set "$panel.i$i" drawing=on label="$row")
   else
     args+=(--set "$panel.i$i" drawing=off)
   fi

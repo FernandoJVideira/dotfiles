@@ -113,7 +113,7 @@ panel_rows() {
   local row
   for row in 1 2 3 4 5 6; do
     sketchybar --add item "$1.i$row" "popup.$1" \
-      --set "$1.i$row" label.drawing=on label.font="$PANEL_FONT" label.width=300 label.align=left \
+      --set "$1.i$row" icon.drawing=off label.drawing=on label.font="$PANEL_FONT" label.width=300 label.align=left \
       label.padding_left=22 label.padding_right=22 drawing=off \
       click_script="$PLUGIN_DIR/popup_close.sh"
   done
@@ -183,12 +183,15 @@ sketchybar --add item clock right \
     click_script="$PLUGIN_DIR/popup_toggle.sh clock $PLUGIN_DIR/calendar.sh fill"
 
 # The calendar panel: a month in a monospaced grid, filled in by plugins/calendar.sh when it opens.
+# The rows are left-aligned: sketchybar centres a label on its visible glyphs, so a centred row that
+# starts or ends with blank days drifts (the 1st was pushed off the right edge). label.width includes
+# the paddings; 262 fits the 28-character rows. icon.drawing=off drops the empty icon slot (20 pt on the left).
 for row in title head w1 w2 w3 w4 w5 w6; do
   sketchybar --add item "cal.$row" popup.clock \
-    --set "cal.$row" label.drawing=on label.font="$PANEL_FONT" label.width=310 label.align=center \
+    --set "cal.$row" icon.drawing=off label.drawing=on label.font="$PANEL_FONT" label.width=262 label.align=left \
       label.padding_left=16 label.padding_right=16 click_script="$PLUGIN_DIR/popup_close.sh"
 done
-sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:15.0" label.color="$CLR_ACCENT" \
+sketchybar --set cal.title label.font="JetBrainsMono Nerd Font:Bold:15.0" label.color="$CLR_ACCENT" label.align=center \
   --set cal.head label.color="$CLR_FG_DIM"
 
 sketchybar --add item battery right \
@@ -234,9 +237,9 @@ panel_rows net
 popup_entry net net.power "󰐥" "Turn Wi-Fi off" "$PLUGIN_DIR/wifi_power.sh"
 popup_entry net net.settings "󰒓" "Wi-Fi settings…" "open 'x-apple.systempreferences:com.apple.wifi-settings-extension'"
 
-# Stay awake (caffeinate), like Skein's indicator: dim while off, the accent color while on.
+# Stay awake (caffeinate), like Skein's indicator: a dim outline cup while off, a bright filled one while on.
 sketchybar --add item awake right \
-  --set awake icon="󰅶" icon.color="$CLR_FG_DIM" update_freq=5 \
+  --set awake icon="󰛊" icon.color="$CLR_FG_DIM" update_freq=5 \
     script="$PLUGIN_DIR/awake.sh" click_script="$PLUGIN_DIR/awake.sh toggle"
 
 # === FINALIZE ===
